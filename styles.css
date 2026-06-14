@@ -71,3 +71,12 @@
 .slider-dots button.active{background:var(--maroon)}
 @media(max-width:780px){.proof-sliders{grid-template-columns:1fr 1fr;gap:12px}.proof-slider{grid-template-rows:62px 1fr 44px}.proof-slider>header{padding:11px}.proof-slider>header .brand-icon,.meetup-icon{flex-basis:34px;width:34px;height:34px}.proof-slider>header h3{font-size:15px}.slide{padding:18px}.slide blockquote{font-size:15px;margin-top:13px}.image-slides .slide{padding:10px}.depop-slides .slide{grid-template-columns:32% 1fr;gap:13px;padding:16px}.depop-slides .slide>img{height:150px}.depop-review p{font-size:13px}.vinted-combined{gap:14px;padding:14px}.vinted-review-copy blockquote{font-size:14px}}
 @media(max-width:540px){.proof-sliders{grid-template-columns:1fr}.proof-slider{aspect-ratio:1/1;max-width:420px;width:100%;margin:auto}.slide blockquote{font-size:17px}.depop-slides .slide{grid-template-columns:34% 1fr;gap:15px;padding:18px}.depop-slides .slide>img{height:175px}.depop-review p{font-size:15px}.vinted-combined{grid-template-columns:38% 1fr;gap:17px;padding:17px}.vinted-review-copy blockquote{font-size:16px}.vinted-review-copy>b{font-size:13px;letter-spacing:2px}}
+
+/* Current featured jerseys */
+.featured-photo{display:block;height:290px;background:#171515;overflow:hidden}
+.featured-photo img{height:100%;object-fit:cover;object-position:center top;transition:transform .25s ease}
+.featured-photo:hover img{transform:scale(1.025)}
+.featured-copy h3{line-height:1.25}
+.featured-copy h3 a:hover{color:var(--maroon)}
+@media(max-width:780px){.featured-photo{height:180px}}
+@media(max-width:430px){.featured-photo{height:160px}}
