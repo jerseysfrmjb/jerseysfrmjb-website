@@ -75,7 +75,9 @@
 /* Current featured jerseys */
 .featured-photo{display:block;height:290px;background:#171515;overflow:hidden}
 .featured-photo img{height:100%;object-fit:cover;object-position:center top;transition:transform .25s ease}
+.featured-photo-tight img{object-position:center 30%;transform:scale(1.12)}
 .featured-photo:hover img{transform:scale(1.025)}
+.featured-photo-tight:hover img{transform:scale(1.15)}
 .featured-copy h3{line-height:1.25}
 .featured-copy h3 a:hover{color:var(--maroon)}
 @media(max-width:780px){.featured-photo{height:180px}}
