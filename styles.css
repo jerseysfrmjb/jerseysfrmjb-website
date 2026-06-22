@@ -139,6 +139,6 @@
 /* Featured image frame keeps side borders black */
 .featured-image-frame{display:block;height:308px;background:#171414;overflow:hidden;position:relative}
 .featured-image-frame img{display:block;width:calc(100% - 28px)!important;height:290px!important;margin:0 auto!important;object-fit:cover!important;object-position:center!important;background:#171414!important}
-.featured-image-frame:after{content:"";position:absolute;left:0;right:0;bottom:0;height:18px;background:#201b1b;border-top:1px solid #ffffff1f}
+.featured-image-frame:after{content:"";position:absolute;left:0;right:0;bottom:0;height:18px;background:#171414;border-top:1px solid #ffffff1f}
 @media(max-width:780px){.featured-image-frame{height:208px;min-height:208px}.featured-image-frame img{width:calc(100% - 20px)!important;height:190px!important;min-height:0!important}}
 @media(max-width:430px){.featured-image-frame{height:192px;min-height:192px}.featured-image-frame img{width:calc(100% - 18px)!important;height:174px!important;min-height:0!important}}
