@@ -1,0 +1,3 @@
+﻿Contact: https://www.instagram.com/jerseysfrmjb/
+Preferred-Languages: en
+Canonical: https://jerseysfrmjb.com/.well-known/security.txt
