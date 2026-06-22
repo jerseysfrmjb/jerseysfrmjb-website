@@ -131,14 +131,7 @@
 /* Consistent product photo side borders */
 @media(max-width:430px){.product-slider .product-slides .slide img{display:block!important;width:calc(100% - 28px)!important;height:100%!important;margin:0 auto!important;object-fit:cover!important;object-position:center!important;background:#171414!important}.retro-inventory .product-slider .product-slides .slide img{width:calc(100% - 28px)!important;height:100%!important;margin:0 auto!important;object-fit:cover!important;object-position:center!important;background:#171414!important}}
 
-/* Featured images use side-only borders */
-.featured-card>img{width:calc(100% - 28px)!important;margin:0 auto!important;height:290px!important;object-fit:cover!important;object-position:center!important;background:#171414!important}
-@media(max-width:780px){.featured-card>img{width:calc(100% - 20px)!important;height:100%!important;min-height:190px!important;margin:0 auto!important}}
-@media(max-width:430px){.featured-card>img{width:calc(100% - 18px)!important;min-height:174px!important}}
-
-/* Featured image frame keeps side borders black */
-.featured-image-frame{display:block;height:308px;background:#171414;overflow:hidden;position:relative}
-.featured-image-frame img{display:block;width:calc(100% - 28px)!important;height:290px!important;margin:0 auto!important;object-fit:cover!important;object-position:center!important;background:#171414!important}
-.featured-image-frame:after{content:"";position:absolute;left:0;right:0;bottom:0;height:18px;background:#171414;border-top:1px solid #ffffff1f}
-@media(max-width:780px){.featured-image-frame{height:208px;min-height:208px}.featured-image-frame img{width:calc(100% - 20px)!important;height:190px!important;min-height:0!important}}
-@media(max-width:430px){.featured-image-frame{height:192px;min-height:192px}.featured-image-frame img{width:calc(100% - 18px)!important;height:174px!important;min-height:0!important}}
+/* Clean featured cards after mobile restore */
+.featured-card>img{display:block!important;width:100%!important;height:290px!important;margin:0!important;object-fit:cover!important;object-position:center!important;background:#171414!important}
+@media(max-width:780px){.featured-card{display:grid!important;grid-template-columns:150px minmax(0,1fr)!important}.featured-card>img{width:150px!important;height:100%!important;min-height:190px!important;margin:0!important;object-fit:cover!important}.featured-copy{min-height:190px!important}}
+@media(max-width:430px){.featured-card{grid-template-columns:120px minmax(0,1fr)!important}.featured-card>img{width:120px!important;min-height:174px!important}.featured-copy{min-height:174px!important}}
