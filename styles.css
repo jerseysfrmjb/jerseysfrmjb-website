@@ -115,15 +115,18 @@
 .product-slider>.product-slides{position:absolute!important;inset:0 0 46px!important;display:block!important;overflow:hidden!important;min-height:0!important;background:#171414}
 .product-slider .product-slides .slide{position:absolute!important;inset:0!important;display:block!important;padding:0!important;background:#171414!important;opacity:0;visibility:hidden;overflow:hidden}
 .product-slider .product-slides .slide.active{opacity:1!important;visibility:visible!important}
-.product-slider .product-slides .slide img{display:block!important;width:100%!important;height:100%!important;object-fit:contain!important;object-position:center!important;background:#171414!important}
+.product-slider .product-slides .slide img{display:block!important;width:calc(100% - 34px)!important;height:100%!important;margin:0 auto!important;object-fit:contain!important;object-position:center!important;background:#171414!important}
 .product-slider .product-status{position:absolute!important;left:14px!important;top:14px!important;z-index:2!important}
 .product-slider .product-controls{position:absolute!important;left:0!important;right:0!important;bottom:0!important;z-index:4!important}
 @media(max-width:780px){.product-slider>.product-slides{inset:0 0 46px!important}.product-slider .product-slides .slide img{height:100%!important}}
 @media(max-width:430px){.product-slider>.product-slides{inset:0 0 46px!important}.product-slider .product-slides .slide img{height:100%!important}}
 /* Retro page keeps full jersey photos visible */
-.retro-inventory .product-slider .product-slides .slide img{object-fit:contain!important;object-position:center!important;background:#171414!important}
+.retro-inventory .product-slider .product-slides .slide img{width:calc(100% - 34px)!important;margin:0 auto!important;object-fit:contain!important;object-position:center!important;background:#171414!important}
 
 /* Reserve slider dot space before JavaScript adds buttons to reduce CLS */
 .product-controls .slider-dots{width:20px;min-width:20px;justify-content:center}
 .proof-slider>footer .slider-dots{width:176px;min-width:176px;justify-content:center}
 @media(max-width:430px){.proof-slider>footer .slider-dots{width:150px;min-width:150px}}
+
+/* Consistent product photo side borders */
+@media(max-width:430px){.product-slider .product-slides .slide img{width:calc(100% - 28px)!important}.retro-inventory .product-slider .product-slides .slide img{width:calc(100% - 28px)!important}}
