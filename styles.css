@@ -137,7 +137,8 @@
 @media(max-width:430px){.featured-card>img{width:calc(100% - 18px)!important;min-height:174px!important}}
 
 /* Featured image frame keeps side borders black */
-.featured-image-frame{display:block;height:290px;background:#171414;overflow:hidden}
-.featured-image-frame img{display:block;width:calc(100% - 28px)!important;height:100%!important;margin:0 auto!important;object-fit:cover!important;object-position:center!important;background:#171414!important}
+.featured-image-frame{display:block;height:290px;background:#171414;overflow:hidden;position:relative;padding-bottom:28px}
+.featured-image-frame img{display:block;width:calc(100% - 28px)!important;height:calc(100% - 28px)!important;margin:0 auto!important;object-fit:cover!important;object-position:center!important;background:#171414!important}
 @media(max-width:780px){.featured-image-frame{height:100%;min-height:190px}.featured-image-frame img{width:calc(100% - 20px)!important}}
 @media(max-width:430px){.featured-image-frame{min-height:174px}.featured-image-frame img{width:calc(100% - 18px)!important}}
+.featured-image-frame:after{content:"";position:absolute;left:0;right:0;bottom:0;height:28px;background:#201b1b;border-top:1px solid #ffffff1f}
