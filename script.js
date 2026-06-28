@@ -43,7 +43,7 @@ const contactForm = document.querySelector("[data-contact-form]");
 if (contactForm) {
   const status = contactForm.querySelector("[data-form-status]");
   const button = contactForm.querySelector("button[type='submit']");
-  const endpoint = ["https://formsubmit.co/ajax/", "jellysmart203", "@", "gmail.com"].join("");
+  const endpoint = "https://formsubmit.co/ajax/ea2a0d2ec2d90eeae272b9a983fa788c";
 
   contactForm.addEventListener("submit", async event => {
     event.preventDefault();
