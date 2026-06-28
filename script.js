@@ -39,3 +39,34 @@ document.querySelectorAll("[data-slider]").forEach(slider => {
   slider.querySelector("[data-next]").addEventListener("click", () => show(current + 1));
   show(0);
 });
+const contactForm = document.querySelector("[data-contact-form]");
+if (contactForm) {
+  const status = contactForm.querySelector("[data-form-status]");
+  const button = contactForm.querySelector("button[type='submit']");
+  const endpoint = ["https://formsubmit.co/ajax/", "jellysmart203", "@", "gmail.com"].join("");
+
+  contactForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    status.textContent = "Sending...";
+    status.className = "form-status";
+    button.disabled = true;
+
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Accept": "application/json" },
+        body: new FormData(contactForm)
+      });
+
+      if (!response.ok) throw new Error("Message failed");
+      contactForm.reset();
+      status.textContent = "Thanks! Your message has been sent. I'll get back to you as soon as possible.";
+      status.classList.add("success");
+    } catch (error) {
+      status.textContent = "Message could not send right now. Please try again or DM @jerseysfrmjb on Instagram.";
+      status.classList.add("error");
+    } finally {
+      button.disabled = false;
+    }
+  });
+}
