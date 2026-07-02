@@ -39,6 +39,21 @@ document.querySelectorAll("[data-slider]").forEach(slider => {
   slider.querySelector("[data-next]").addEventListener("click", () => show(current + 1));
   show(0);
 });
+
+document.querySelectorAll(".inventory-filter").forEach(filterGroup => {
+  const buttons = [...filterGroup.querySelectorAll("[data-filter]")];
+  const cards = [...document.querySelectorAll("[data-inventory-grid] article[data-stock]")];
+
+  buttons.forEach(button => {
+    button.addEventListener("click", () => {
+      const filter = button.dataset.filter;
+      buttons.forEach(item => item.classList.toggle("active", item === button));
+      cards.forEach(card => {
+        card.hidden = filter !== "all" && card.dataset.stock !== filter;
+      });
+    });
+  });
+});
 const contactForm = document.querySelector("[data-contact-form]");
 if (contactForm) {
   const status = contactForm.querySelector("[data-form-status]");
