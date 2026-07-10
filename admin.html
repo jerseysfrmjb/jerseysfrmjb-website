@@ -1,0 +1,48 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Inventory Admin | JerseysFrmJB</title>
+  <meta name="robots" content="noindex,nofollow">
+  <link rel="icon" href="assets/jerseysfrmjb-logo.jpg" type="image/jpeg">
+  <link rel="stylesheet" href="styles.css?v=59">
+  <script src="admin.js?v=1" defer></script>
+</head>
+<body class="admin-body">
+  <main class="admin-shell">
+    <section class="admin-login" data-admin-login>
+      <img src="assets/jerseysfrmjb-logo.jpg" alt="JerseysFrmJB logo">
+      <h1>Inventory Admin</h1>
+      <p>Enter the admin password to update jersey stock, sizes, players, and listing links.</p>
+      <form data-login-form>
+        <label>Password<input type="password" name="password" autocomplete="current-password" required></label>
+        <button class="shop-button" type="submit">Log In</button>
+        <p class="form-status" data-login-status></p>
+      </form>
+    </section>
+
+    <section class="admin-panel" data-admin-panel hidden>
+      <div class="admin-topbar">
+        <div>
+          <span class="section-kicker">JerseysFrmJB</span>
+          <h1>Inventory Admin</h1>
+          <p>Quantity 0 automatically marks a jersey sold out. Quantity above 0 brings it back in stock.</p>
+        </div>
+        <button class="shop-button secondary-admin" type="button" data-logout>Log Out</button>
+      </div>
+      <div class="admin-tools">
+        <input type="search" data-admin-search placeholder="Search jerseys">
+        <select data-admin-category>
+          <option value="all">All categories</option>
+          <option value="world">World Cup</option>
+          <option value="retro">Retro</option>
+          <option value="club">Club</option>
+        </select>
+      </div>
+      <div class="admin-list" data-admin-list></div>
+      <p class="form-status" data-admin-status></p>
+    </section>
+  </main>
+</body>
+</html>

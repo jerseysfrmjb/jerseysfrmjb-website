@@ -177,3 +177,26 @@
 /* Reviews after marketplace cleanup */
 .reviews-only{grid-template-columns:repeat(2,minmax(0,1fr))!important}
 @media(max-width:780px){.reviews-only{grid-template-columns:1fr!important}}
+
+/* Inventory admin and data-powered shop controls */
+.inventory-loading{grid-column:1/-1;background:#fff;border:1px solid #dedad3;padding:28px!important;border-radius:8px;color:#655!important;text-align:center}
+.size-filter{border:1px solid #d9d0c8;background:#fff;color:#241d1d;border-radius:999px;padding:10px 18px;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.8px;cursor:pointer;box-shadow:0 8px 18px #0000000b}
+.buy-link.disabled{background:#6c6866!important;color:#fff!important;pointer-events:none;box-shadow:none;opacity:.82}
+.admin-body{min-height:100vh;background:#211d1d;color:#161313}
+.admin-shell{max-width:1050px;margin:0 auto;padding:28px 16px 60px}
+.admin-login{max-width:430px;margin:60px auto;background:#fff;border:1px solid #ddd6cf;border-radius:10px;padding:28px;box-shadow:0 20px 50px #00000035;text-align:center}
+.admin-login img{width:76px;height:76px;border-radius:50%;object-fit:cover;margin-bottom:14px}
+.admin-login h1,.admin-panel h1{font:700 34px Georgia,serif;margin:0 0 8px;color:#101010}
+.admin-login p,.admin-panel p{color:#5d5552;font-size:13px;line-height:1.5}
+.admin-login form,.edit-box{display:grid;gap:14px;text-align:left}
+.admin-login label,.edit-box label,.qty-row label{display:grid;gap:6px;font-size:10px;font-weight:900;letter-spacing:.9px;text-transform:uppercase;color:var(--maroon)}
+.admin-login input,.admin-tools input,.admin-tools select,.edit-box input,.qty-row input{width:100%;border:1px solid #d9d1ca;border-radius:8px;padding:12px 13px;font:600 15px Arial,sans-serif;color:#161313;background:#fff}
+.admin-panel{background:#f1efeb;border-radius:12px;padding:22px;box-shadow:0 20px 50px #00000030}
+.admin-topbar{display:flex;align-items:center;justify-content:space-between;gap:20px;background:#fff;border:1px solid #ded7cf;border-radius:10px;padding:22px;margin-bottom:16px}
+.admin-topbar h1{font-size:32px}.secondary-admin{border:0;padding:12px 18px;background:#211819!important;cursor:pointer}
+.admin-tools{display:grid;grid-template-columns:1fr 180px;gap:12px;margin-bottom:16px}
+.admin-list{display:grid;gap:14px}.admin-card{display:grid;grid-template-columns:150px 1fr;background:#fff;border:1px solid #ded7cf;border-radius:10px;overflow:hidden;box-shadow:0 8px 22px #00000012}
+.admin-card-photo{background:#171414;min-height:190px}.admin-card-photo img{width:100%;height:100%;object-fit:cover}.admin-card-main{padding:18px;display:grid;gap:14px}.admin-card-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.admin-card-head span{font-size:9px;color:var(--maroon);font-weight:900;text-transform:uppercase;letter-spacing:1px}.admin-card-head h2{font:700 20px/1.25 Georgia,serif;margin:5px 0 0}.stock-toggle{border:0;border-radius:999px;padding:10px 13px;color:#fff;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.6px;white-space:nowrap;cursor:pointer}.stock-toggle.on{background:#0f7b45}.stock-toggle.off{background:var(--maroon)}
+.qty-row{display:grid;grid-template-columns:42px 1fr 42px;gap:10px;align-items:end}.qty-row button{height:42px;border:0;border-radius:50%;background:var(--maroon);color:#fff;font-size:22px;font-weight:900;cursor:pointer}.edit-box{border:1px solid #eee5df;border-radius:8px;padding:12px}.edit-box summary{font-size:11px;font-weight:900;color:#211819;cursor:pointer;text-transform:uppercase;letter-spacing:.7px}.save-admin{justify-self:start;border:0;padding:11px 18px;cursor:pointer}.form-status.success{color:#0d7a43}.form-status.error{color:#9a1237}
+@media(max-width:780px){.admin-shell{padding:16px 10px 42px}.admin-panel{padding:12px}.admin-topbar{display:grid}.admin-tools{grid-template-columns:1fr}.admin-card{grid-template-columns:112px 1fr}.admin-card-photo{min-height:170px}.admin-card-main{padding:13px}.admin-card-head{display:grid}.stock-toggle{justify-self:start}.qty-row{grid-template-columns:38px 1fr 38px}.admin-card-head h2{font-size:17px}.save-admin{width:100%}}
+@media(max-width:430px){.inventory-filter{gap:8px}.size-filter,.inventory-filter button{padding:9px 12px;font-size:9px}.admin-card{grid-template-columns:1fr}.admin-card-photo{height:230px}.admin-login{margin-top:25px;padding:22px}.admin-login h1,.admin-panel h1{font-size:28px}}
