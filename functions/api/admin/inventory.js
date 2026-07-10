@@ -1,4 +1,5 @@
-﻿import { isAuthorized, unauthorized } from "./_auth.js";
+﻿import { ensureInventory } from "../_inventorySeed.js";
+import { isAuthorized, unauthorized } from "./_auth.js";
 
 function parseItem(row) {
   return {
@@ -19,6 +20,7 @@ function parseItem(row) {
 export async function onRequestGet({ request, env }) {
   if (!(await isAuthorized(request, env))) return unauthorized();
   if (!env.DB) return Response.json({ error: "D1 binding missing" }, { status: 503 });
+  await ensureInventory(env);
 
   const result = await env.DB.prepare("SELECT * FROM inventory ORDER BY CASE WHEN quantity > 0 THEN 0 ELSE 1 END, category, sort_order, name").all();
   return Response.json({ items: result.results.map(parseItem) });
@@ -27,6 +29,7 @@ export async function onRequestGet({ request, env }) {
 export async function onRequestPatch({ request, env }) {
   if (!(await isAuthorized(request, env))) return unauthorized();
   if (!env.DB) return Response.json({ error: "D1 binding missing" }, { status: 503 });
+  await ensureInventory(env);
 
   const body = await request.json().catch(() => ({}));
   const id = String(body.id || "").trim();
@@ -53,3 +56,4 @@ export async function onRequestPatch({ request, env }) {
   const updated = await env.DB.prepare("SELECT * FROM inventory WHERE id = ?").bind(id).first();
   return Response.json({ item: parseItem(updated) });
 }
+

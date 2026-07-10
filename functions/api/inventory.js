@@ -1,4 +1,6 @@
-﻿function parseItem(row) {
+import { ensureInventory } from "./_inventorySeed.js";
+
+function parseItem(row) {
   return {
     id: row.id,
     category: row.category,
@@ -18,6 +20,8 @@ export async function onRequestGet({ env, request }) {
   if (!env.DB) {
     return Response.json({ error: "D1 binding missing" }, { status: 503 });
   }
+
+  await ensureInventory(env);
 
   const url = new URL(request.url);
   const category = url.searchParams.get("category");
