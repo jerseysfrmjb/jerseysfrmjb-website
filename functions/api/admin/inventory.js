@@ -1,5 +1,5 @@
-﻿import { ensureInventory } from "../_inventorySeed.js";
-import { isAuthorized, unauthorized } from "./_auth.js";
+import { ensureInventory } from "../_inventorySeed.js";
+import { adminConfigError, isAuthorized, unauthorized } from "./_auth.js";
 
 function parseItem(row) {
   return {

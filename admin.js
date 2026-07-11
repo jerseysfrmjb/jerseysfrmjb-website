@@ -1,4 +1,4 @@
-﻿const loginSection = document.querySelector("[data-admin-login]");
+const loginSection = document.querySelector("[data-admin-login]");
 const panel = document.querySelector("[data-admin-panel]");
 const list = document.querySelector("[data-admin-list]");
 const statusLine = document.querySelector("[data-admin-status]");
@@ -114,7 +114,7 @@ document.querySelector("[data-login-form]").addEventListener("submit", async eve
     await api("/api/admin/login", { method: "POST", body: JSON.stringify({ password: event.target.password.value }) });
     await loadInventory();
   } catch (error) {
-    status.textContent = "Wrong password or admin setup missing.";
+    status.textContent = error.message;
   }
 });
 
