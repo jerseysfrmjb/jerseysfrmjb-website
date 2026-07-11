@@ -238,13 +238,14 @@ function createHelpWidget() {
     <button class="help-widget-button" type="button" aria-expanded="false">
       <span>Need Help?</span>
     </button>
+    <div class="help-widget-overlay" data-help-overlay hidden></div>
     <section class="help-widget-panel" aria-label="Message JerseysFrmJB" hidden>
       <div class="help-widget-head">
         <div>
           <span>Quick Message</span>
           <h2>Need Help?</h2>
         </div>
-        <button class="help-widget-close" type="button" aria-label="Close message form">x</button>
+        <button class="help-widget-close" type="button" aria-label="Close message form">&times;</button>
       </div>
       <p class="help-widget-copy">Instagram DMs are currently not working for some people. Leave your Instagram username and message below. Please follow @jerseysfrmjb so I can message you back and continue the conversation.</p>
       <a class="help-instagram-link" href="${instagramUrl}" target="_blank" rel="noopener">Follow @jerseysfrmjb</a>
@@ -276,31 +277,57 @@ function createHelpWidget() {
 
   const toggle = widget.querySelector(".help-widget-button");
   const panel = widget.querySelector(".help-widget-panel");
+  const overlay = widget.querySelector("[data-help-overlay]");
   const close = widget.querySelector(".help-widget-close");
   const form = widget.querySelector("[data-help-form]");
   const status = widget.querySelector("[data-help-status]");
   const success = widget.querySelector("[data-help-success]");
   const submit = widget.querySelector(".help-submit");
+  const defaultSubmitText = submit.textContent;
   let sent = false;
+  let submitting = false;
+  let touchStartY = 0;
 
   function setOpen(open) {
     panel.hidden = !open;
+    overlay.hidden = !open;
     toggle.setAttribute("aria-expanded", String(open));
     widget.classList.toggle("open", open);
-    if (open) form.querySelector("input[name='instagram_username']")?.focus();
+    document.body.classList.toggle("help-modal-open", open);
+    if (open) {
+      window.setTimeout(() => form.querySelector("input[name='instagram_username']")?.focus(), 80);
+    }
   }
 
   toggle.addEventListener("click", () => setOpen(panel.hidden));
   close.addEventListener("click", () => setOpen(false));
+  overlay.addEventListener("click", () => setOpen(false));
+
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && !panel.hidden) setOpen(false);
+  });
+
+  panel.addEventListener("touchstart", event => {
+    touchStartY = event.touches?.[0]?.clientY || 0;
+  }, { passive: true });
+
+  panel.addEventListener("touchend", event => {
+    const endY = event.changedTouches?.[0]?.clientY || 0;
+    if (touchStartY && endY - touchStartY > 90 && panel.scrollTop < 8) {
+      setOpen(false);
+    }
+    touchStartY = 0;
+  }, { passive: true });
 
   form.addEventListener("submit", async event => {
     event.preventDefault();
-    if (sent) return;
+    if (sent || submitting) return;
 
     status.textContent = "Sending...";
     status.className = "help-widget-status";
     submit.disabled = true;
-    sent = true;
+    submit.textContent = "Sending...";
+    submitting = true;
 
     try {
       const body = Object.fromEntries(new FormData(form).entries());
@@ -311,13 +338,20 @@ function createHelpWidget() {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok || data.error) throw new Error(data.error || "Message failed");
+      sent = true;
+      status.textContent = "";
+      status.className = "help-widget-status";
+      form.reset();
       form.hidden = true;
       success.hidden = false;
     } catch (error) {
-      sent = false;
       status.textContent = error.message || "Message could not send right now. Please try again.";
       status.classList.add("error");
       submit.disabled = false;
+    } finally {
+      submitting = false;
+      submit.textContent = defaultSubmitText;
+      if (!sent) submit.disabled = false;
     }
   });
 }
