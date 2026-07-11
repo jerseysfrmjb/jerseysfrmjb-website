@@ -595,11 +595,25 @@ export const schemaStatements = [
     photos TEXT NOT NULL DEFAULT '[]',
     links TEXT NOT NULL DEFAULT '{}',
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-  )`,
+  )`
+].map(statement => statement.replace(/\u007f/g, '`'));
+
+const indexStatements = [
   `CREATE INDEX IF NOT EXISTS idx_inventory_category_stock ON inventory(category, quantity)`,
   `CREATE INDEX IF NOT EXISTS idx_inventory_featured ON inventory(featured, quantity)`,
   `CREATE INDEX IF NOT EXISTS idx_inventory_featured_order ON inventory(featured, featured_order)`
-];
+].map(statement => statement.replace(/\u007f/g, '`'));
+
+async function addColumnIfMissing(env, columnSql) {
+  try {
+    await env.DB.prepare(columnSql).run();
+  } catch (error) {
+    const message = String(error?.message || error || '');
+    if (!/duplicate column|already exists/i.test(message)) {
+      throw error;
+    }
+  }
+}
 
 export async function ensureInventory(env) {
   if (!env.DB) throw new Error("D1 binding missing");
@@ -607,16 +621,11 @@ export async function ensureInventory(env) {
     await env.DB.prepare(statement).run();
   }
 
-  try {
-    await env.DB.prepare("ALTER TABLE inventory ADD COLUMN featured_order INTEGER NOT NULL DEFAULT 0").run();
-  } catch (error) {
-    // Existing databases already have this column after the first migration.
-  }
+  await addColumnIfMissing(env, "ALTER TABLE inventory ADD COLUMN featured_order INTEGER NOT NULL DEFAULT 0");
+  await addColumnIfMissing(env, "ALTER TABLE inventory ADD COLUMN sizes_json TEXT NOT NULL DEFAULT '{}'");
 
-  try {
-    await env.DB.prepare("ALTER TABLE inventory ADD COLUMN sizes_json TEXT NOT NULL DEFAULT '{}'").run();
-  } catch (error) {
-    // Existing databases already have this column after the first migration.
+  for (const statement of indexStatements) {
+    await env.DB.prepare(statement).run();
   }
 
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS site_settings (
@@ -652,4 +661,3 @@ export async function ensureInventory(env) {
 
   if (statements.length) await env.DB.batch(statements);
 }
-
