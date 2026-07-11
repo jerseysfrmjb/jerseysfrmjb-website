@@ -1,4 +1,4 @@
-﻿export const seedInventory = {
+export const seedInventory = {
     "items":  [
                   {
                       "sort_order":  10,
@@ -581,7 +581,7 @@
 ;
 
 export const schemaStatements = [
-  CREATE TABLE IF NOT EXISTS inventory (
+  `CREATE TABLE IF NOT EXISTS inventory (
     id TEXT PRIMARY KEY,
     category TEXT NOT NULL,
     name TEXT NOT NULL,
@@ -593,9 +593,9 @@ export const schemaStatements = [
     photos TEXT NOT NULL DEFAULT '[]',
     links TEXT NOT NULL DEFAULT '{}',
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-  ),
-  CREATE INDEX IF NOT EXISTS idx_inventory_category_stock ON inventory(category, quantity),
-  CREATE INDEX IF NOT EXISTS idx_inventory_featured ON inventory(featured, quantity)
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_inventory_category_stock ON inventory(category, quantity)`,
+  `CREATE INDEX IF NOT EXISTS idx_inventory_featured ON inventory(featured, quantity)`
 ];
 
 export async function ensureInventory(env) {
@@ -608,8 +608,8 @@ export async function ensureInventory(env) {
   if (Number(row?.count || 0) > 0) return;
 
   const insert = env.DB.prepare(
-    INSERT OR IGNORE INTO inventory (id, category, name, size, price, quantity, featured, sort_order, photos, links)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `INSERT OR IGNORE INTO inventory (id, category, name, size, price, quantity, featured, sort_order, photos, links)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   );
 
   const statements = seedInventory.items.map(item => insert.bind(
