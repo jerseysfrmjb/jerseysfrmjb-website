@@ -23,8 +23,8 @@
   <meta name="twitter:title" content="JerseysFrmJB | Soccer Jerseys">
   <meta name="twitter:description" content="Browse current World Cup, club, and retro soccer jersey inventory from JerseysFrmJB.">
   <meta name="twitter:image" content="https://jerseysfrmjb.com/assets/jerseysfrmjb-logo.jpg">
-  <link rel="stylesheet" href="styles.css?v=sizes-2">
-  <script src="script.js?v=sizes-2" defer></script>
+  <link rel="stylesheet" href="styles.css?v=contact-size-1">
+  <script src="script.js?v=contact-size-1" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -72,8 +72,8 @@
     </section>
     <section class="restock-ticker" aria-label="Restock ticker">
       <div class="ticker-track">
-        <span class="ticker-line">&#128293; SMALL DROP AVAILABLE NOW &bull; BIG DROP COMING SOON &bull; FILL CONTACT FORM TO REQUEST &#10084;&#65039;</span>
-        <span class="ticker-line" aria-hidden="true">&#128293; SMALL DROP AVAILABLE NOW &bull; BIG DROP COMING SOON &bull; FILL CONTACT FORM TO REQUEST &#10084;&#65039;</span>
+        <span class="ticker-line">&#128293; SMALL DROP AVAILABLE NOW &bull; BIG DROP COMING SOON &bull; TAP NEED HELP TO REQUEST &#10084;&#65039;</span>
+        <span class="ticker-line" aria-hidden="true">&#128293; SMALL DROP AVAILABLE NOW &bull; BIG DROP COMING SOON &bull; TAP NEED HELP TO REQUEST &#10084;&#65039;</span>
       </div>
     </section>
     <section class="update-stack" aria-label="Store updates">
@@ -81,7 +81,7 @@
         <span>&#128680;</span>
         <div>
           <strong>Small Drop, Big Drop Coming Soon</strong>
-          <p>A small World Cup drop is available now. A bigger drop is coming soon. Fill out the contact form to request a jersey or DM <a href="https://www.instagram.com/jerseysfrmjb/" target="_blank" rel="noopener">@jerseysfrmjb</a> with questions.</p>
+          <p>A small World Cup drop is available now. A bigger drop is coming soon. Tap Need Help to request a jersey or DM <a href="https://www.instagram.com/jerseysfrmjb/" target="_blank" rel="noopener">@jerseysfrmjb</a> with questions.</p>
         </div>
       </aside>
     </section>
@@ -206,23 +206,21 @@
       <a class="contact-jump-button" href="#contact-form">&#128233; Contact Me</a>
       <a class="primary-link" href="https://www.instagram.com/jerseysfrmjb/" target="_blank" rel="noopener">Shop / DM JerseysFrmJB</a>
 
-      <div class="contact-card" id="contact-form">
+      <div class="contact-card request-card" id="contact-form">
         <div class="contact-copy">
-          <span>Backup Contact</span>
-          <h2>Need Help or Can&rsquo;t DM Me?</h2>
-          <p>Have a question about a jersey, size, order, or can&rsquo;t message me on Instagram? Use the form below and I&rsquo;ll get back to you as soon as possible. If you already tried messaging me on Instagram, include your username so I can try to message you first.</p>
+          <span>Message JerseysFrmJB</span>
+          <h2>Questions or Jersey Requests?</h2>
+          <p>Instagram DMs may not work for some people. Tap the &ldquo;Need Help?&rdquo; button in the bottom-right corner of any page to send a jersey request, ask about sizes, or get order help.</p>
         </div>
-        <form class="contact-form" data-contact-form>
-          <input type="hidden" name="_subject" value="New JerseysFrmJB website message">
-          <input type="hidden" name="_template" value="table">
-          <input type="hidden" name="_captcha" value="false">
-          <input type="text" name="_honey" tabindex="-1" autocomplete="off" aria-hidden="true">
-          <label>Name<input type="text" name="name" autocomplete="name" required></label>
-          <label>Instagram username<input type="text" name="contact" autocomplete="username" required></label>
-          <label>Message<textarea name="message" rows="5" required></textarea></label>
-          <button type="submit">Send Message</button>
-          <p class="form-status" data-form-status role="status" aria-live="polite"></p>
-        </form>
+        <div class="request-card-actions">
+          <ul>
+            <li>Jersey requests</li>
+            <li>Size questions</li>
+            <li>Order help</li>
+            <li>Sold-out jersey requests</li>
+          </ul>
+          <button class="primary-link open-help-button" type="button" data-open-help>Open Need Help</button>
+        </div>
       </div>
     </section>
   </main>

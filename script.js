@@ -137,19 +137,20 @@ function renderSlides(item) {
 function renderProductCard(item) {
   const available = isAvailable(item);
   const links = item.links || {};
+  const sizes = displaySize(item);
   const buy = available
     ? `<a class="buy-link" href="${escapeHtml(links.depop || "https://www.depop.com/jerseysfrmjb/")}" target="_blank" rel="noopener">Buy on Depop</a>`
     : '<span class="buy-link disabled" aria-disabled="true">Sold Out</span>';
 
   return `
-    <article data-stock="${available ? "available" : "sold-out"}" data-size="${escapeHtml(filterSizeTokens(item).join("|"))}" data-id="${escapeHtml(item.id)}">
+    <article data-stock="${available ? "available" : "sold-out"}" data-size="${escapeHtml(filterSizeTokens(item).join("|"))}" data-size-display="${escapeHtml(sizes)}" data-id="${escapeHtml(item.id)}">
       <div class="product-photo product-slider" data-slider>
         <div class="slides product-slides">${renderSlides(item)}</div>
         <div class="product-controls"><button data-prev type="button" aria-label="Previous photo">&lsaquo;</button><div class="slider-dots"></div><button data-next type="button" aria-label="Next photo">&rsaquo;</button></div>
       </div>
       ${available ? "" : '<p class="notice sold">Out of Stock</p>'}
       <h2>${escapeHtml(item.name)}</h2>
-      <p>${escapeHtml(displaySize(item))}</p>
+      <p data-card-size>${escapeHtml(sizes)}</p>
       <strong>$${escapeHtml(item.price)}</strong>
       ${buy}
     </article>`;
@@ -227,7 +228,7 @@ function setupFilters(filterGroup, cards) {
       ["large", "Large"],
       ["xl+", "XL+"]
     ];
-    sizeSelect.innerHTML = '<option value="all">Size</option>' + options.map(([value, label]) => `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`).join("");
+    sizeSelect.innerHTML = '<option value="all">All</option>' + options.map(([value, label]) => `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`).join("");
   }
 
   function selectedSizeLabel(value) {
@@ -253,6 +254,12 @@ function setupFilters(filterGroup, cards) {
         if (card.dataset.stock === "available") selectedSizeAvailableCount += 1;
       }
       card.hidden = !stockMatch || !sizeMatch;
+      const sizeText = card.querySelector("[data-card-size]");
+      if (sizeText) {
+        sizeText.textContent = selectedSize === "all"
+          ? card.dataset.sizeDisplay || ""
+          : selectedSizeLabel(selectedSize);
+      }
       if (!card.hidden) visibleCount += 1;
     });
     if (emptyMessage) {
@@ -371,6 +378,12 @@ function createHelpWidget() {
   }
 
   toggle.addEventListener("click", () => setOpen(panel.hidden));
+  document.querySelectorAll("[data-open-help]").forEach(button => {
+    button.addEventListener("click", event => {
+      event.preventDefault();
+      setOpen(true);
+    });
+  });
   close.addEventListener("click", () => setOpen(false));
   overlay.addEventListener("click", () => setOpen(false));
 
