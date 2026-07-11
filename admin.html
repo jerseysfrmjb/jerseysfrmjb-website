@@ -6,8 +6,8 @@
   <title>Inventory Admin | JerseysFrmJB</title>
   <meta name="robots" content="noindex,nofollow">
   <link rel="icon" href="assets/jerseysfrmjb-logo.jpg" type="image/jpeg">
-  <link rel="stylesheet" href="styles.css?v=59">
-  <script src="admin.js?v=featured-controls" defer></script>
+  <link rel="stylesheet" href="styles.css?v=60">
+  <script src="admin.js?v=admin-tools-2" defer></script>
 </head>
 <body class="admin-body">
   <main class="admin-shell">
@@ -42,6 +42,20 @@
         <div class="admin-featured-preview" data-featured-preview></div>
       </section>
 
+      <section class="admin-banner-panel" aria-label="Homepage banner editor">
+        <div>
+          <span class="section-kicker">Homepage Banner</span>
+          <h2>Banner Message</h2>
+          <p>Edit the homepage restock banner without changing code. First line becomes the heading.</p>
+        </div>
+        <div class="banner-presets" aria-label="Banner presets">
+          <button type="button" data-banner-preset="live">Restock Live</button>
+          <button type="button" data-banner-preset="almost">Almost Sold Out</button>
+          <button type="button" data-banner-preset="soon">Next Drop Coming Soon</button>
+        </div>
+        <label class="banner-editor-label">Banner Text<textarea data-banner-message rows="4"></textarea></label>
+        <button class="shop-button secondary-admin" type="button" data-save-banner>Save Banner</button>
+      </section>
       <div class="admin-tools">
         <input type="search" data-admin-search placeholder="Search jerseys">
         <select data-admin-category>
@@ -57,3 +71,4 @@
   </main>
 </body>
 </html>
+

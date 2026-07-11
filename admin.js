@@ -1,4 +1,4 @@
-﻿const loginSection = document.querySelector("[data-admin-login]");
+const loginSection = document.querySelector("[data-admin-login]");
 const panel = document.querySelector("[data-admin-panel]");
 const list = document.querySelector("[data-admin-list]");
 const statusLine = document.querySelector("[data-admin-status]");
@@ -7,9 +7,18 @@ const categorySelect = document.querySelector("[data-admin-category]");
 const featuredPreview = document.querySelector("[data-featured-preview]");
 const hideSoldFeatured = document.querySelector("[data-hide-sold-featured]");
 const saveFeaturedSettings = document.querySelector("[data-save-featured-settings]");
+const bannerMessage = document.querySelector("[data-banner-message]");
+const saveBanner = document.querySelector("[data-save-banner]");
 let inventory = [];
 let settings = {};
 let featuredLimit = 3;
+let sizeOptions = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"];
+
+const bannerPresets = {
+  live: "World Cup Restock LIVE\nNew World Cup jerseys are in stock now. Message @jerseysfrmjb for questions or requests.",
+  almost: "Almost Sold Out\nThanks for all the support! Only a few jerseys remain. Next restock coming soon.",
+  soon: "Next Drop Coming Soon\nMore jerseys are coming soon. Fill out the contact form to request a jersey."
+};
 
 function escapeHtml(value = "") {
   return String(value).replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
@@ -23,6 +32,15 @@ function itemLinks(item) {
   return item.links || {};
 }
 
+function itemSizes(item) {
+  return item.sizes || {};
+}
+
+function activeSizeText(item) {
+  const active = sizeOptions.filter(size => Number(itemSizes(item)[size]) > 0);
+  return active.length ? active.join(", ") : item.size;
+}
+
 function featuredItems() {
   return inventory
     .filter(item => item.featured)
@@ -31,12 +49,19 @@ function featuredItems() {
 }
 
 async function api(path, options = {}) {
-  const response = await fetch(path, {
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
-    ...options
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || "Request failed");
+  let response;
+  try {
+    response = await fetch(path, {
+      headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+      ...options
+    });
+  } catch (error) {
+    throw new Error("Could not reach the server. Refresh and try again.");
+  }
+  const text = await response.text();
+  let data = {};
+  try { data = text ? JSON.parse(text) : {}; } catch (error) { data = {}; }
+  if (!response.ok) throw new Error(data.error || text || `Request failed (${response.status})`);
   return data;
 }
 
@@ -56,21 +81,47 @@ function renderFeaturedPreview() {
         <div>
           <span>Position ${Number(item.featured_order) || index + 1} ${isAvailable(item) ? "" : "- Sold Out"}</span>
           <h3>${escapeHtml(item.name)}</h3>
-          <p>${escapeHtml(item.size)} - $${escapeHtml(item.price)}</p>
+          <p>${escapeHtml(activeSizeText(item))} - $${escapeHtml(item.price)}</p>
         </div>
       </article>`;
   }).join("") : '<p class="empty-featured">No featured jerseys selected yet.</p>';
+}
+
+function renderSizeControls(item) {
+  const sizes = itemSizes(item);
+  return `
+    <div class="size-admin-grid" data-size-grid>
+      ${sizeOptions.map(size => {
+        const qty = Number(sizes[size] || 0);
+        return `
+          <label class="size-admin-box">
+            <span><input data-size-check="${escapeHtml(size)}" type="checkbox" ${qty > 0 ? "checked" : ""}> ${escapeHtml(size)}</span>
+            <input data-size-qty="${escapeHtml(size)}" type="number" min="0" inputmode="numeric" value="${qty}" aria-label="${escapeHtml(size)} quantity">
+          </label>`;
+      }).join("")}
+    </div>`;
+}
+
+function readSizeControls(card) {
+  const sizes = {};
+  sizeOptions.forEach(size => {
+    const checked = card.querySelector(`[data-size-check="${size}"]`)?.checked;
+    const qty = Math.max(0, Math.floor(Number(card.querySelector(`[data-size-qty="${size}"]`)?.value || 0)));
+    if (checked && qty > 0) sizes[size] = qty;
+  });
+  return sizes;
 }
 
 function render() {
   const query = searchInput.value.trim().toLowerCase();
   const category = categorySelect.value;
   if (hideSoldFeatured) hideSoldFeatured.checked = settings.hide_sold_out_featured === "true";
+  if (bannerMessage) bannerMessage.value = settings.homepage_banner_message || bannerPresets.soon;
 
   const shown = inventory
     .filter(item => category === "all" || item.category === category)
-    .filter(item => !query || item.name.toLowerCase().includes(query) || item.size.toLowerCase().includes(query))
-    .sort((a, b) => Number(b.quantity > 0) - Number(a.quantity > 0) || a.sort_order - b.sort_order || a.name.localeCompare(b.name));
+    .filter(item => !query || item.name.toLowerCase().includes(query) || activeSizeText(item).toLowerCase().includes(query))
+    .sort((a, b) => Number(isAvailable(b)) - Number(isAvailable(a)) || a.sort_order - b.sort_order || a.name.localeCompare(b.name));
 
   list.innerHTML = shown.map(item => {
     const links = itemLinks(item);
@@ -87,11 +138,7 @@ function render() {
             </div>
             <button class="stock-toggle ${available ? "on" : "off"}" type="button" data-toggle>${available ? "In Stock" : "Sold Out"}</button>
           </div>
-          <div class="qty-row">
-            <button type="button" data-minus aria-label="Decrease quantity">-</button>
-            <label>Quantity<input data-field="quantity" type="number" min="0" inputmode="numeric" value="${Number(item.quantity)}"></label>
-            <button type="button" data-plus aria-label="Increase quantity">+</button>
-          </div>
+          ${renderSizeControls(item)}
           <div class="featured-admin-row">
             <label class="featured-check"><input data-field="featured" type="checkbox" ${featured ? "checked" : ""}> Featured</label>
             <label>Position<input data-field="featured_order" type="number" min="1" max="${featuredLimit}" inputmode="numeric" value="${featured ? Number(item.featured_order || 1) : ""}" placeholder="1-${featuredLimit}"></label>
@@ -99,7 +146,6 @@ function render() {
           <details class="edit-box">
             <summary>Edit jersey details</summary>
             <label>Player / Jersey Name<input data-field="name" value="${escapeHtml(item.name)}"></label>
-            <label>Size<input data-field="size" value="${escapeHtml(item.size)}"></label>
             <label>Depop Link<input data-field="depop" value="${escapeHtml(links.depop || "")}"></label>
             <label>eBay Link<input data-field="ebay" value="${escapeHtml(links.ebay || "")}"></label>
           </details>
@@ -115,6 +161,7 @@ function applyAdminData(data) {
   if (data.item) inventory = inventory.map(item => item.id === data.item.id ? data.item : item);
   if (data.settings) settings = data.settings;
   if (data.featuredLimit) featuredLimit = Number(data.featuredLimit) || 3;
+  if (Array.isArray(data.sizeOptions)) sizeOptions = data.sizeOptions;
 }
 
 async function loadInventory() {
@@ -137,12 +184,14 @@ async function saveCard(card) {
 
   const featured = card.querySelector('[data-field="featured"]').checked;
   const featuredOrder = Number(card.querySelector('[data-field="featured_order"]').value);
+  const sizes = readSizeControls(card);
+  const quantity = Object.values(sizes).reduce((sum, qty) => sum + Number(qty), 0);
 
   const payload = {
     id,
     name: card.querySelector('[data-field="name"]').value.trim(),
-    size: card.querySelector('[data-field="size"]').value.trim(),
-    quantity: Number(card.querySelector('[data-field="quantity"]').value),
+    quantity,
+    sizes,
     featured,
     featured_order: featured ? featuredOrder : 0,
     links
@@ -185,6 +234,27 @@ saveFeaturedSettings?.addEventListener("click", async () => {
   } catch (error) {
     statusLine.textContent = error.message;
   }
+});
+
+saveBanner?.addEventListener("click", async () => {
+  statusLine.textContent = "Saving banner...";
+  try {
+    const data = await api("/api/admin/inventory", {
+      method: "PATCH",
+      body: JSON.stringify({ settings: { homepage_banner_message: bannerMessage.value } })
+    });
+    applyAdminData(data);
+    statusLine.textContent = "Banner saved.";
+    render();
+  } catch (error) {
+    statusLine.textContent = error.message;
+  }
+});
+
+document.querySelectorAll("[data-banner-preset]").forEach(button => {
+  button.addEventListener("click", () => {
+    bannerMessage.value = bannerPresets[button.dataset.bannerPreset] || bannerMessage.value;
+  });
 });
 
 let draggedFeaturedId = "";
@@ -230,23 +300,50 @@ featuredPreview?.addEventListener("drop", async event => {
 list.addEventListener("click", async event => {
   const card = event.target.closest(".admin-card");
   if (!card) return;
-  const input = card.querySelector('[data-field="quantity"]');
 
-  if (event.target.matches("[data-minus]")) input.value = Math.max(0, Number(input.value) - 1);
-  if (event.target.matches("[data-plus]")) input.value = Number(input.value) + 1;
-  if (event.target.matches("[data-toggle]")) input.value = Number(input.value) > 0 ? 0 : 1;
-  if (event.target.matches("[data-minus], [data-plus], [data-toggle], [data-save]")) {
+  if (event.target.matches("[data-toggle]")) {
+    const sizes = readSizeControls(card);
+    const hasStock = Object.values(sizes).some(qty => Number(qty) > 0);
+    card.querySelectorAll("[data-size-check]").forEach(input => input.checked = false);
+    card.querySelectorAll("[data-size-qty]").forEach(input => input.value = 0);
+    if (!hasStock) {
+      const medium = card.querySelector('[data-size-check="M"]') || card.querySelector("[data-size-check]");
+      const size = medium?.dataset.sizeCheck;
+      if (medium && size) {
+        medium.checked = true;
+        card.querySelector(`[data-size-qty="${size}"]`).value = 1;
+      }
+    }
+  }
+
+  if (event.target.matches("[data-toggle], [data-save]")) {
     try { await saveCard(card); } catch (error) { statusLine.textContent = error.message; }
   }
 });
 
 list.addEventListener("change", event => {
   const card = event.target.closest(".admin-card");
-  if (!card || !event.target.matches('[data-field="featured"]')) return;
-  const order = card.querySelector('[data-field="featured_order"]');
-  if (event.target.checked && !order.value) {
-    const used = new Set(featuredItems().map(item => Number(item.featured_order)).filter(Boolean));
-    order.value = [1, 2, 3].find(position => !used.has(position)) || 1;
+  if (!card) return;
+
+  if (event.target.matches('[data-field="featured"]')) {
+    const order = card.querySelector('[data-field="featured_order"]');
+    if (event.target.checked && !order.value) {
+      const used = new Set(featuredItems().map(item => Number(item.featured_order)).filter(Boolean));
+      order.value = [1, 2, 3].find(position => !used.has(position)) || 1;
+    }
+  }
+
+  if (event.target.matches("[data-size-check]")) {
+    const size = event.target.dataset.sizeCheck;
+    const qty = card.querySelector(`[data-size-qty="${size}"]`);
+    if (event.target.checked && Number(qty.value) <= 0) qty.value = 1;
+    if (!event.target.checked) qty.value = 0;
+  }
+
+  if (event.target.matches("[data-size-qty]")) {
+    const size = event.target.dataset.sizeQty;
+    const checked = card.querySelector(`[data-size-check="${size}"]`);
+    checked.checked = Number(event.target.value) > 0;
   }
 });
 

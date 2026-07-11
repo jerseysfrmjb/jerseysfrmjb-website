@@ -1,0 +1,8 @@
+/admin
+  Cache-Control: no-store, no-cache, must-revalidate
+/admin.html
+  Cache-Control: no-store, no-cache, must-revalidate
+/admin.js
+  Cache-Control: no-store, no-cache, must-revalidate
+/api/*
+  Cache-Control: no-store, no-cache, must-revalidate

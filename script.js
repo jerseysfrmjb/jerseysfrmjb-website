@@ -29,8 +29,20 @@ function sortInventory(items) {
   return [...items].sort((a, b) => Number(isAvailable(b)) - Number(isAvailable(a)) || a.sort_order - b.sort_order || a.name.localeCompare(b.name));
 }
 
-function sizeTokens(size = "") {
-  return String(size)
+function activeSizes(item) {
+  const sizes = item?.sizes || {};
+  const order = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"];
+  return order.filter(size => Number(sizes[size]) > 0);
+}
+
+function displaySize(item) {
+  const active = activeSizes(item);
+  return active.length ? active.join(", ") : String(item?.size || "");
+}
+
+function sizeTokens(value = "") {
+  if (Array.isArray(value)) return value;
+  return String(value)
     .replace(/&amp;/g, "&")
     .split(/&|,|\+|\/|\u00b7|\band\b/i)
     .map(part => part.trim())
@@ -39,6 +51,33 @@ function sizeTokens(size = "") {
     .filter(Boolean);
 }
 
+async function fetchSiteSettings() {
+  try {
+    const response = await fetch("/api/settings", { headers: { Accept: "application/json" } });
+    if (!response.ok) return {};
+    const data = await response.json();
+    return data.settings || {};
+  } catch (error) {
+    return {};
+  }
+}
+
+function applyHomepageBanner(message = "") {
+  const banner = document.querySelector(".restock-banner");
+  if (!banner || !message.trim()) return;
+  const lines = message.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+  const title = lines.shift();
+  const body = lines.join(" ");
+  const titleNode = banner.querySelector("strong");
+  const bodyNode = banner.querySelector("p");
+  if (titleNode && title) titleNode.textContent = title;
+  if (bodyNode && body) bodyNode.textContent = body;
+}
+
+async function loadSiteSettings() {
+  const settings = await fetchSiteSettings();
+  applyHomepageBanner(settings.homepage_banner_message || "");
+}
 async function fetchInventory(params = {}) {
   const query = new URLSearchParams(params);
   const apiUrl = `/api/inventory${query.toString() ? `?${query}` : ""}`;
@@ -73,14 +112,14 @@ function renderProductCard(item) {
     : '<span class="buy-link disabled" aria-disabled="true">Sold Out</span>';
 
   return `
-    <article data-stock="${available ? "available" : "sold-out"}" data-size="${escapeHtml(sizeTokens(item.size).join("|").toLowerCase())}" data-id="${escapeHtml(item.id)}">
+    <article data-stock="${available ? "available" : "sold-out"}" data-size="${escapeHtml(sizeTokens(displaySize(item)).join("|").toLowerCase())}" data-id="${escapeHtml(item.id)}">
       <div class="product-photo product-slider" data-slider>
         <div class="slides product-slides">${renderSlides(item)}</div>
         <div class="product-controls"><button data-prev type="button" aria-label="Previous photo">&lsaquo;</button><div class="slider-dots"></div><button data-next type="button" aria-label="Next photo">&rsaquo;</button></div>
       </div>
       ${available ? "" : '<p class="notice sold">Out of Stock</p>'}
       <h2>${escapeHtml(item.name)}</h2>
-      <p>${escapeHtml(item.size)}</p>
+      <p>${escapeHtml(displaySize(item))}</p>
       <strong>$${escapeHtml(item.price)}</strong>
       ${buy}
     </article>`;
@@ -100,7 +139,7 @@ function renderFeaturedCard(item, index) {
       <div class="featured-copy">
         <span>FEATURED JERSEY ${String(index + 1).padStart(2, "0")}</span>
         <h3>${escapeHtml(item.name)}</h3>
-        <div class="featured-meta"><p>${escapeHtml(item.size)}</p><strong>$${escapeHtml(item.price)}</strong></div>
+        <div class="featured-meta"><p>${escapeHtml(displaySize(item))}</p><strong>$${escapeHtml(item.price)}</strong></div>
         ${buy}
       </div>
     </article>`;
@@ -222,3 +261,4 @@ if (contactForm) {
     }
   });
 }
+

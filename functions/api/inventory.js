@@ -1,18 +1,61 @@
-﻿import { ensureInventory } from "./_inventorySeed.js";
+import { ensureInventory } from "./_inventorySeed.js";
+
+const SIZE_ORDER = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"];
+const SIZE_WORDS = [
+  ["4XL", /4\s*x\s*l/i],
+  ["3XL", /3\s*x\s*l/i],
+  ["2XL", /2\s*x\s*l|xxl/i],
+  ["XL", /\bxl\b|extra\s+large/i],
+  ["L", /\bl\b|\blarge\b/i],
+  ["M", /\bm\b|\bmedium\b/i],
+  ["S", /\bs\b|\bsmall\b/i]
+];
+
+function parseJson(value, fallback) {
+  try { return JSON.parse(value || ""); } catch (error) { return fallback; }
+}
+
+function normalizeSizes(raw = {}, fallbackSize = "", fallbackQuantity = 0) {
+  const sizes = {};
+  for (const size of SIZE_ORDER) {
+    const qty = Math.max(0, Math.floor(Number(raw?.[size] || 0)));
+    if (qty > 0) sizes[size] = qty;
+  }
+  if (!Object.keys(sizes).length && Number(fallbackQuantity) > 0) {
+    const matches = SIZE_WORDS.filter(([, pattern]) => pattern.test(String(fallbackSize))).map(([size]) => size);
+    if (matches.length) {
+      const base = Math.max(1, Math.floor(Number(fallbackQuantity) / matches.length));
+      for (const size of matches) sizes[size] = base;
+    }
+  }
+  return sizes;
+}
+
+function sizesLabel(sizes, fallbackSize = "") {
+  const active = SIZE_ORDER.filter(size => Number(sizes[size]) > 0);
+  return active.length ? active.join(", ") : fallbackSize;
+}
+
+function totalQuantity(sizes, fallbackQuantity = 0) {
+  const total = SIZE_ORDER.reduce((sum, size) => sum + Math.max(0, Math.floor(Number(sizes[size] || 0))), 0);
+  return total || Math.max(0, Math.floor(Number(fallbackQuantity || 0)));
+}
 
 function parseItem(row) {
+  const sizes = normalizeSizes(parseJson(row.sizes_json, {}), row.size, row.quantity);
   return {
     id: row.id,
     category: row.category,
     name: row.name,
-    size: row.size,
+    size: sizesLabel(sizes, row.size),
+    sizes,
     price: row.price,
-    quantity: row.quantity,
+    quantity: totalQuantity(sizes, row.quantity),
     featured: Boolean(row.featured),
     featured_order: row.featured_order || 0,
     sort_order: row.sort_order,
-    photos: JSON.parse(row.photos || "[]"),
-    links: JSON.parse(row.links || "{}"),
+    photos: parseJson(row.photos, []),
+    links: parseJson(row.links, {}),
     updated_at: row.updated_at
   };
 }
