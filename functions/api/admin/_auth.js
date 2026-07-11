@@ -1,23 +1,32 @@
-﻿const encoder = new TextEncoder();
+export function json(data, status = 200, headers = {}) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      ...headers
+    }
+  });
+}
 
 export function adminConfigError(env, options = {}) {
   if (!env.ADMIN_PASSWORD) {
-    return Response.json({ error: "Missing ADMIN_PASSWORD secret" }, { status: 503 });
+    return json({ error: "Missing ADMIN_PASSWORD secret" }, 503);
   }
 
   if (!env.ADMIN_SESSION_SECRET) {
-    return Response.json({ error: "Missing ADMIN_SESSION_SECRET secret" }, { status: 503 });
+    return json({ error: "Missing ADMIN_SESSION_SECRET secret" }, 503);
   }
 
   if (options.requireDb && !env.DB) {
-    return Response.json({ error: "Missing DB D1 binding" }, { status: 503 });
+    return json({ error: "Missing DB D1 binding" }, 503);
   }
 
   return null;
 }
 
 async function sha256(value) {
-  const hash = await crypto.subtle.digest("SHA-256", encoder.encode(value));
+  if (!globalThis.crypto?.subtle) throw new Error("Web Crypto is unavailable");
+  const hash = await globalThis.crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
   return [...new Uint8Array(hash)].map(byte => byte.toString(16).padStart(2, "0")).join("");
 }
 
@@ -38,5 +47,5 @@ export async function isAuthorized(request, env) {
 }
 
 export function unauthorized() {
-  return Response.json({ error: "Not authorized" }, { status: 401 });
+  return json({ error: "Not authorized" }, 401);
 }

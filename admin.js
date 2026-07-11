@@ -61,7 +61,11 @@ async function api(path, options = {}) {
   const text = await response.text();
   let data = {};
   try { data = text ? JSON.parse(text) : {}; } catch (error) { data = {}; }
-  if (!response.ok) throw new Error(data.error || text || `Request failed (${response.status})`);
+  if (!response.ok) {
+    const plainText = text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+    const message = data.error || (text.trim().startsWith("<") ? `Server error (${response.status}). The site returned an error page instead of JSON.` : plainText) || `Request failed (${response.status})`;
+    throw new Error(message);
+  }
   return data;
 }
 
@@ -350,3 +354,4 @@ list.addEventListener("change", event => {
 searchInput.addEventListener("input", render);
 categorySelect.addEventListener("change", render);
 loadInventory();
+

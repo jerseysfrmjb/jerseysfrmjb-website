@@ -1,5 +1,9 @@
 import { ensureInventory } from "./_inventorySeed.js";
 
+
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), { status, headers: { "Content-Type": "application/json; charset=utf-8" } });
+}
 const SIZE_ORDER = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"];
 const SIZE_WORDS = [
   ["4XL", /4\s*x\s*l/i],
@@ -67,7 +71,7 @@ async function getSetting(env, key, fallback = "") {
 
 export async function onRequestGet({ env, request }) {
   if (!env.DB) {
-    return Response.json({ error: "D1 binding missing" }, { status: 503 });
+    return json({ error: "D1 binding missing" }, 503);
   }
 
   await ensureInventory(env);
@@ -93,5 +97,9 @@ export async function onRequestGet({ env, request }) {
 
   const sql = `SELECT * FROM inventory ${where.length ? "WHERE " + where.join(" AND ") : ""} ${order}`;
   const result = await env.DB.prepare(sql).bind(...params).all();
-  return Response.json({ items: result.results.map(parseItem) });
+  return json({ items: result.results.map(parseItem) });
 }
+
+
+
+

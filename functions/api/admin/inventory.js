@@ -1,5 +1,5 @@
 import { ensureInventory } from "../_inventorySeed.js";
-import { adminConfigError, isAuthorized, unauthorized } from "./_auth.js";
+import { adminConfigError, isAuthorized, json, unauthorized } from "./_auth.js";
 
 const FEATURED_LIMIT = 3;
 const SIZE_ORDER = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"];
@@ -95,16 +95,16 @@ async function loadInventory(env) {
   return result.results.map(parseItem);
 }
 
-export async function onRequestGet({ request, env }) {
+async function handleGet({ request, env }) {
   const configError = adminConfigError(env, { requireDb: true });
   if (configError) return configError;
   if (!(await isAuthorized(request, env))) return unauthorized();
   await ensureInventory(env);
 
-  return Response.json({ items: await loadInventory(env), settings: await getSettings(env), featuredLimit: FEATURED_LIMIT, sizeOptions: SIZE_ORDER });
+  return json({ items: await loadInventory(env), settings: await getSettings(env), featuredLimit: FEATURED_LIMIT, sizeOptions: SIZE_ORDER });
 }
 
-export async function onRequestPatch({ request, env }) {
+async function handlePatch({ request, env }) {
   const configError = adminConfigError(env, { requireDb: true });
   if (configError) return configError;
   if (!(await isAuthorized(request, env))) return unauthorized();
@@ -113,13 +113,13 @@ export async function onRequestPatch({ request, env }) {
   const body = await request.json().catch(() => ({}));
 
   if (body.settings) {
-    return Response.json({ settings: await updateSettings(env, body.settings), items: await loadInventory(env), featuredLimit: FEATURED_LIMIT, sizeOptions: SIZE_ORDER });
+    return json({ settings: await updateSettings(env, body.settings), items: await loadInventory(env), featuredLimit: FEATURED_LIMIT, sizeOptions: SIZE_ORDER });
   }
 
   if (Array.isArray(body.featuredOrder)) {
     const ids = [...new Set(body.featuredOrder.map(id => String(id).trim()).filter(Boolean))];
     if (ids.length > FEATURED_LIMIT) {
-      return Response.json({ error: `Only ${FEATURED_LIMIT} featured jerseys can be active.` }, { status: 400 });
+      return json({ error: `Only ${FEATURED_LIMIT} featured jerseys can be active.` }, 400);
     }
 
     await env.DB.prepare("UPDATE inventory SET featured = 0, featured_order = 0 WHERE featured = 1").run();
@@ -129,14 +129,14 @@ export async function onRequestPatch({ request, env }) {
         .run();
     }
 
-    return Response.json({ settings: await getSettings(env), items: await loadInventory(env), featuredLimit: FEATURED_LIMIT, sizeOptions: SIZE_ORDER });
+    return json({ settings: await getSettings(env), items: await loadInventory(env), featuredLimit: FEATURED_LIMIT, sizeOptions: SIZE_ORDER });
   }
 
   const id = String(body.id || "").trim();
-  if (!id) return Response.json({ error: "Missing jersey id" }, { status: 400 });
+  if (!id) return json({ error: "Missing jersey id" }, 400);
 
   const current = await env.DB.prepare("SELECT * FROM inventory WHERE id = ?").bind(id).first();
-  if (!current) return Response.json({ error: "Jersey not found" }, { status: 404 });
+  if (!current) return json({ error: "Jersey not found" }, 404);
 
   const wantsFeatured = typeof body.featured === "boolean" ? body.featured : Boolean(current.featured);
   let featuredOrder = normalizeFeaturedOrder(body.featured_order ?? current.featured_order);
@@ -148,7 +148,7 @@ export async function onRequestPatch({ request, env }) {
   }
 
   if (wantsFeatured && (featuredOrder < 1 || featuredOrder > FEATURED_LIMIT)) {
-    return Response.json({ error: `Featured position must be 1-${FEATURED_LIMIT}` }, { status: 400 });
+    return json({ error: `Featured position must be 1-${FEATURED_LIMIT}` }, 400);
   }
 
   if (wantsFeatured) {
@@ -177,5 +177,20 @@ export async function onRequestPatch({ request, env }) {
   `).bind(next.name, next.size, next.sizes_json, next.price, next.quantity, next.featured, next.featured_order, next.links, id).run();
 
   const updated = await env.DB.prepare("SELECT * FROM inventory WHERE id = ?").bind(id).first();
-  return Response.json({ item: parseItem(updated), items: await loadInventory(env), settings: await getSettings(env), featuredLimit: FEATURED_LIMIT, sizeOptions: SIZE_ORDER });
+  return json({ item: parseItem(updated), items: await loadInventory(env), settings: await getSettings(env), featuredLimit: FEATURED_LIMIT, sizeOptions: SIZE_ORDER });
+}
+export async function onRequestGet(context) {
+  try {
+    return await handleGet(context);
+  } catch (error) {
+    return json({ error: `Inventory server error: ${error?.message || "Unknown error"}` }, 500);
+  }
+}
+
+export async function onRequestPatch(context) {
+  try {
+    return await handlePatch(context);
+  } catch (error) {
+    return json({ error: `Inventory save error: ${error?.message || "Unknown error"}` }, 500);
+  }
 }
