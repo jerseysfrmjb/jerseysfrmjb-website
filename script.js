@@ -35,9 +35,31 @@ function activeSizes(item) {
   return order.filter(size => Number(sizes[size]) > 0);
 }
 
+function sizeLabel(value = "") {
+  const normalized = String(value).trim().toLowerCase();
+  if (normalized === "s" || normalized === "small") return "Small";
+  if (normalized === "m" || normalized === "medium") return "Medium";
+  if (normalized === "l" || normalized === "large") return "Large";
+  if (/^(xl|2xl|3xl|4xl|x-large|extra large)/i.test(normalized)) return "XL+";
+  return "";
+}
+
+function sizeLabelsFromText(value = "") {
+  const text = String(value).toLowerCase();
+  const labels = [];
+  if (/\b(s|small)\b/.test(text)) labels.push("Small");
+  if (/\b(m|medium)\b/.test(text)) labels.push("Medium");
+  if (/\b(l|large)\b/.test(text)) labels.push("Large");
+  if (/\b(xl|2xl|3xl|4xl|x-large|extra large)\b/.test(text)) labels.push("XL+");
+  return [...new Set(labels)];
+}
+
 function displaySize(item) {
   const active = activeSizes(item);
-  return active.length ? active.join(", ") : String(item?.size || "");
+  const labels = active.length
+    ? [...new Set(active.map(sizeLabel).filter(Boolean))]
+    : sizeLabelsFromText(item?.size || "");
+  return labels.length ? labels.join(", ") : String(item?.size || "");
 }
 
 function sizeTokens(value = "") {
@@ -49,6 +71,14 @@ function sizeTokens(value = "") {
     .filter(Boolean)
     .map(part => part.replace(/Player Version/i, "").trim())
     .filter(Boolean);
+}
+
+function filterSizeTokens(item) {
+  const active = activeSizes(item);
+  const labels = active.length
+    ? active.map(sizeLabel)
+    : sizeLabelsFromText(item?.size || displaySize(item));
+  return [...new Set(labels.filter(Boolean).map(label => label.toLowerCase()))];
 }
 
 async function fetchSiteSettings() {
@@ -112,7 +142,7 @@ function renderProductCard(item) {
     : '<span class="buy-link disabled" aria-disabled="true">Sold Out</span>';
 
   return `
-    <article data-stock="${available ? "available" : "sold-out"}" data-size="${escapeHtml(sizeTokens(displaySize(item)).join("|").toLowerCase())}" data-id="${escapeHtml(item.id)}">
+    <article data-stock="${available ? "available" : "sold-out"}" data-size="${escapeHtml(filterSizeTokens(item).join("|"))}" data-id="${escapeHtml(item.id)}">
       <div class="product-photo product-slider" data-slider>
         <div class="slides product-slides">${renderSlides(item)}</div>
         <div class="product-controls"><button data-prev type="button" aria-label="Previous photo">&lsaquo;</button><div class="slider-dots"></div><button data-next type="button" aria-label="Next photo">&rsaquo;</button></div>
@@ -181,20 +211,41 @@ function setupFilters(filterGroup, cards) {
   if (!filterGroup) return;
   const buttons = [...filterGroup.querySelectorAll("[data-filter]")];
   const sizeSelect = filterGroup.querySelector("[data-size-filter]");
-  const sizes = [...new Set(cards.flatMap(card => (card.dataset.size || "").split("|").filter(Boolean)))].sort();
+  let emptyMessage = filterGroup.querySelector("[data-filter-empty]");
+  if (!emptyMessage) {
+    emptyMessage = document.createElement("p");
+    emptyMessage.className = "inventory-filter-empty";
+    emptyMessage.dataset.filterEmpty = "";
+    emptyMessage.hidden = true;
+    filterGroup.insertAdjacentElement("afterend", emptyMessage);
+  }
 
   if (sizeSelect) {
-    sizeSelect.innerHTML = '<option value="all">Size</option>' + sizes.map(size => `<option value="${escapeHtml(size)}">${escapeHtml(size.replace(/\b\w/g, char => char.toUpperCase()))}</option>`).join("");
+    const options = [
+      ["small", "Small"],
+      ["medium", "Medium"],
+      ["large", "Large"],
+      ["xl+", "XL+"]
+    ];
+    sizeSelect.innerHTML = '<option value="all">Size</option>' + options.map(([value, label]) => `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`).join("");
   }
 
   function apply() {
     const active = filterGroup.querySelector("[data-filter].active")?.dataset.filter || "all";
     const selectedSize = sizeSelect?.value || "all";
+    let visibleCount = 0;
     cards.forEach(card => {
       const stockMatch = active === "all" || card.dataset.stock === active;
       const sizeMatch = selectedSize === "all" || (card.dataset.size || "").split("|").includes(selectedSize);
       card.hidden = !stockMatch || !sizeMatch;
+      if (!card.hidden) visibleCount += 1;
     });
+    if (emptyMessage) {
+      emptyMessage.textContent = selectedSize !== "all" && visibleCount === 0
+        ? "No jersey is currently available in that size."
+        : "";
+      emptyMessage.hidden = !emptyMessage.textContent;
+    }
   }
 
   buttons.forEach(button => {
