@@ -230,20 +230,40 @@ function setupFilters(filterGroup, cards) {
     sizeSelect.innerHTML = '<option value="all">Size</option>' + options.map(([value, label]) => `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`).join("");
   }
 
+  function selectedSizeLabel(value) {
+    return {
+      small: "Small",
+      medium: "Medium",
+      large: "Large",
+      "xl+": "XL+"
+    }[value] || "";
+  }
+
   function apply() {
     const active = filterGroup.querySelector("[data-filter].active")?.dataset.filter || "all";
     const selectedSize = sizeSelect?.value || "all";
     let visibleCount = 0;
+    let selectedSizeCount = 0;
+    let selectedSizeAvailableCount = 0;
     cards.forEach(card => {
       const stockMatch = active === "all" || card.dataset.stock === active;
       const sizeMatch = selectedSize === "all" || (card.dataset.size || "").split("|").includes(selectedSize);
+      if (selectedSize !== "all" && sizeMatch) {
+        selectedSizeCount += 1;
+        if (card.dataset.stock === "available") selectedSizeAvailableCount += 1;
+      }
       card.hidden = !stockMatch || !sizeMatch;
       if (!card.hidden) visibleCount += 1;
     });
     if (emptyMessage) {
-      emptyMessage.textContent = selectedSize !== "all" && visibleCount === 0
-        ? "No jersey is currently available in that size."
-        : "";
+      let message = "";
+      const sizeLabel = selectedSizeLabel(selectedSize);
+      if (selectedSize !== "all" && selectedSizeCount === 0) {
+        message = "No jersey is currently available in that size.";
+      } else if (selectedSize !== "all" && selectedSizeAvailableCount === 0) {
+        message = `All jerseys in ${sizeLabel} are sold out.`;
+      }
+      emptyMessage.textContent = message;
       emptyMessage.hidden = !emptyMessage.textContent;
     }
   }
