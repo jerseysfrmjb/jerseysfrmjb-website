@@ -1,4 +1,4 @@
-﻿CREATE TABLE IF NOT EXISTS inventory (
+CREATE TABLE IF NOT EXISTS inventory (
   id TEXT PRIMARY KEY,
   category TEXT NOT NULL,
   name TEXT NOT NULL,
@@ -6,6 +6,7 @@
   price INTEGER NOT NULL,
   quantity INTEGER NOT NULL DEFAULT 0,
   featured INTEGER NOT NULL DEFAULT 0,
+  featured_order INTEGER NOT NULL DEFAULT 0,
   sort_order INTEGER NOT NULL DEFAULT 0,
   photos TEXT NOT NULL DEFAULT '[]',
   links TEXT NOT NULL DEFAULT '{}',
@@ -14,3 +15,12 @@
 
 CREATE INDEX IF NOT EXISTS idx_inventory_category_stock ON inventory(category, quantity);
 CREATE INDEX IF NOT EXISTS idx_inventory_featured ON inventory(featured, quantity);
+CREATE INDEX IF NOT EXISTS idx_inventory_featured_order ON inventory(featured, featured_order);
+
+CREATE TABLE IF NOT EXISTS site_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT OR IGNORE INTO site_settings (key, value) VALUES ('hide_sold_out_featured', 'false');

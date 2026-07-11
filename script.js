@@ -1,4 +1,4 @@
-﻿const toggle = document.querySelector(".menu-toggle");
+const toggle = document.querySelector(".menu-toggle");
 const drawer = document.querySelector(".drawer");
 const backdrop = document.querySelector(".drawer-backdrop");
 const closeButton = document.querySelector(".drawer-close");
@@ -183,7 +183,7 @@ async function renderFeaturedGrid() {
   const grid = document.querySelector("[data-featured-grid]");
   if (!grid) return;
   const data = await fetchInventory({ featured: "true" });
-  const items = sortInventory(data.items || []).slice(0, 3);
+  const items = (data.items || []).slice(0, 3);
   grid.innerHTML = items.map(renderFeaturedCard).join("");
 }
 

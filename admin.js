@@ -1,10 +1,15 @@
-const loginSection = document.querySelector("[data-admin-login]");
+﻿const loginSection = document.querySelector("[data-admin-login]");
 const panel = document.querySelector("[data-admin-panel]");
 const list = document.querySelector("[data-admin-list]");
 const statusLine = document.querySelector("[data-admin-status]");
 const searchInput = document.querySelector("[data-admin-search]");
 const categorySelect = document.querySelector("[data-admin-category]");
+const featuredPreview = document.querySelector("[data-featured-preview]");
+const hideSoldFeatured = document.querySelector("[data-hide-sold-featured]");
+const saveFeaturedSettings = document.querySelector("[data-save-featured-settings]");
 let inventory = [];
+let settings = {};
+let featuredLimit = 3;
 
 function escapeHtml(value = "") {
   return String(value).replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
@@ -16,6 +21,13 @@ function isAvailable(item) {
 
 function itemLinks(item) {
   return item.links || {};
+}
+
+function featuredItems() {
+  return inventory
+    .filter(item => item.featured)
+    .sort((a, b) => (Number(a.featured_order) || 999) - (Number(b.featured_order) || 999) || a.name.localeCompare(b.name))
+    .slice(0, featuredLimit);
 }
 
 async function api(path, options = {}) {
@@ -33,9 +45,28 @@ function showPanel() {
   panel.hidden = false;
 }
 
+function renderFeaturedPreview() {
+  if (!featuredPreview) return;
+  const items = featuredItems();
+  featuredPreview.innerHTML = items.length ? items.map((item, index) => {
+    const photo = item.photos?.[0] || {};
+    return `
+      <article class="admin-featured-card" data-id="${escapeHtml(item.id)}" draggable="true">
+        <img src="${escapeHtml(photo.src || "assets/jerseysfrmjb-logo.jpg")}" alt="${escapeHtml(photo.alt || item.name)}">
+        <div>
+          <span>Position ${Number(item.featured_order) || index + 1} ${isAvailable(item) ? "" : "- Sold Out"}</span>
+          <h3>${escapeHtml(item.name)}</h3>
+          <p>${escapeHtml(item.size)} - $${escapeHtml(item.price)}</p>
+        </div>
+      </article>`;
+  }).join("") : '<p class="empty-featured">No featured jerseys selected yet.</p>';
+}
+
 function render() {
   const query = searchInput.value.trim().toLowerCase();
   const category = categorySelect.value;
+  if (hideSoldFeatured) hideSoldFeatured.checked = settings.hide_sold_out_featured === "true";
+
   const shown = inventory
     .filter(item => category === "all" || item.category === category)
     .filter(item => !query || item.name.toLowerCase().includes(query) || item.size.toLowerCase().includes(query))
@@ -44,6 +75,7 @@ function render() {
   list.innerHTML = shown.map(item => {
     const links = itemLinks(item);
     const available = isAvailable(item);
+    const featured = Boolean(item.featured);
     return `
       <article class="admin-card" data-id="${escapeHtml(item.id)}">
         <div class="admin-card-photo"><img src="${escapeHtml(item.photos?.[0]?.src || "assets/jerseysfrmjb-logo.jpg")}" alt="${escapeHtml(item.photos?.[0]?.alt || item.name)}"></div>
@@ -60,6 +92,10 @@ function render() {
             <label>Quantity<input data-field="quantity" type="number" min="0" inputmode="numeric" value="${Number(item.quantity)}"></label>
             <button type="button" data-plus aria-label="Increase quantity">+</button>
           </div>
+          <div class="featured-admin-row">
+            <label class="featured-check"><input data-field="featured" type="checkbox" ${featured ? "checked" : ""}> Featured</label>
+            <label>Position<input data-field="featured_order" type="number" min="1" max="${featuredLimit}" inputmode="numeric" value="${featured ? Number(item.featured_order || 1) : ""}" placeholder="1-${featuredLimit}"></label>
+          </div>
           <details class="edit-box">
             <summary>Edit jersey details</summary>
             <label>Player / Jersey Name<input data-field="name" value="${escapeHtml(item.name)}"></label>
@@ -71,12 +107,20 @@ function render() {
         </div>
       </article>`;
   }).join("");
+  renderFeaturedPreview();
+}
+
+function applyAdminData(data) {
+  if (Array.isArray(data.items)) inventory = data.items;
+  if (data.item) inventory = inventory.map(item => item.id === data.item.id ? data.item : item);
+  if (data.settings) settings = data.settings;
+  if (data.featuredLimit) featuredLimit = Number(data.featuredLimit) || 3;
 }
 
 async function loadInventory() {
   try {
     const data = await api("/api/admin/inventory");
-    inventory = data.items;
+    applyAdminData(data);
     showPanel();
     render();
   } catch (error) {
@@ -91,17 +135,22 @@ async function saveCard(card) {
   links.depop = card.querySelector('[data-field="depop"]').value.trim();
   links.ebay = card.querySelector('[data-field="ebay"]').value.trim();
 
+  const featured = card.querySelector('[data-field="featured"]').checked;
+  const featuredOrder = Number(card.querySelector('[data-field="featured_order"]').value);
+
   const payload = {
     id,
     name: card.querySelector('[data-field="name"]').value.trim(),
     size: card.querySelector('[data-field="size"]').value.trim(),
     quantity: Number(card.querySelector('[data-field="quantity"]').value),
+    featured,
+    featured_order: featured ? featuredOrder : 0,
     links
   };
 
   statusLine.textContent = "Saving...";
   const data = await api("/api/admin/inventory", { method: "PATCH", body: JSON.stringify(payload) });
-  inventory = inventory.map(item => item.id === id ? data.item : item);
+  applyAdminData(data);
   statusLine.textContent = "Saved.";
   render();
 }
@@ -123,6 +172,61 @@ document.querySelector("[data-logout]").addEventListener("click", async () => {
   location.reload();
 });
 
+saveFeaturedSettings?.addEventListener("click", async () => {
+  statusLine.textContent = "Saving featured setting...";
+  try {
+    const data = await api("/api/admin/inventory", {
+      method: "PATCH",
+      body: JSON.stringify({ settings: { hide_sold_out_featured: hideSoldFeatured.checked } })
+    });
+    applyAdminData(data);
+    statusLine.textContent = "Featured setting saved.";
+    render();
+  } catch (error) {
+    statusLine.textContent = error.message;
+  }
+});
+
+let draggedFeaturedId = "";
+
+featuredPreview?.addEventListener("dragstart", event => {
+  const card = event.target.closest(".admin-featured-card");
+  if (!card) return;
+  draggedFeaturedId = card.dataset.id;
+  event.dataTransfer.effectAllowed = "move";
+});
+
+featuredPreview?.addEventListener("dragover", event => {
+  if (event.target.closest(".admin-featured-card")) event.preventDefault();
+});
+
+featuredPreview?.addEventListener("drop", async event => {
+  const target = event.target.closest(".admin-featured-card");
+  if (!target || !draggedFeaturedId || target.dataset.id === draggedFeaturedId) return;
+  event.preventDefault();
+
+  const orderedIds = featuredItems().map(item => item.id);
+  const from = orderedIds.indexOf(draggedFeaturedId);
+  const to = orderedIds.indexOf(target.dataset.id);
+  if (from < 0 || to < 0) return;
+
+  orderedIds.splice(from, 1);
+  orderedIds.splice(to, 0, draggedFeaturedId);
+
+  statusLine.textContent = "Saving featured order...";
+  try {
+    const data = await api("/api/admin/inventory", {
+      method: "PATCH",
+      body: JSON.stringify({ featuredOrder: orderedIds })
+    });
+    applyAdminData(data);
+    statusLine.textContent = "Featured order saved.";
+    render();
+  } catch (error) {
+    statusLine.textContent = error.message;
+  }
+});
+
 list.addEventListener("click", async event => {
   const card = event.target.closest(".admin-card");
   if (!card) return;
@@ -133,6 +237,16 @@ list.addEventListener("click", async event => {
   if (event.target.matches("[data-toggle]")) input.value = Number(input.value) > 0 ? 0 : 1;
   if (event.target.matches("[data-minus], [data-plus], [data-toggle], [data-save]")) {
     try { await saveCard(card); } catch (error) { statusLine.textContent = error.message; }
+  }
+});
+
+list.addEventListener("change", event => {
+  const card = event.target.closest(".admin-card");
+  if (!card || !event.target.matches('[data-field="featured"]')) return;
+  const order = card.querySelector('[data-field="featured_order"]');
+  if (event.target.checked && !order.value) {
+    const used = new Set(featuredItems().map(item => Number(item.featured_order)).filter(Boolean));
+    order.value = [1, 2, 3].find(position => !used.has(position)) || 1;
   }
 });
 

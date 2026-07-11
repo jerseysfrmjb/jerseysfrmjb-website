@@ -589,13 +589,15 @@ export const schemaStatements = [
     price INTEGER NOT NULL,
     quantity INTEGER NOT NULL DEFAULT 0,
     featured INTEGER NOT NULL DEFAULT 0,
+    featured_order INTEGER NOT NULL DEFAULT 0,
     sort_order INTEGER NOT NULL DEFAULT 0,
     photos TEXT NOT NULL DEFAULT '[]',
     links TEXT NOT NULL DEFAULT '{}',
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
   `CREATE INDEX IF NOT EXISTS idx_inventory_category_stock ON inventory(category, quantity)`,
-  `CREATE INDEX IF NOT EXISTS idx_inventory_featured ON inventory(featured, quantity)`
+  `CREATE INDEX IF NOT EXISTS idx_inventory_featured ON inventory(featured, quantity)`,
+  `CREATE INDEX IF NOT EXISTS idx_inventory_featured_order ON inventory(featured, featured_order)`
 ];
 
 export async function ensureInventory(env) {
@@ -604,12 +606,25 @@ export async function ensureInventory(env) {
     await env.DB.prepare(statement).run();
   }
 
+  try {
+    await env.DB.prepare("ALTER TABLE inventory ADD COLUMN featured_order INTEGER NOT NULL DEFAULT 0").run();
+  } catch (error) {
+    // Existing databases already have this column after the first migration.
+  }
+
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS site_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`).run();
+  await env.DB.prepare("INSERT OR IGNORE INTO site_settings (key, value) VALUES (?, ?)").bind("hide_sold_out_featured", "false").run();
+
   const row = await env.DB.prepare("SELECT COUNT(*) AS count FROM inventory").first();
   if (Number(row?.count || 0) > 0) return;
 
   const insert = env.DB.prepare(
-    `INSERT OR IGNORE INTO inventory (id, category, name, size, price, quantity, featured, sort_order, photos, links)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT OR IGNORE INTO inventory (id, category, name, size, price, quantity, featured, featured_order, sort_order, photos, links)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   );
 
   const statements = seedInventory.items.map(item => insert.bind(
@@ -620,6 +635,7 @@ export async function ensureInventory(env) {
     item.price,
     item.quantity,
     item.featured ? 1 : 0,
+    item.featured_order || 0,
     item.sort_order,
     JSON.stringify(item.photos || []),
     JSON.stringify(item.links || {})

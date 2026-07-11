@@ -7,7 +7,7 @@
   <meta name="robots" content="noindex,nofollow">
   <link rel="icon" href="assets/jerseysfrmjb-logo.jpg" type="image/jpeg">
   <link rel="stylesheet" href="styles.css?v=59">
-  <script src="admin.js?v=d7c2c4b" defer></script>
+  <script src="admin.js?v=featured-controls" defer></script>
 </head>
 <body class="admin-body">
   <main class="admin-shell">
@@ -31,6 +31,17 @@
         </div>
         <button class="shop-button secondary-admin" type="button" data-logout>Log Out</button>
       </div>
+      <section class="admin-featured-panel" aria-label="Featured jersey controls">
+        <div>
+          <span class="section-kicker">Homepage Featured</span>
+          <h2>Featured Jerseys</h2>
+          <p>Choose up to 3 jerseys for the homepage. Position 1, 2, and 3 match the homepage card order.</p>
+        </div>
+        <label class="featured-setting"><input type="checkbox" data-hide-sold-featured> Hide sold-out featured jerseys</label>
+        <button class="shop-button secondary-admin" type="button" data-save-featured-settings>Save Featured Setting</button>
+        <div class="admin-featured-preview" data-featured-preview></div>
+      </section>
+
       <div class="admin-tools">
         <input type="search" data-admin-search placeholder="Search jerseys">
         <select data-admin-category>
