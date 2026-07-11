@@ -230,6 +230,100 @@ renderInventoryGrids();
 renderFeaturedGrid();
 initSliders();
 
+function createHelpWidget() {
+  const instagramUrl = "https://www.instagram.com/jerseysfrmjb/";
+  const widget = document.createElement("div");
+  widget.className = "help-widget";
+  widget.innerHTML = `
+    <button class="help-widget-button" type="button" aria-expanded="false">
+      <span>Need Help?</span>
+    </button>
+    <section class="help-widget-panel" aria-label="Message JerseysFrmJB" hidden>
+      <div class="help-widget-head">
+        <div>
+          <span>Quick Message</span>
+          <h2>Need Help?</h2>
+        </div>
+        <button class="help-widget-close" type="button" aria-label="Close message form">x</button>
+      </div>
+      <p class="help-widget-copy">Instagram DMs are currently not working for some people. Leave your Instagram username and message below. Please follow @jerseysfrmjb so I can message you back and continue the conversation.</p>
+      <a class="help-instagram-link" href="${instagramUrl}" target="_blank" rel="noopener">Follow @jerseysfrmjb</a>
+      <form class="help-widget-form" data-help-form>
+        <input type="text" name="website" autocomplete="off" tabindex="-1" aria-hidden="true">
+        <label>Instagram username
+          <input name="instagram_username" type="text" placeholder="@username" autocomplete="username" required>
+        </label>
+        <label>Jersey or request
+          <input name="jersey_request" type="text" placeholder="Example: Messi Argentina Home" required>
+        </label>
+        <label>Size
+          <input name="size" type="text" placeholder="Example: M" required>
+        </label>
+        <label>Message
+          <textarea name="message" rows="4" placeholder="What do you need help with?" required></textarea>
+        </label>
+        <button class="help-submit" type="submit">Send Message</button>
+        <p class="help-widget-status" data-help-status role="status"></p>
+      </form>
+      <div class="help-widget-success" data-help-success hidden>
+        <p>Thanks! Your message has been received. You can leave the website now. Please make sure you follow @jerseysfrmjb so I can message you back.</p>
+        <a class="help-instagram-link" href="${instagramUrl}" target="_blank" rel="noopener">Open Instagram</a>
+      </div>
+    </section>
+  `;
+
+  document.body.appendChild(widget);
+
+  const toggle = widget.querySelector(".help-widget-button");
+  const panel = widget.querySelector(".help-widget-panel");
+  const close = widget.querySelector(".help-widget-close");
+  const form = widget.querySelector("[data-help-form]");
+  const status = widget.querySelector("[data-help-status]");
+  const success = widget.querySelector("[data-help-success]");
+  const submit = widget.querySelector(".help-submit");
+  let sent = false;
+
+  function setOpen(open) {
+    panel.hidden = !open;
+    toggle.setAttribute("aria-expanded", String(open));
+    widget.classList.toggle("open", open);
+    if (open) form.querySelector("input[name='instagram_username']")?.focus();
+  }
+
+  toggle.addEventListener("click", () => setOpen(panel.hidden));
+  close.addEventListener("click", () => setOpen(false));
+
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    if (sent) return;
+
+    status.textContent = "Sending...";
+    status.className = "help-widget-status";
+    submit.disabled = true;
+    sent = true;
+
+    try {
+      const body = Object.fromEntries(new FormData(form).entries());
+      const response = await fetch("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data.error) throw new Error(data.error || "Message failed");
+      form.hidden = true;
+      success.hidden = false;
+    } catch (error) {
+      sent = false;
+      status.textContent = error.message || "Message could not send right now. Please try again.";
+      status.classList.add("error");
+      submit.disabled = false;
+    }
+  });
+}
+
+createHelpWidget();
+
 const contactForm = document.querySelector("[data-contact-form]");
 if (contactForm) {
   const status = contactForm.querySelector("[data-form-status]");

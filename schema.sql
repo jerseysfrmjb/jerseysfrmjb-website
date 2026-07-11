@@ -29,3 +29,17 @@ INSERT OR IGNORE INTO site_settings (key, value) VALUES ('hide_sold_out_featured
 INSERT OR IGNORE INTO site_settings (key, value) VALUES ('homepage_banner_message', 'Small Drop, Big Drop Coming Soon
 A small World Cup drop is available now. A bigger drop is coming soon. Fill out the contact form to request a jersey or DM @jerseysfrmjb with questions.');
 
+
+CREATE TABLE IF NOT EXISTS contact_messages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  instagram_username TEXT NOT NULL,
+  jersey_request TEXT NOT NULL,
+  size TEXT NOT NULL,
+  message TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'unread',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_contact_messages_created ON contact_messages(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_contact_messages_status ON contact_messages(status, created_at DESC);

@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -6,8 +6,8 @@
   <title>Inventory Admin | JerseysFrmJB</title>
   <meta name="robots" content="noindex,nofollow">
   <link rel="icon" href="assets/jerseysfrmjb-logo.jpg" type="image/jpeg">
-  <link rel="stylesheet" href="styles.css?v=60">
-  <script src="admin.js?v=admin-tools-3" defer></script>
+  <link rel="stylesheet" href="styles.css?v=messages-1">
+  <script src="admin.js?v=messages-1" defer></script>
 </head>
 <body class="admin-body">
   <main class="admin-shell">
@@ -31,6 +31,17 @@
         </div>
         <button class="shop-button secondary-admin" type="button" data-logout>Log Out</button>
       </div>
+      <section class="admin-messages-panel" aria-label="Customer messages">
+        <div class="admin-messages-head">
+          <div>
+            <span class="section-kicker">Customer Messages</span>
+            <h2>Messages <span class="message-badge" data-message-count>0 unread</span></h2>
+            <p>New website messages appear here first. Copy usernames or open Instagram to continue the conversation.</p>
+          </div>
+          <button class="shop-button secondary-admin" type="button" data-refresh-messages>Refresh Messages</button>
+        </div>
+        <div class="admin-message-list" data-admin-messages><p class="empty-featured">Log in to view messages.</p></div>
+      </section>
       <section class="admin-featured-panel" aria-label="Featured jersey controls">
         <div>
           <span class="section-kicker">Homepage Featured</span>
@@ -71,5 +82,6 @@
   </main>
 </body>
 </html>
+
 
 

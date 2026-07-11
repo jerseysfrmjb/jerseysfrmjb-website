@@ -9,10 +9,15 @@ const hideSoldFeatured = document.querySelector("[data-hide-sold-featured]");
 const saveFeaturedSettings = document.querySelector("[data-save-featured-settings]");
 const bannerMessage = document.querySelector("[data-banner-message]");
 const saveBanner = document.querySelector("[data-save-banner]");
+const messagesList = document.querySelector("[data-admin-messages]");
+const messageCount = document.querySelector("[data-message-count]");
+const refreshMessages = document.querySelector("[data-refresh-messages]");
 let inventory = [];
 let settings = {};
 let featuredLimit = 3;
 let sizeOptions = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"];
+let messages = [];
+let unreadMessages = 0;
 
 const bannerPresets = {
   live: "World Cup Restock LIVE\nNew World Cup jerseys are in stock now. Message @jerseysfrmjb for questions or requests.",
@@ -72,6 +77,84 @@ async function api(path, options = {}) {
 function showPanel() {
   loginSection.hidden = true;
   panel.hidden = false;
+}
+
+function formatMessageDate(value = "") {
+  if (!value) return "";
+  const date = new Date(value.endsWith("Z") ? value : value + "Z");
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+function instagramProfile(username = "") {
+  const clean = String(username || "").replace(/^@+/, "").trim();
+  return clean ? "https://www.instagram.com/" + encodeURIComponent(clean) + "/" : "https://www.instagram.com/jerseysfrmjb/";
+}
+
+function renderMessages() {
+  if (!messagesList) return;
+  if (messageCount) messageCount.textContent = unreadMessages + " unread";
+  messagesList.innerHTML = messages.length ? messages.map(message => {
+    const read = message.status === "read";
+    const username = String(message.instagram_username || "").replace(/^@+/, "");
+    return `
+      <article class="admin-message-card ${read ? "read" : "unread"}" data-id="${escapeHtml(message.id)}" data-status="${escapeHtml(message.status || "unread")}">
+        <div class="admin-message-main">
+          <div class="admin-message-title">
+            <span>${read ? "Read" : "Unread"}</span>
+            <h3>@${escapeHtml(username)}</h3>
+          </div>
+          <p><b>Jersey/request:</b> ${escapeHtml(message.jersey_request)}</p>
+          <p><b>Size:</b> ${escapeHtml(message.size)}</p>
+          <p class="admin-message-body">${escapeHtml(message.message)}</p>
+          <small>${escapeHtml(formatMessageDate(message.created_at))}</small>
+        </div>
+        <div class="admin-message-actions">
+          <button type="button" data-copy-username="${escapeHtml(username)}">Copy Username</button>
+          <a href="${escapeHtml(instagramProfile(username))}" target="_blank" rel="noopener">Open Instagram</a>
+          <button type="button" data-toggle-read>${read ? "Mark Unread" : "Mark Read"}</button>
+          <button type="button" data-delete-message>Delete</button>
+        </div>
+      </article>`;
+  }).join("") : '<p class="empty-featured">No messages yet.</p>';
+}
+
+function applyMessageData(data) {
+  if (Array.isArray(data.messages)) messages = data.messages;
+  unreadMessages = Number(data.unread || 0);
+  renderMessages();
+}
+
+async function loadMessages() {
+  if (!messagesList) return;
+  messagesList.innerHTML = '<p class="empty-featured">Loading messages...</p>';
+  try {
+    applyMessageData(await api("/api/admin/messages"));
+  } catch (error) {
+    messagesList.innerHTML = `<p class="form-status error">${escapeHtml(error.message)}</p>`;
+  }
+}
+
+async function updateMessage(id, status) {
+  statusLine.textContent = "Updating message...";
+  applyMessageData(await api("/api/admin/messages", { method: "PATCH", body: JSON.stringify({ id, status }) }));
+  statusLine.textContent = "Message updated.";
+}
+
+async function deleteMessage(id) {
+  statusLine.textContent = "Deleting message...";
+  applyMessageData(await api("/api/admin/messages?id=" + encodeURIComponent(id), { method: "DELETE" }));
+  statusLine.textContent = "Message deleted.";
+}
+
+async function copyUsername(username) {
+  const value = username.startsWith("@") ? username : "@" + username;
+  try {
+    await navigator.clipboard.writeText(value);
+    statusLine.textContent = value + " copied.";
+  } catch (error) {
+    statusLine.textContent = value;
+  }
 }
 
 function renderFeaturedPreview() {
@@ -174,6 +257,7 @@ async function loadInventory() {
     applyAdminData(data);
     showPanel();
     render();
+    loadMessages();
   } catch (error) {
     document.querySelector("[data-login-status]").textContent = error.message === "Not authorized" ? "Enter the admin password." : error.message;
   }
@@ -298,6 +382,37 @@ featuredPreview?.addEventListener("drop", async event => {
     render();
   } catch (error) {
     statusLine.textContent = error.message;
+  }
+});
+
+refreshMessages?.addEventListener("click", loadMessages);
+
+messagesList?.addEventListener("click", async event => {
+  const card = event.target.closest(".admin-message-card");
+  if (!card) return;
+
+  if (event.target.matches("[data-copy-username]")) {
+    copyUsername(event.target.dataset.copyUsername || "");
+    return;
+  }
+
+  if (event.target.matches("[data-toggle-read]")) {
+    const nextStatus = card.dataset.status === "read" ? "unread" : "read";
+    try {
+      await updateMessage(card.dataset.id, nextStatus);
+    } catch (error) {
+      statusLine.textContent = error.message;
+    }
+    return;
+  }
+
+  if (event.target.matches("[data-delete-message]")) {
+    if (!confirm("Delete this message?")) return;
+    try {
+      await deleteMessage(card.dataset.id);
+    } catch (error) {
+      statusLine.textContent = error.message;
+    }
   }
 });
 

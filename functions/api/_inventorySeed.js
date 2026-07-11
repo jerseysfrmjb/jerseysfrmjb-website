@@ -633,6 +633,19 @@ export async function ensureInventory(env) {
     value TEXT NOT NULL,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`).run();
+
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS contact_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    instagram_username TEXT NOT NULL,
+    jersey_request TEXT NOT NULL,
+    size TEXT NOT NULL,
+    message TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'unread',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`).run();
+  await env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_contact_messages_created ON contact_messages(created_at DESC)`).run();
+  await env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_contact_messages_status ON contact_messages(status, created_at DESC)`).run();
   await env.DB.prepare("INSERT OR IGNORE INTO site_settings (key, value) VALUES (?, ?)").bind("hide_sold_out_featured", "false").run();
   await env.DB.prepare("INSERT OR IGNORE INTO site_settings (key, value) VALUES (?, ?)").bind("homepage_banner_message", "Small Drop, Big Drop Coming Soon\nA small World Cup drop is available now. A bigger drop is coming soon. Fill out the contact form to request a jersey or DM @jerseysfrmjb with questions.").run();
 
