@@ -237,3 +237,29 @@
 .size-admin-box{display:grid!important;gap:6px;background:#f7f5f1;border:1px solid #e3dbd3;border-radius:8px;padding:10px;font-size:10px!important;font-weight:900;letter-spacing:.7px;text-transform:uppercase;color:var(--maroon)!important}
 .size-admin-box span{display:flex;align-items:center;gap:7px}.size-admin-box input[type="checkbox"]{width:auto!important}.size-admin-box input[type="number"]{width:100%;border:1px solid #d9d1ca;border-radius:7px;padding:8px 9px;font:700 13px Arial,sans-serif;color:#161313;background:#fff}
 @media(max-width:780px){.size-admin-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.banner-presets{display:grid;grid-template-columns:1fr}.admin-banner-panel{padding:16px}}
+
+/* Cleaner reviews and mobile carousel polish */
+.reviews-section .trusted-heading{margin-bottom:20px}
+.reviews-section .trust-card-grid{gap:14px}
+.reviews-section .trust-card-grid article{min-height:auto;padding:16px 18px;border-radius:8px;box-shadow:0 10px 26px #0000000d}
+.reviews-section .proof-heading{margin:34px 0 18px}
+.reviews-only{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:16px}
+.reviews-only .proof-slider{aspect-ratio:auto;min-height:350px;grid-template-rows:auto minmax(220px,1fr) 38px;border-radius:8px}
+.reviews-only .proof-slider>header{align-items:flex-start;padding:14px 16px}
+.reviews-only .proof-slider>header p{font-size:10px;margin-bottom:8px}
+.review-profile-button{display:inline-flex;align-items:center;justify-content:center;width:max-content;border-radius:999px;background:var(--maroon);color:#fff!important;font-size:10px;font-weight:900;letter-spacing:.7px;text-transform:uppercase;padding:7px 11px;box-shadow:0 8px 18px #6d203a26}
+.review-profile-button:hover{transform:translateY(-1px);box-shadow:0 12px 24px #6d203a35}
+.reviews-only .slide{padding:0!important;background:#fff}
+.review-proof-card{height:100%;display:grid;grid-template-rows:auto auto auto 1fr auto;gap:8px;padding:22px;background:#fff;color:#211b1b}
+.review-stars{color:#8a1f42;font-size:13px;letter-spacing:2px;line-height:1}
+.review-market{margin:0;color:#7b1638;font-size:10px;font-weight:900;letter-spacing:1.3px;text-transform:uppercase}
+.review-proof-card h4{margin:0;font:700 18px/1.18 Georgia,serif;color:#171414}
+.review-proof-card blockquote{margin:4px 0 0;font:500 16px/1.45 Georgia,serif;color:#2d2828}
+.review-proof-card small{align-self:end;color:#7b7370;font-size:11px;font-weight:700}
+.reviews-only .proof-slider>footer,.customer-photo-grid .proof-slider>footer{height:38px;padding:5px 10px;gap:10px}
+.reviews-only .proof-slider>footer>button,.customer-photo-grid .proof-slider>footer>button{width:27px;height:27px;font-size:18px}
+.reviews-only .proof-slider>footer .slider-dots,.customer-photo-grid .proof-slider>footer .slider-dots{width:auto;min-width:94px;gap:5px}
+.reviews-only .slider-dots button,.customer-photo-grid .slider-dots button{width:6px;height:6px}
+@media(max-width:900px){.reviews-only{grid-template-columns:1fr!important;max-width:520px;margin:0 auto}.reviews-only .proof-slider{min-height:330px}}
+@media(max-width:430px){.reviews-section{padding-top:46px!important;padding-bottom:50px!important}.reviews-section .trust-card-grid{gap:10px}.reviews-section .proof-heading{margin-top:28px}.reviews-only .proof-slider{min-height:318px;grid-template-rows:auto minmax(205px,1fr) 34px}.reviews-only .proof-slider>header{padding:12px 13px}.review-proof-card{padding:17px}.review-proof-card h4{font-size:16px}.review-proof-card blockquote{font-size:14px;line-height:1.42}.review-profile-button{font-size:9px;padding:6px 9px}.reviews-only .proof-slider>footer,.customer-photo-grid .proof-slider>footer{height:34px}.reviews-only .proof-slider>footer>button,.customer-photo-grid .proof-slider>footer>button{width:24px;height:24px;font-size:16px}.customer-photo-section{padding-top:48px!important}.customer-photo-grid .proof-slider>footer .slider-dots{min-width:116px}}.reviews-only .slides .slide,.reviews-only .depop-slides .slide{display:block!important;grid-template-columns:none!important;gap:0!important}
+.review-proof-card{box-sizing:border-box;width:100%}

@@ -1,4 +1,4 @@
-﻿import { ensureInventory } from "./_inventorySeed.js";
+import { ensureInventory } from "./_inventorySeed.js";
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -15,7 +15,72 @@ function clean(value = "", max = 500) {
 }
 
 function cleanUsername(value = "") {
-  return clean(value, 80).replace(/^@+/, "");
+  return clean(value, 80).replace(/^@+/, "").replace(/[^a-zA-Z0-9._]/g, "");
+}
+
+function instagramProfileUrl(username) {
+  return `https://www.instagram.com/${encodeURIComponent(username)}/`;
+}
+
+function discordValue(value, fallback = "Not provided", max = 1000) {
+  const text = clean(value, max);
+  return text || fallback;
+}
+
+async function sendDiscordNotification(env, data) {
+  if (!env.DISCORD_WEBHOOK_URL) return;
+
+  const profileUrl = instagramProfileUrl(data.instagram_username);
+  const payload = {
+    content: `New JerseysFrmJB Need Help message from @${data.instagram_username}`,
+    embeds: [
+      {
+        title: "New Need Help Message",
+        color: 8130609,
+        url: profileUrl,
+        timestamp: data.submitted_at,
+        fields: [
+          {
+            name: "Instagram username",
+            value: `[@${data.instagram_username}](${profileUrl})`,
+            inline: true
+          },
+          {
+            name: "Jersey/request",
+            value: discordValue(data.jersey_request, "Not provided", 240),
+            inline: true
+          },
+          {
+            name: "Size",
+            value: discordValue(data.size, "Not provided", 80),
+            inline: true
+          },
+          {
+            name: "Message",
+            value: discordValue(data.message, "Not provided", 1000)
+          },
+          {
+            name: "Submission date and time",
+            value: data.submitted_at
+          },
+          {
+            name: "Open Instagram Profile",
+            value: profileUrl
+          }
+        ]
+      }
+    ]
+  };
+
+  const response = await fetch(env.DISCORD_WEBHOOK_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Discord webhook returned ${response.status}`);
+  }
 }
 
 export async function onRequestPost({ request, env }) {
@@ -49,10 +114,24 @@ export async function onRequestPost({ request, env }) {
       return json({ ok: true, duplicate: true });
     }
 
+    const submitted_at = new Date().toISOString();
+
     await env.DB.prepare(`
       INSERT INTO contact_messages (instagram_username, jersey_request, size, message)
       VALUES (?, ?, ?, ?)
     `).bind(instagram_username, jersey_request, size, message).run();
+
+    try {
+      await sendDiscordNotification(env, {
+        instagram_username,
+        jersey_request,
+        size,
+        message,
+        submitted_at
+      });
+    } catch (notificationError) {
+      console.warn("Discord notification failed", notificationError);
+    }
 
     return json({ ok: true });
   } catch (error) {
