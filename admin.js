@@ -12,12 +12,16 @@ const saveBanner = document.querySelector("[data-save-banner]");
 const messagesList = document.querySelector("[data-admin-messages]");
 const messageCount = document.querySelector("[data-message-count]");
 const refreshMessages = document.querySelector("[data-refresh-messages]");
+const adminSummary = document.querySelector("[data-admin-summary]");
+const adminQuick = document.querySelector("[data-admin-quick]");
+const adminFilterButtons = [...document.querySelectorAll("[data-admin-filter]")];
 let inventory = [];
 let settings = {};
 let featuredLimit = 3;
 let sizeOptions = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"];
 let messages = [];
 let unreadMessages = 0;
+let adminFilter = "all";
 
 const bannerPresets = {
   live: "World Cup Restock LIVE\nNew World Cup jerseys are in stock now. Message @jerseysfrmjb for questions or requests.",
@@ -29,8 +33,34 @@ function escapeHtml(value = "") {
   return String(value).replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
 }
 
+function totalQuantity(item) {
+  const sizes = item?.sizes || {};
+  const sizeTotal = Object.values(sizes).reduce((sum, qty) => sum + Math.max(0, Math.floor(Number(qty || 0))), 0);
+  return sizeTotal || Math.max(0, Math.floor(Number(item?.quantity || 0)));
+}
+
 function isAvailable(item) {
-  return Number(item.quantity) > 0;
+  return totalQuantity(item) > 0;
+}
+
+function isLowStock(item) {
+  const qty = totalQuantity(item);
+  return qty > 0 && qty <= 2;
+}
+
+function isRecentlyAdded(item) {
+  if (item.new_arrival) return true;
+  if (!item.date_added) return false;
+  const date = new Date(String(item.date_added).includes("T") ? item.date_added : item.date_added + "T00:00:00");
+  return !Number.isNaN(date.getTime()) && (Date.now() - date.getTime()) / 86400000 <= 7;
+}
+
+function categoryLabel(category = "") {
+  return { world: "World Cup", club: "Club", retro: "Retro" }[category] || category;
+}
+
+function itemSearchText(item) {
+  return [item.name, item.category, categoryLabel(item.category), item.size, activeSizeText(item), ...(item.photos || []).map(photo => photo.alt || "")].join(" ").toLowerCase();
 }
 
 function itemLinks(item) {
@@ -44,6 +74,13 @@ function itemSizes(item) {
 function activeSizeText(item) {
   const active = sizeOptions.filter(size => Number(itemSizes(item)[size]) > 0);
   return active.length ? active.join(", ") : item.size;
+}
+
+function formatAdminDate(value = "") {
+  if (!value) return "";
+  const date = new Date(String(value).includes("T") ? value : value + "T00:00:00");
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
 }
 
 function featuredItems() {
@@ -174,6 +211,36 @@ function renderFeaturedPreview() {
   }).join("") : '<p class="empty-featured">No featured jerseys selected yet.</p>';
 }
 
+function renderAdminSummary() {
+  if (!adminSummary) return;
+  const availableItems = inventory.filter(isAvailable);
+  const byCategory = category => inventory.filter(item => item.category === category).reduce((sum, item) => sum + totalQuantity(item), 0);
+  const stats = [
+    ["Total jerseys available", availableItems.reduce((sum, item) => sum + totalQuantity(item), 0)],
+    ["Total products", inventory.length],
+    ["World Cup inventory", byCategory("world")],
+    ["Club inventory", byCategory("club")],
+    ["Retro inventory", byCategory("retro")],
+    ["Low-stock products", inventory.filter(isLowStock).length],
+    ["Sold-out products", inventory.filter(item => !isAvailable(item)).length]
+  ];
+  adminSummary.innerHTML = stats.map(([label, value]) => `<article><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></article>`).join("");
+}
+
+function renderQuickSections() {
+  if (!adminQuick) return;
+  const groups = [
+    ["Low Stock", inventory.filter(isLowStock)],
+    ["Sold Out", inventory.filter(item => !isAvailable(item))],
+    ["Recently Added", inventory.filter(isRecentlyAdded)]
+  ];
+  adminQuick.innerHTML = groups.map(([title, items]) => `
+    <article class="admin-quick-card">
+      <h3>${escapeHtml(title)}</h3>
+      ${items.length ? items.slice(0, 8).map(item => `<button type="button" data-jump-product="${escapeHtml(item.id)}"><span>${escapeHtml(item.name)}</span><small>${escapeHtml(activeSizeText(item) || "No size")} - ${escapeHtml(categoryLabel(item.category))}</small></button>`).join("") : '<p class="empty-featured">Nothing here right now.</p>'}
+    </article>`).join("");
+}
+
 function renderSizeControls(item) {
   const sizes = itemSizes(item);
   return `
@@ -207,8 +274,12 @@ function render() {
 
   const shown = inventory
     .filter(item => category === "all" || item.category === category)
-    .filter(item => !query || item.name.toLowerCase().includes(query) || activeSizeText(item).toLowerCase().includes(query))
-    .sort((a, b) => Number(isAvailable(b)) - Number(isAvailable(a)) || a.sort_order - b.sort_order || a.name.localeCompare(b.name));
+    .filter(item => adminFilter === "all" || (adminFilter === "available" && isAvailable(item)) || (adminFilter === "sold-out" && !isAvailable(item)) || (adminFilter === "low-stock" && isLowStock(item)) || item.category === adminFilter)
+    .filter(item => !query || itemSearchText(item).includes(query))
+    .sort((a, b) => Number(isAvailable(b)) - Number(isAvailable(a)) || Number(a.sort_order || 0) - Number(b.sort_order || 0) || a.name.localeCompare(b.name));
+
+  renderAdminSummary();
+  renderQuickSections();
 
   list.innerHTML = shown.map(item => {
     const links = itemLinks(item);
@@ -220,7 +291,7 @@ function render() {
         <div class="admin-card-main">
           <div class="admin-card-head">
             <div>
-              <span>${escapeHtml(item.category)}</span>
+              <span>${escapeHtml(categoryLabel(item.category))} ${isLowStock(item) ? "Low Stock" : ""} ${isRecentlyAdded(item) ? "New Arrival" : ""}</span>
               <h2>${escapeHtml(item.name)}</h2>
             </div>
             <button class="stock-toggle ${available ? "on" : "off"}" type="button" data-toggle>${available ? "In Stock" : "Sold Out"}</button>
@@ -233,6 +304,8 @@ function render() {
           <details class="edit-box">
             <summary>Edit jersey details</summary>
             <label>Player / Jersey Name<input data-field="name" value="${escapeHtml(item.name)}"></label>
+            <label class="featured-check"><input data-field="new_arrival" type="checkbox" ${item.new_arrival ? "checked" : ""}> New Arrival</label>
+            <label>Date Added<input data-field="date_added" type="date" value="${escapeHtml((item.date_added || "").slice(0, 10))}"></label>
             <label>Depop Link<input data-field="depop" value="${escapeHtml(links.depop || "")}"></label>
             <label>eBay Link<input data-field="ebay" value="${escapeHtml(links.ebay || "")}"></label>
           </details>
@@ -282,6 +355,8 @@ async function saveCard(card) {
     sizes,
     featured,
     featured_order: featured ? featuredOrder : 0,
+    new_arrival: card.querySelector('[data-field="new_arrival"]')?.checked || false,
+    date_added: card.querySelector('[data-field="date_added"]')?.value || "",
     links
   };
 
@@ -464,6 +539,28 @@ list.addEventListener("change", event => {
     const checked = card.querySelector(`[data-size-check="${size}"]`);
     checked.checked = Number(event.target.value) > 0;
   }
+});
+
+adminFilterButtons.forEach(button => {
+  button.addEventListener("click", () => {
+    adminFilter = button.dataset.adminFilter || "all";
+    adminFilterButtons.forEach(item => item.classList.toggle("active", item === button));
+    render();
+  });
+});
+
+adminQuick?.addEventListener("click", event => {
+  const button = event.target.closest("[data-jump-product]");
+  if (!button) return;
+  adminFilter = "all";
+  adminFilterButtons.forEach(item => item.classList.toggle("active", item.dataset.adminFilter === "all"));
+  categorySelect.value = "all";
+  searchInput.value = "";
+  render();
+  const card = list.querySelector(`[data-id="${CSS.escape(button.dataset.jumpProduct)}"]`);
+  card?.scrollIntoView({ behavior: "smooth", block: "center" });
+  card?.classList.add("admin-card-highlight");
+  window.setTimeout(() => card?.classList.remove("admin-card-highlight"), 1400);
 });
 
 searchInput.addEventListener("input", render);

@@ -58,6 +58,8 @@ function parseItem(row) {
     sort_order: row.sort_order,
     photos: parseJson(row.photos, []),
     links: parseJson(row.links, {}),
+    new_arrival: Boolean(row.new_arrival),
+    date_added: row.date_added || "",
     updated_at: row.updated_at
   };
 }
@@ -81,6 +83,9 @@ async function updateSettings(env, settings = {}) {
   }
   if (Object.prototype.hasOwnProperty.call(settings, "homepage_banner_message")) {
     await setSetting(env, "homepage_banner_message", String(settings.homepage_banner_message || "").trim());
+  }
+  if (Object.prototype.hasOwnProperty.call(settings, "inventory_updated_at")) {
+    await setSetting(env, "inventory_updated_at", settings.inventory_updated_at || new Date().toISOString());
   }
   return getSettings(env);
 }
@@ -167,14 +172,18 @@ async function handlePatch({ request, env }) {
     quantity: nextQuantity,
     featured: wantsFeatured ? 1 : 0,
     featured_order: wantsFeatured ? featuredOrder : 0,
+    new_arrival: typeof body.new_arrival === "boolean" ? (body.new_arrival ? 1 : 0) : Number(current.new_arrival || 0),
+    date_added: typeof body.date_added === "string" ? body.date_added.trim() : (current.date_added || ""),
     links: body.links ? JSON.stringify(body.links) : current.links
   };
 
   await env.DB.prepare(`
     UPDATE inventory
-    SET name = ?, size = ?, sizes_json = ?, price = ?, quantity = ?, featured = ?, featured_order = ?, links = ?, updated_at = CURRENT_TIMESTAMP
+    SET name = ?, size = ?, sizes_json = ?, price = ?, quantity = ?, featured = ?, featured_order = ?, new_arrival = ?, date_added = ?, links = ?, updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
-  `).bind(next.name, next.size, next.sizes_json, next.price, next.quantity, next.featured, next.featured_order, next.links, id).run();
+  `).bind(next.name, next.size, next.sizes_json, next.price, next.quantity, next.featured, next.featured_order, next.new_arrival, next.date_added, next.links, id).run();
+
+  await setSetting(env, "inventory_updated_at", new Date().toISOString());
 
   const updated = await env.DB.prepare("SELECT * FROM inventory WHERE id = ?").bind(id).first();
   return json({ item: parseItem(updated), items: await loadInventory(env), settings: await getSettings(env), featuredLimit: FEATURED_LIMIT, sizeOptions: SIZE_ORDER });

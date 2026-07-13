@@ -60,6 +60,8 @@ function parseItem(row) {
     sort_order: row.sort_order,
     photos: parseJson(row.photos, []),
     links: parseJson(row.links, {}),
+    new_arrival: Boolean(row.new_arrival),
+    date_added: row.date_added || "",
     updated_at: row.updated_at
   };
 }
@@ -97,7 +99,9 @@ export async function onRequestGet({ env, request }) {
 
   const sql = `SELECT * FROM inventory ${where.length ? "WHERE " + where.join(" AND ") : ""} ${order}`;
   const result = await env.DB.prepare(sql).bind(...params).all();
-  return json({ items: result.results.map(parseItem) });
+  const settingsResult = await env.DB.prepare("SELECT key, value FROM site_settings").all();
+  const settings = Object.fromEntries((settingsResult.results || []).map(row => [row.key, row.value]));
+  return json({ items: result.results.map(parseItem), settings, updated_at: settings.inventory_updated_at || "" });
 }
 
 

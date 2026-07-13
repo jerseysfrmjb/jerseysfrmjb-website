@@ -591,6 +591,8 @@ export const schemaStatements = [
     quantity INTEGER NOT NULL DEFAULT 0,
     featured INTEGER NOT NULL DEFAULT 0,
     featured_order INTEGER NOT NULL DEFAULT 0,
+    new_arrival INTEGER NOT NULL DEFAULT 0,
+    date_added TEXT DEFAULT '',
     sort_order INTEGER NOT NULL DEFAULT 0,
     photos TEXT NOT NULL DEFAULT '[]',
     links TEXT NOT NULL DEFAULT '{}',
@@ -623,6 +625,8 @@ export async function ensureInventory(env) {
 
   await addColumnIfMissing(env, "ALTER TABLE inventory ADD COLUMN featured_order INTEGER NOT NULL DEFAULT 0");
   await addColumnIfMissing(env, "ALTER TABLE inventory ADD COLUMN sizes_json TEXT NOT NULL DEFAULT '{}'");
+  await addColumnIfMissing(env, "ALTER TABLE inventory ADD COLUMN new_arrival INTEGER NOT NULL DEFAULT 0");
+  await addColumnIfMissing(env, "ALTER TABLE inventory ADD COLUMN date_added TEXT DEFAULT ''");
 
   for (const statement of indexStatements) {
     await env.DB.prepare(statement).run();
@@ -648,13 +652,14 @@ export async function ensureInventory(env) {
   await env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_contact_messages_status ON contact_messages(status, created_at DESC)`).run();
   await env.DB.prepare("INSERT OR IGNORE INTO site_settings (key, value) VALUES (?, ?)").bind("hide_sold_out_featured", "false").run();
   await env.DB.prepare("INSERT OR IGNORE INTO site_settings (key, value) VALUES (?, ?)").bind("homepage_banner_message", "Small Drop, Big Drop Coming Soon\nA small World Cup drop is available now. A bigger drop is coming soon. Fill out the contact form to request a jersey or DM @jerseysfrmjb with questions.").run();
+  await env.DB.prepare("INSERT OR IGNORE INTO site_settings (key, value) VALUES (?, CURRENT_TIMESTAMP)").bind("inventory_updated_at").run();
 
   const row = await env.DB.prepare("SELECT COUNT(*) AS count FROM inventory").first();
   if (Number(row?.count || 0) > 0) return;
 
   const insert = env.DB.prepare(
-    `INSERT OR IGNORE INTO inventory (id, category, name, size, sizes_json, price, quantity, featured, featured_order, sort_order, photos, links)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT OR IGNORE INTO inventory (id, category, name, size, sizes_json, price, quantity, featured, featured_order, new_arrival, date_added, sort_order, photos, links)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   );
 
   const statements = seedInventory.items.map(item => insert.bind(
@@ -667,6 +672,8 @@ export async function ensureInventory(env) {
     item.quantity,
     item.featured ? 1 : 0,
     item.featured_order || 0,
+    item.new_arrival ? 1 : 0,
+    item.date_added || '',
     item.sort_order,
     JSON.stringify(item.photos || []),
     JSON.stringify(item.links || {})

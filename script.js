@@ -21,12 +21,26 @@ function escapeHtml(value = "") {
   return String(value).replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
 }
 
+function totalQuantity(item) {
+  const sizes = item?.sizes || {};
+  const sizeTotal = Object.values(sizes).reduce((sum, qty) => sum + Math.max(0, Math.floor(Number(qty || 0))), 0);
+  return sizeTotal || Math.max(0, Math.floor(Number(item?.quantity || 0)));
+}
+
 function isAvailable(item) {
-  return Number(item.quantity) > 0;
+  return totalQuantity(item) > 0;
+}
+
+function isNewArrival(item) {
+  if (!item?.new_arrival) return false;
+  if (!item.date_added) return true;
+  const date = new Date(String(item.date_added).includes("T") ? item.date_added : item.date_added + "T00:00:00");
+  if (Number.isNaN(date.getTime())) return true;
+  return (Date.now() - date.getTime()) / 86400000 <= 7;
 }
 
 function sortInventory(items) {
-  return [...items].sort((a, b) => Number(isAvailable(b)) - Number(isAvailable(a)) || a.sort_order - b.sort_order || a.name.localeCompare(b.name));
+  return [...items].sort((a, b) => Number(isAvailable(b)) - Number(isAvailable(a)) || Number(a.sort_order || 0) - Number(b.sort_order || 0) || a.name.localeCompare(b.name));
 }
 
 function activeSizes(item) {
@@ -57,9 +71,24 @@ function sizeLabelsFromText(value = "") {
 function displaySize(item) {
   const active = activeSizes(item);
   const labels = active.length
-    ? [...new Set(active.map(sizeLabel).filter(Boolean))]
+    ? active.map(size => sizeLabel(size) || size)
     : sizeLabelsFromText(item?.size || "");
-  return labels.length ? labels.join(", ") : String(item?.size || "");
+  return labels.length ? [...new Set(labels)].join(", ") : String(item?.size || "");
+}
+
+function searchText(item) {
+  return [item.name, item.category, categoryLabel(item.category), item.size, displaySize(item), ...(item.photos || []).map(photo => photo.alt || "")].join(" ").toLowerCase();
+}
+
+function categoryLabel(category = "") {
+  return { world: "World Cup", club: "Club", retro: "Retro" }[category] || category;
+}
+
+function formatInventoryUpdated(value = "") {
+  if (!value) return "";
+  const date = new Date(String(value).includes("T") ? value : value + "Z");
+  if (Number.isNaN(date.getTime())) return "";
+  return "Inventory updated: " + date.toLocaleString([], { month: "long", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
 function sizeTokens(value = "") {
@@ -75,10 +104,12 @@ function sizeTokens(value = "") {
 
 function filterSizeTokens(item) {
   const active = activeSizes(item);
-  const labels = active.length
-    ? active.map(sizeLabel)
-    : sizeLabelsFromText(item?.size || displaySize(item));
-  return [...new Set(labels.filter(Boolean).map(label => label.toLowerCase()))];
+  if (active.length) {
+    return [...new Set(active.map(size => ({ S: "small", M: "medium", L: "large", XL: "xl", "2XL": "2xl", "3XL": "3xl", "4XL": "4xl" }[size] || String(size).toLowerCase())))];
+  }
+  const labels = sizeLabelsFromText(item?.size || displaySize(item));
+  const tokenMap = { Small: "small", Medium: "medium", Large: "large", "XL+": "xl" };
+  return [...new Set(labels.filter(Boolean).map(label => tokenMap[label] || label.toLowerCase()))];
 }
 
 async function fetchSiteSettings() {
@@ -127,10 +158,12 @@ async function fetchInventory(params = {}) {
 
 function renderSlides(item) {
   const sold = !isAvailable(item);
+  const newArrival = isNewArrival(item) ? '<p class="product-status new-arrival">New Arrival</p>' : "";
   return (item.photos || []).map((photo, index) => `
     <div class="slide${index === 0 ? " active" : ""}">
       <img decoding="async" loading="lazy" src="${escapeHtml(photo.src)}" alt="${escapeHtml(photo.alt || item.name)}">
       ${sold && index === 0 ? '<p class="product-status out-of-stock">Out of Stock</p>' : ""}
+      ${index === 0 ? newArrival : ""}
     </div>`).join("");
 }
 
@@ -143,11 +176,12 @@ function renderProductCard(item) {
     : '<span class="buy-link disabled" aria-disabled="true">Sold Out</span>';
 
   return `
-    <article data-stock="${available ? "available" : "sold-out"}" data-size="${escapeHtml(filterSizeTokens(item).join("|"))}" data-size-display="${escapeHtml(sizes)}" data-id="${escapeHtml(item.id)}">
+    <article data-stock="${available ? "available" : "sold-out"}" data-category="${escapeHtml(item.category || "")}" data-search="${escapeHtml(searchText(item))}" data-size="${escapeHtml(filterSizeTokens(item).join("|"))}" data-size-display="${escapeHtml(sizes)}" data-id="${escapeHtml(item.id)}">
       <div class="product-photo product-slider" data-slider>
         <div class="slides product-slides">${renderSlides(item)}</div>
         <div class="product-controls"><button data-prev type="button" aria-label="Previous photo">&lsaquo;</button><div class="slider-dots"></div><button data-next type="button" aria-label="Next photo">&rsaquo;</button></div>
       </div>
+      <p class="notice category-notice">${escapeHtml(categoryLabel(item.category))}</p>
       ${available ? "" : '<p class="notice sold">Out of Stock</p>'}
       <h2>${escapeHtml(item.name)}</h2>
       <p data-card-size>${escapeHtml(sizes)}</p>
@@ -210,15 +244,19 @@ function initSliders(root = document) {
 
 function setupFilters(filterGroup, cards) {
   if (!filterGroup) return;
-  const buttons = [...filterGroup.querySelectorAll("[data-filter]")];
-  const sizeSelect = filterGroup.querySelector("[data-size-filter]");
-  let emptyMessage = filterGroup.querySelector("[data-filter-empty]");
+  const container = filterGroup.closest(".inventory-page");
+  const scope = filterGroup.closest("[data-shop-all-controls]") || container || document;
+  const stockButtons = [...scope.querySelectorAll("[data-stock-filter], [data-filter]")];
+  const categoryButtons = [...scope.querySelectorAll("[data-category-filter]")];
+  const sizeSelect = scope.querySelector("[data-size-filter]");
+  const searchInput = scope.querySelector("[data-inventory-search]");
+  let emptyMessage = scope.querySelector("[data-filter-empty]") || container?.querySelector("[data-filter-empty]");
   if (!emptyMessage) {
     emptyMessage = document.createElement("p");
     emptyMessage.className = "inventory-filter-empty";
     emptyMessage.dataset.filterEmpty = "";
     emptyMessage.hidden = true;
-    filterGroup.insertAdjacentElement("afterend", emptyMessage);
+    (scope.closest(".shop-all-controls") || filterGroup).insertAdjacentElement("afterend", emptyMessage);
   }
 
   if (sizeSelect) {
@@ -226,34 +264,44 @@ function setupFilters(filterGroup, cards) {
       ["small", "Small"],
       ["medium", "Medium"],
       ["large", "Large"],
-      ["xl+", "XL+"]
+      ["xl", "XL"],
+      ["2xl", "2XL"],
+      ["3xl", "3XL"],
+      ["4xl", "4XL"]
     ];
-    sizeSelect.innerHTML = '<option value="all">All</option>' + options.map(([value, label]) => `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`).join("");
+    sizeSelect.innerHTML = '<option value="all">All Sizes</option>' + options.map(([value, label]) => `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`).join("");
   }
 
   function selectedSizeLabel(value) {
-    return {
-      small: "Small",
-      medium: "Medium",
-      large: "Large",
-      "xl+": "XL+"
-    }[value] || "";
+    return { small: "Small", medium: "Medium", large: "Large", xl: "XL", "2xl": "2XL", "3xl": "3XL", "4xl": "4XL", "xl+": "XL+" }[value] || "";
+  }
+
+  function setActive(buttons, selected) {
+    buttons.forEach(button => button.classList.toggle("active", button === selected));
   }
 
   function apply() {
-    const active = filterGroup.querySelector("[data-filter].active")?.dataset.filter || "all";
+    const activeStock = scope.querySelector("[data-stock-filter].active, [data-filter].active")?.dataset.stockFilter || scope.querySelector("[data-stock-filter].active, [data-filter].active")?.dataset.filter || "all";
+    const activeCategory = scope.querySelector("[data-category-filter].active")?.dataset.categoryFilter || "all";
     const selectedSize = sizeSelect?.value || "all";
+    const query = (searchInput?.value || "").trim().toLowerCase();
     let visibleCount = 0;
     let selectedSizeCount = 0;
     let selectedSizeAvailableCount = 0;
+
     cards.forEach(card => {
-      const stockMatch = active === "all" || card.dataset.stock === active;
-      const sizeMatch = selectedSize === "all" || (card.dataset.size || "").split("|").includes(selectedSize);
-      if (selectedSize !== "all" && sizeMatch) {
+      const stockMatch = activeStock === "all" || card.dataset.stock === activeStock;
+      const categoryMatch = activeCategory === "all" || card.dataset.category === activeCategory;
+      const sizeTokens = (card.dataset.size || "").split("|").filter(Boolean);
+      const sizeMatch = selectedSize === "all" || sizeTokens.includes(selectedSize) || (selectedSize === "xl" && sizeTokens.includes("xl+"));
+      const searchMatch = !query || (card.dataset.search || "").includes(query);
+
+      if (selectedSize !== "all" && categoryMatch && searchMatch && sizeMatch) {
         selectedSizeCount += 1;
         if (card.dataset.stock === "available") selectedSizeAvailableCount += 1;
       }
-      card.hidden = !stockMatch || !sizeMatch;
+
+      card.hidden = !stockMatch || !categoryMatch || !sizeMatch || !searchMatch;
       const sizeText = card.querySelector("[data-card-size]");
       if (sizeText) {
         sizeText.textContent = selectedSize === "all"
@@ -262,37 +310,50 @@ function setupFilters(filterGroup, cards) {
       }
       if (!card.hidden) visibleCount += 1;
     });
+
     if (emptyMessage) {
       let message = "";
       const sizeLabel = selectedSizeLabel(selectedSize);
-      if (selectedSize !== "all" && selectedSizeCount === 0) {
+      if (visibleCount === 0 && selectedSize !== "all" && selectedSizeCount === 0) {
         message = "No jersey is currently available in that size.";
       } else if (selectedSize !== "all" && selectedSizeAvailableCount === 0) {
         message = `All jerseys in ${sizeLabel} are sold out.`;
+      } else if (visibleCount === 0) {
+        message = "No jerseys match those filters.";
       }
       emptyMessage.textContent = message;
-      emptyMessage.hidden = !emptyMessage.textContent;
+      emptyMessage.hidden = !message;
     }
   }
 
-  buttons.forEach(button => {
+  stockButtons.forEach(button => {
     button.addEventListener("click", () => {
-      buttons.forEach(item => item.classList.toggle("active", item === button));
+      setActive(stockButtons, button);
+      apply();
+    });
+  });
+  categoryButtons.forEach(button => {
+    button.addEventListener("click", () => {
+      setActive(categoryButtons, button);
       apply();
     });
   });
   sizeSelect?.addEventListener("change", apply);
+  searchInput?.addEventListener("input", apply);
   apply();
 }
 
 async function renderInventoryGrids() {
   const grids = [...document.querySelectorAll("[data-inventory-grid]")];
   await Promise.all(grids.map(async grid => {
-    const data = await fetchInventory({ category: grid.dataset.category });
+    const params = grid.dataset.category ? { category: grid.dataset.category } : {};
+    const data = await fetchInventory(params);
     const items = sortInventory(data.items || []);
     grid.innerHTML = items.map(renderProductCard).join("");
+    const updated = grid.closest(".inventory-page")?.querySelector("[data-inventory-updated]");
+    if (updated) updated.textContent = formatInventoryUpdated(data.settings?.inventory_updated_at || data.updated_at || "");
     initSliders(grid);
-    setupFilters(grid.closest(".inventory-page")?.querySelector(".inventory-filter"), [...grid.querySelectorAll("article")]);
+    setupFilters(grid.closest(".inventory-page")?.querySelector(".inventory-filter, .shop-all-controls"), [...grid.querySelectorAll("article")]);
   }));
 }
 
@@ -304,8 +365,20 @@ async function renderFeaturedGrid() {
   grid.innerHTML = items.map(renderFeaturedCard).join("");
 }
 
+async function renderHomepageStats() {
+  const stats = document.querySelector(".brand-stats");
+  if (!stats) return;
+  const data = await fetchInventory();
+  const availableProducts = (data.items || []).filter(isAvailable).length;
+  const inventoryTotal = (data.items || []).reduce((sum, item) => sum + totalQuantity(item), 0);
+  const statCards = [...stats.querySelectorAll("div")];
+  if (statCards[3]) statCards[3].querySelector("strong").textContent = inventoryTotal ? `${inventoryTotal} Jerseys Available` : "Small Drop Available";
+  if (statCards[2] && availableProducts) statCards[2].querySelector("small")?.remove();
+}
+
 renderInventoryGrids();
 renderFeaturedGrid();
+renderHomepageStats();
 initSliders();
 
 function createHelpWidget() {

@@ -8,6 +8,8 @@ CREATE TABLE IF NOT EXISTS inventory (
   quantity INTEGER NOT NULL DEFAULT 0,
   featured INTEGER NOT NULL DEFAULT 0,
   featured_order INTEGER NOT NULL DEFAULT 0,
+  new_arrival INTEGER NOT NULL DEFAULT 0,
+  date_added TEXT DEFAULT '',
   sort_order INTEGER NOT NULL DEFAULT 0,
   photos TEXT NOT NULL DEFAULT '[]',
   links TEXT NOT NULL DEFAULT '{}',
@@ -25,6 +27,8 @@ CREATE TABLE IF NOT EXISTS site_settings (
 );
 
 INSERT OR IGNORE INTO site_settings (key, value) VALUES ('hide_sold_out_featured', 'false');
+
+INSERT OR IGNORE INTO site_settings (key, value) VALUES ('inventory_updated_at', CURRENT_TIMESTAMP);
 
 INSERT OR IGNORE INTO site_settings (key, value) VALUES ('homepage_banner_message', 'Small Drop, Big Drop Coming Soon
 A small World Cup drop is available now. A bigger drop is coming soon. Fill out the contact form to request a jersey or DM @jerseysfrmjb with questions.');
