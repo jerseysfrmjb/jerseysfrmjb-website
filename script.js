@@ -293,6 +293,19 @@ function setupFilters(filterGroup, cards) {
     (scope.closest(".shop-all-controls") || filterGroup).insertAdjacentElement("afterend", emptyMessage);
   }
 
+  let resultCount = scope.querySelector("[data-inventory-result-count]") || container?.querySelector("[data-inventory-result-count]");
+  if (!resultCount) {
+    resultCount = document.createElement("p");
+    resultCount.className = "inventory-result-count";
+    resultCount.dataset.inventoryResultCount = "";
+    const updated = scope.querySelector("[data-inventory-updated]") || container?.querySelector("[data-inventory-updated]");
+    if (updated) {
+      updated.insertAdjacentElement("beforebegin", resultCount);
+    } else {
+      (scope.closest(".shop-all-controls") || filterGroup).insertAdjacentElement("afterend", resultCount);
+    }
+  }
+
   if (sizeSelect) {
     const options = [
       ["small", "Small"],
@@ -320,6 +333,8 @@ function setupFilters(filterGroup, cards) {
     const selectedSize = sizeSelect?.value || "all";
     const query = (searchInput?.value || "").trim().toLowerCase();
     let visibleCount = 0;
+    let availableMatchCount = 0;
+    let soldOutMatchCount = 0;
     let selectedSizeCount = 0;
     let selectedSizeAvailableCount = 0;
 
@@ -329,6 +344,12 @@ function setupFilters(filterGroup, cards) {
       const sizeTokens = (card.dataset.size || "").split("|").filter(Boolean);
       const sizeMatch = selectedSize === "all" || sizeTokens.includes(selectedSize) || (selectedSize === "xl" && sizeTokens.includes("xl+"));
       const searchMatch = !query || (card.dataset.search || "").includes(query);
+      const baseMatch = categoryMatch && sizeMatch && searchMatch;
+
+      if (baseMatch) {
+        if (card.dataset.stock === "available") availableMatchCount += 1;
+        if (card.dataset.stock === "sold-out") soldOutMatchCount += 1;
+      }
 
       if (selectedSize !== "all" && categoryMatch && searchMatch && sizeMatch) {
         selectedSizeCount += 1;
@@ -345,9 +366,18 @@ function setupFilters(filterGroup, cards) {
       if (!card.hidden) visibleCount += 1;
     });
 
+    const sizeLabel = selectedSizeLabel(selectedSize);
+    const sizeSuffix = selectedSize !== "all" && sizeLabel ? ` in ${sizeLabel}` : "";
+    if (resultCount) {
+      const count = activeStock === "sold-out" ? soldOutMatchCount : availableMatchCount;
+      const noun = count === 1 ? "jersey" : "jerseys";
+      resultCount.textContent = activeStock === "sold-out"
+        ? `${count} sold-out ${noun} shown${sizeSuffix}`
+        : `${count} ${noun} available${sizeSuffix}`;
+    }
+
     if (emptyMessage) {
       let message = "";
-      const sizeLabel = selectedSizeLabel(selectedSize);
       if (visibleCount === 0 && selectedSize !== "all" && selectedSizeCount === 0) {
         message = "No jersey is currently available in that size.";
       } else if (selectedSize !== "all" && selectedSizeAvailableCount === 0) {
