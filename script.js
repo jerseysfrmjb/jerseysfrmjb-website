@@ -3,8 +3,41 @@ const drawer = document.querySelector(".drawer");
 const backdrop = document.querySelector(".drawer-backdrop");
 const closeButton = document.querySelector(".drawer-close");
 
+function enhanceMobileDrawer() {
+  if (!drawer || drawer.dataset.enhanced === "true") return;
+
+  drawer.dataset.enhanced = "true";
+  drawer.insertAdjacentHTML("afterbegin", `
+    <div class="drawer-brand">
+      <img src="assets/jerseysfrmjb-logo.jpg" alt="JerseysFrmJB logo">
+      <div>
+        <strong>JerseysFrmJB</strong>
+        <span>Football Jerseys</span>
+      </div>
+    </div>
+  `);
+
+  const iconMap = {
+    Home: "⌂",
+    "Shop All": "◆",
+    "World Cup Jerseys": "◉",
+    "Retro Jerseys": "↺",
+    "Club Jerseys": "▦",
+    "Size Guide": "尺",
+    Contact: "✉"
+  };
+
+  drawer.querySelectorAll("a").forEach(link => {
+    const label = link.textContent.trim();
+    const icon = iconMap[label] || "•";
+    link.classList.add("drawer-link");
+    link.innerHTML = `<span class="drawer-link-icon" aria-hidden="true">${icon}</span><span>${escapeHtml(label)}</span>`;
+  });
+}
+
 function setDrawer(open) {
   if (!drawer || !backdrop || !toggle) return;
+  enhanceMobileDrawer();
   drawer.classList.toggle("open", open);
   backdrop.classList.toggle("open", open);
   drawer.setAttribute("aria-hidden", String(!open));
@@ -12,6 +45,7 @@ function setDrawer(open) {
 }
 
 if (toggle && closeButton && backdrop) {
+  enhanceMobileDrawer();
   toggle.addEventListener("click", () => setDrawer(true));
   closeButton.addEventListener("click", () => setDrawer(false));
   backdrop.addEventListener("click", () => setDrawer(false));
