@@ -1,4 +1,4 @@
-const toggle = document.querySelector(".menu-toggle");
+﻿const toggle = document.querySelector(".menu-toggle");
 const drawer = document.querySelector(".drawer");
 const backdrop = document.querySelector(".drawer-backdrop");
 const closeButton = document.querySelector(".drawer-close");
@@ -18,18 +18,18 @@ function enhanceMobileDrawer() {
   `);
 
   const iconMap = {
-    Home: "⌂",
-    "Shop All": "◆",
-    "World Cup Jerseys": "◉",
-    "Retro Jerseys": "↺",
-    "Club Jerseys": "▦",
-    "Size Guide": "尺",
-    Contact: "✉"
+    Home: "âŒ‚",
+    "Shop All": "â—†",
+    "World Cup Jerseys": "â—‰",
+    "Retro Jerseys": "â†º",
+    "Club Jerseys": "â–¦",
+    "Size Guide": "å°º",
+    Contact: "âœ‰"
   };
 
   drawer.querySelectorAll("a").forEach(link => {
     const label = link.textContent.trim();
-    const icon = iconMap[label] || "•";
+    const icon = iconMap[label] || "â€¢";
     link.classList.add("drawer-link");
     link.innerHTML = `<span class="drawer-link-icon" aria-hidden="true">${icon}</span><span>${escapeHtml(label)}</span>`;
   });
@@ -431,6 +431,7 @@ function initReviewLightbox() {
         <button class="review-lightbox-close" type="button" aria-label="Close review preview">&times;</button>
       </div>
       <div class="review-lightbox-proof">
+        <img class="review-lightbox-image" data-review-proof-image alt="" hidden>
         <span class="review-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
         <blockquote data-review-copy></blockquote>
       </div>
@@ -441,6 +442,7 @@ function initReviewLightbox() {
   const market = lightbox.querySelector("[data-review-market]");
   const product = lightbox.querySelector("[data-review-product]");
   const copy = lightbox.querySelector("[data-review-copy]");
+  const proofImage = lightbox.querySelector("[data-review-proof-image]");
   const close = lightbox.querySelector(".review-lightbox-close");
 
   function setOpen(open) {
@@ -453,6 +455,14 @@ function initReviewLightbox() {
       market.textContent = `Verified ${button.dataset.marketplace || "Marketplace"} Review`;
       product.textContent = button.dataset.product || "Buyer Review";
       copy.textContent = button.dataset.review || "";
+      if (proofImage) {
+        const imageSrc = button.dataset.proofImage || "";
+        proofImage.hidden = !imageSrc;
+        if (imageSrc) {
+          proofImage.src = imageSrc;
+          proofImage.alt = `${button.dataset.marketplace || "Marketplace"} review proof screenshot`;
+        }
+      }
       setOpen(true);
       close.focus();
     });
@@ -633,4 +643,3 @@ if (contactForm) {
     }
   });
 }
-
