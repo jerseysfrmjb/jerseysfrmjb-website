@@ -414,6 +414,59 @@ renderInventoryGrids();
 renderFeaturedGrid();
 renderHomepageStats();
 initSliders();
+function initReviewLightbox() {
+  const triggers = document.querySelectorAll("[data-review-lightbox]");
+  if (!triggers.length) return;
+
+  const lightbox = document.createElement("div");
+  lightbox.className = "review-lightbox";
+  lightbox.hidden = true;
+  lightbox.innerHTML = `
+    <div class="review-lightbox-card" role="dialog" aria-modal="true" aria-label="Review proof preview">
+      <div class="review-lightbox-head">
+        <div>
+          <span data-review-market></span>
+          <h3 data-review-product></h3>
+        </div>
+        <button class="review-lightbox-close" type="button" aria-label="Close review preview">&times;</button>
+      </div>
+      <div class="review-lightbox-proof">
+        <span class="review-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
+        <blockquote data-review-copy></blockquote>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(lightbox);
+
+  const market = lightbox.querySelector("[data-review-market]");
+  const product = lightbox.querySelector("[data-review-product]");
+  const copy = lightbox.querySelector("[data-review-copy]");
+  const close = lightbox.querySelector(".review-lightbox-close");
+
+  function setOpen(open) {
+    lightbox.hidden = !open;
+    document.body.classList.toggle("help-modal-open", open);
+  }
+
+  triggers.forEach(button => {
+    button.addEventListener("click", () => {
+      market.textContent = `Verified ${button.dataset.marketplace || "Marketplace"} Review`;
+      product.textContent = button.dataset.product || "Buyer Review";
+      copy.textContent = button.dataset.review || "";
+      setOpen(true);
+      close.focus();
+    });
+  });
+
+  close.addEventListener("click", () => setOpen(false));
+  lightbox.addEventListener("click", event => {
+    if (event.target === lightbox) setOpen(false);
+  });
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && !lightbox.hidden) setOpen(false);
+  });
+}
+initReviewLightbox();
 
 function createHelpWidget() {
   const instagramUrl = "https://www.instagram.com/jerseysfrmjb/";
