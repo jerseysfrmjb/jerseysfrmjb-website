@@ -1,4 +1,4 @@
-﻿const toggle = document.querySelector(".menu-toggle");
+const toggle = document.querySelector(".menu-toggle");
 const drawer = document.querySelector(".drawer");
 const backdrop = document.querySelector(".drawer-backdrop");
 const closeButton = document.querySelector(".drawer-close");
@@ -18,18 +18,18 @@ function enhanceMobileDrawer() {
   `);
 
   const iconMap = {
-    Home: "âŒ‚",
-    "Shop All": "â—†",
-    "World Cup Jerseys": "â—‰",
-    "Retro Jerseys": "â†º",
-    "Club Jerseys": "â–¦",
-    "Size Guide": "å°º",
-    Contact: "âœ‰"
+    Home: "\u2302",
+    "Shop All": "\u25C6",
+    "World Cup Jerseys": "\u25CE",
+    "Retro Jerseys": "\u21BA",
+    "Club Jerseys": "\u25A6",
+    "Size Guide": "\u25A3",
+    Contact: "\u2709"
   };
 
   drawer.querySelectorAll("a").forEach(link => {
     const label = link.textContent.trim();
-    const icon = iconMap[label] || "â€¢";
+    const icon = iconMap[label] || "\u2022";
     link.classList.add("drawer-link");
     link.innerHTML = `<span class="drawer-link-icon" aria-hidden="true">${icon}</span><span>${escapeHtml(label)}</span>`;
   });
