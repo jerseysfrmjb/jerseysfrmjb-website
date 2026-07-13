@@ -372,7 +372,7 @@ async function renderHomepageStats() {
   const availableProducts = (data.items || []).filter(isAvailable).length;
   const inventoryTotal = (data.items || []).reduce((sum, item) => sum + totalQuantity(item), 0);
   const statCards = [...stats.querySelectorAll("div")];
-  if (statCards[3]) statCards[3].querySelector("strong").textContent = inventoryTotal ? `${inventoryTotal} Jerseys Available` : "Small Drop Available";
+  if (statCards[3]) statCards[3].querySelector("strong").textContent = "Small Drop Almost Sold Out";
   if (statCards[2] && availableProducts) statCards[2].querySelector("small")?.remove();
 }
 
