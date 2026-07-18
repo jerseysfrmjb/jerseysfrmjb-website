@@ -148,7 +148,7 @@ function filterSizeTokens(item) {
 
 async function fetchSiteSettings() {
   try {
-    const response = await fetch("/api/settings", { headers: { Accept: "application/json" } });
+    const response = await fetch("/api/settings", { cache: "no-store", headers: { Accept: "application/json" } });
     if (!response.ok) return {};
     const data = await response.json();
     return data.settings || {};
@@ -173,6 +173,9 @@ async function loadSiteSettings() {
   const settings = await fetchSiteSettings();
   applyHomepageBanner(settings.homepage_banner_message || "");
 }
+
+loadSiteSettings();
+
 async function fetchInventory(params = {}) {
   const query = new URLSearchParams(params);
   const apiUrl = `/api/inventory${query.toString() ? `?${query}` : ""}`;
