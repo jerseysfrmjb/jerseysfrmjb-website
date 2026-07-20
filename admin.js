@@ -15,6 +15,19 @@ const refreshMessages = document.querySelector("[data-refresh-messages]");
 const adminSummary = document.querySelector("[data-admin-summary]");
 const adminQuick = document.querySelector("[data-admin-quick]");
 const adminFilterButtons = [...document.querySelectorAll("[data-admin-filter]")];
+const bulkLines = document.querySelector("[data-bulk-lines]");
+const bulkMode = document.querySelector("[data-bulk-mode]");
+const bulkCsv = document.querySelector("[data-bulk-csv]");
+const bulkPreviewBox = document.querySelector("[data-bulk-preview]");
+const bulkStatus = document.querySelector("[data-bulk-status]");
+const previewRestock = document.querySelector("[data-preview-restock]");
+const applyRestock = document.querySelector("[data-apply-restock]");
+const undoRestock = document.querySelector("[data-undo-restock]");
+const presetSelect = document.querySelector("[data-restock-preset-select]");
+const presetName = document.querySelector("[data-restock-preset-name]");
+const saveRestockPreset = document.querySelector("[data-save-restock-preset]");
+const loadRestockPreset = document.querySelector("[data-load-restock-preset]");
+const deleteRestockPreset = document.querySelector("[data-delete-restock-preset]");
 let inventory = [];
 let settings = {};
 let featuredLimit = 3;
@@ -22,6 +35,9 @@ let sizeOptions = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"];
 let messages = [];
 let unreadMessages = 0;
 let adminFilter = "all";
+let restockPresets = [];
+let lastBulkRestock = null;
+let currentBulkPreview = null;
 
 const bannerPresets = {
   live: "World Cup Restock LIVE\nNew World Cup jerseys are in stock now. Message @jerseysfrmjb for questions or requests.",
@@ -76,6 +92,156 @@ function activeSizeText(item) {
   return active.length ? active.join(", ") : item.size;
 }
 
+function renderPresetOptions() {
+  if (!presetSelect) return;
+  const selected = presetSelect.value;
+  presetSelect.innerHTML = '<option value="">Load saved preset</option>' + restockPresets
+    .map(preset => `<option value="${escapeHtml(preset.id)}">${escapeHtml(preset.name)}</option>`)
+    .join("");
+  if (selected && restockPresets.some(preset => preset.id === selected)) presetSelect.value = selected;
+}
+
+function productOptions(selectedId = "") {
+  return '<option value="">Choose matching jersey</option>' + inventory
+    .map(item => `<option value="${escapeHtml(item.id)}" ${item.id === selectedId ? "selected" : ""}>${escapeHtml(item.name)} (${escapeHtml(categoryLabel(item.category))})</option>`)
+    .join("");
+}
+
+function sizeSelectOptions(selectedSize = "") {
+  return sizeOptions
+    .map(size => `<option value="${escapeHtml(size)}" ${size === selectedSize ? "selected" : ""}>${escapeHtml(size)}</option>`)
+    .join("");
+}
+
+function readBulkCorrections() {
+  const corrections = {};
+  bulkPreviewBox?.querySelectorAll("[data-correction-line]").forEach(row => {
+    const line = row.dataset.correctionLine;
+    const itemId = row.querySelector("[data-correction-product]")?.value || "";
+    const size = row.querySelector("[data-correction-size]")?.value || "";
+    const quantity = row.querySelector("[data-correction-quantity]")?.value || "";
+    if (itemId || size || quantity) corrections[line] = { itemId, size, quantity };
+  });
+  return corrections;
+}
+
+function parseCsvRows(text = "") {
+  const rows = [];
+  let row = [];
+  let cell = "";
+  let quoted = false;
+  for (let index = 0; index < text.length; index++) {
+    const char = text[index];
+    const next = text[index + 1];
+    if (char === '"' && quoted && next === '"') {
+      cell += '"';
+      index++;
+    } else if (char === '"') {
+      quoted = !quoted;
+    } else if (char === "," && !quoted) {
+      row.push(cell.trim());
+      cell = "";
+    } else if ((char === "\n" || char === "\r") && !quoted) {
+      if (char === "\r" && next === "\n") index++;
+      row.push(cell.trim());
+      if (row.some(Boolean)) rows.push(row);
+      row = [];
+      cell = "";
+    } else {
+      cell += char;
+    }
+  }
+  row.push(cell.trim());
+  if (row.some(Boolean)) rows.push(row);
+  return rows;
+}
+
+function csvToRestockLines(text = "") {
+  const rows = parseCsvRows(text);
+  if (!rows.length) return "";
+  const header = rows[0].map(cell => cell.toLowerCase());
+  const productIndex = header.indexOf("product");
+  const sizeIndex = header.indexOf("size");
+  const quantityIndex = header.indexOf("quantity");
+  const dataRows = productIndex >= 0 && sizeIndex >= 0 && quantityIndex >= 0 ? rows.slice(1) : rows;
+  return dataRows
+    .map(row => {
+      const product = productIndex >= 0 ? row[productIndex] : row[0];
+      const size = sizeIndex >= 0 ? row[sizeIndex] : row[1];
+      const quantity = quantityIndex >= 0 ? row[quantityIndex] : row[2];
+      return [product, size, quantity].filter(value => value !== undefined).join(" | ");
+    })
+    .filter(line => line.replace(/[|\s]/g, ""))
+    .join("\n");
+}
+
+function renderBulkPreview(preview) {
+  currentBulkPreview = preview || null;
+  if (!bulkPreviewBox) return;
+  if (!preview) {
+    bulkPreviewBox.innerHTML = "";
+    if (applyRestock) applyRestock.disabled = true;
+    return;
+  }
+  if (applyRestock) applyRestock.disabled = !preview.canApply;
+
+  const matched = preview.matchedItems?.length ? `
+    <section class="bulk-preview-card">
+      <h3>Matched Items</h3>
+      <div class="bulk-table">
+        <div class="bulk-table-head"><span>Line</span><span>Jersey</span><span>Size</span><span>Current</span><span>New</span></div>
+        ${preview.matchedItems.map(item => `
+          <div class="bulk-table-row">
+            <span>${escapeHtml(item.lineNumber)}</span>
+            <span>${escapeHtml(item.itemName)}</span>
+            <span>${escapeHtml(item.size)}</span>
+            <span>${escapeHtml(item.currentQuantity)}</span>
+            <span>${escapeHtml(item.newQuantity)}</span>
+          </div>`).join("")}
+      </div>
+    </section>` : "";
+
+  const duplicates = preview.duplicateItems?.length ? `
+    <section class="bulk-preview-card warning">
+      <h3>Duplicate / Conflicting Lines</h3>
+      ${preview.duplicateItems.map(item => `
+        <p><b>${escapeHtml(item.itemName)} (${escapeHtml(item.size)})</b> appears on lines ${escapeHtml(item.lineNumbers.join(", "))}. ${item.conflicting ? "Set quantity mode cannot apply duplicates." : "Add mode will combine these quantities."}</p>
+      `).join("")}
+    </section>` : "";
+
+  const unmatched = preview.unmatchedItems?.length ? `
+    <section class="bulk-preview-card error">
+      <h3>Unmatched Items</h3>
+      ${preview.unmatchedItems.map(item => `
+        <article class="bulk-correction" data-correction-line="${escapeHtml(item.lineNumber)}">
+          <div>
+            <strong>Line ${escapeHtml(item.lineNumber)}: ${escapeHtml(item.input)}</strong>
+            <small>${escapeHtml(item.reason || "Choose the matching jersey.")}</small>
+          </div>
+          <label>Correct Jersey
+            <select data-correction-product>${productOptions("")}</select>
+          </label>
+          <label>Size
+            <select data-correction-size>${sizeSelectOptions(item.size || "")}</select>
+          </label>
+          <label>Quantity
+            <input type="number" min="1" inputmode="numeric" data-correction-quantity value="${escapeHtml(Math.max(1, Number(item.quantity || 1)))}">
+          </label>
+        </article>`).join("")}
+    </section>` : "";
+
+  bulkPreviewBox.innerHTML = `
+    <div class="bulk-preview-summary">
+      <span>${escapeHtml(preview.lineCount || 0)} lines checked</span>
+      <span>${escapeHtml(preview.matchedItems?.length || 0)} matched</span>
+      <span>${escapeHtml(preview.unmatchedItems?.length || 0)} unmatched</span>
+    </div>
+    ${matched}
+    ${duplicates}
+    ${unmatched}
+  `;
+}
+
 function formatAdminDate(value = "") {
   if (!value) return "";
   const date = new Date(String(value).includes("T") ? value : value + "T00:00:00");
@@ -106,7 +272,9 @@ async function api(path, options = {}) {
   if (!response.ok) {
     const plainText = text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
     const message = data.error || (text.trim().startsWith("<") ? `Server error (${response.status}). The site returned an error page instead of JSON.` : plainText) || `Request failed (${response.status})`;
-    throw new Error(message);
+    const error = new Error(message);
+    Object.assign(error, data);
+    throw error;
   }
   return data;
 }
@@ -322,6 +490,10 @@ function applyAdminData(data) {
   if (data.settings) settings = data.settings;
   if (data.featuredLimit) featuredLimit = Number(data.featuredLimit) || 3;
   if (Array.isArray(data.sizeOptions)) sizeOptions = data.sizeOptions;
+  if (Array.isArray(data.restockPresets)) restockPresets = data.restockPresets;
+  if (Object.prototype.hasOwnProperty.call(data, "lastBulkRestock")) lastBulkRestock = data.lastBulkRestock;
+  if (Object.prototype.hasOwnProperty.call(data, "bulkPreview")) renderBulkPreview(data.bulkPreview);
+  renderPresetOptions();
 }
 
 async function loadInventory() {
@@ -365,6 +537,119 @@ async function saveCard(card) {
   applyAdminData(data);
   statusLine.textContent = "Saved.";
   render();
+}
+
+async function previewBulkRestock() {
+  if (!bulkLines) return;
+  bulkStatus.textContent = "Checking restock lines...";
+  try {
+    const data = await api("/api/admin/inventory", {
+      method: "PATCH",
+      body: JSON.stringify({
+        bulkRestockPreview: true,
+        mode: bulkMode?.value || "add",
+        lines: bulkLines.value,
+        corrections: readBulkCorrections()
+      })
+    });
+    applyAdminData(data);
+    bulkStatus.textContent = data.bulkPreview?.canApply ? "Preview ready. Review it, then apply when everything looks right." : "Preview ready. Fix unmatched or conflicting lines before applying.";
+    render();
+  } catch (error) {
+    bulkStatus.textContent = error.message;
+  }
+}
+
+async function applyBulkRestock() {
+  if (!bulkLines || !currentBulkPreview) return;
+  if (!currentBulkPreview.canApply && !confirm("Some lines need attention. Try previewing again after corrections?")) return;
+  bulkStatus.textContent = "Applying restock...";
+  if (applyRestock) applyRestock.disabled = true;
+  try {
+    const data = await api("/api/admin/inventory", {
+      method: "PATCH",
+      body: JSON.stringify({
+        bulkRestockApply: true,
+        mode: bulkMode?.value || "add",
+        lines: bulkLines.value,
+        corrections: readBulkCorrections()
+      })
+    });
+    applyAdminData(data);
+    bulkStatus.textContent = "Bulk restock applied. You can undo the most recent restock if needed.";
+    renderBulkPreview(data.bulkPreview);
+    render();
+  } catch (error) {
+    bulkStatus.textContent = error.message;
+    if (error.preview) renderBulkPreview(error.preview);
+  }
+}
+
+async function undoLastRestock() {
+  if (!confirm("Undo the most recent bulk restock?")) return;
+  bulkStatus.textContent = "Undoing last restock...";
+  try {
+    const data = await api("/api/admin/inventory", {
+      method: "PATCH",
+      body: JSON.stringify({ bulkRestockUndo: true })
+    });
+    applyAdminData(data);
+    bulkStatus.textContent = "Most recent bulk restock was undone.";
+    renderBulkPreview(null);
+    render();
+  } catch (error) {
+    bulkStatus.textContent = error.message;
+  }
+}
+
+async function savePreset() {
+  const name = presetName?.value.trim() || "";
+  const lines = bulkLines?.value.trim() || "";
+  bulkStatus.textContent = "Saving preset...";
+  try {
+    const data = await api("/api/admin/inventory", {
+      method: "PATCH",
+      body: JSON.stringify({ restockPreset: { action: "save", name, lines, id: presetSelect?.value || "" } })
+    });
+    applyAdminData(data);
+    if (data.restockPresetSaved && presetSelect) presetSelect.value = data.restockPresetSaved;
+    bulkStatus.textContent = "Restock preset saved.";
+  } catch (error) {
+    bulkStatus.textContent = error.message;
+  }
+}
+
+function loadPreset() {
+  const preset = restockPresets.find(item => item.id === presetSelect?.value);
+  if (!preset) {
+    bulkStatus.textContent = "Choose a saved preset first.";
+    return;
+  }
+  if (bulkLines) bulkLines.value = preset.lines || "";
+  if (presetName) presetName.value = preset.name || "";
+  renderBulkPreview(null);
+  bulkStatus.textContent = "Preset loaded. Preview before applying.";
+}
+
+async function deletePreset() {
+  const id = presetSelect?.value || "";
+  if (!id) {
+    bulkStatus.textContent = "Choose a saved preset first.";
+    return;
+  }
+  if (!confirm("Delete this restock preset?")) return;
+  bulkStatus.textContent = "Deleting preset...";
+  try {
+    const data = await api("/api/admin/inventory", {
+      method: "PATCH",
+      body: JSON.stringify({ restockPreset: { action: "delete", id } })
+    });
+    applyAdminData(data);
+    if (presetName) presetName.value = "";
+    bulkStatus.textContent = "Restock preset deleted.";
+  } catch (error) {
+    bulkStatus.textContent = error.message;
+  }
 }
 
 document.querySelector("[data-login-form]").addEventListener("submit", async event => {
@@ -461,6 +746,38 @@ featuredPreview?.addEventListener("drop", async event => {
 });
 
 refreshMessages?.addEventListener("click", loadMessages);
+
+previewRestock?.addEventListener("click", previewBulkRestock);
+applyRestock?.addEventListener("click", applyBulkRestock);
+undoRestock?.addEventListener("click", undoLastRestock);
+saveRestockPreset?.addEventListener("click", savePreset);
+loadRestockPreset?.addEventListener("click", loadPreset);
+deleteRestockPreset?.addEventListener("click", deletePreset);
+presetSelect?.addEventListener("change", () => {
+  const preset = restockPresets.find(item => item.id === presetSelect.value);
+  if (presetName && preset) presetName.value = preset.name || "";
+});
+bulkLines?.addEventListener("input", () => {
+  renderBulkPreview(null);
+  if (bulkStatus) bulkStatus.textContent = "";
+});
+bulkMode?.addEventListener("change", () => {
+  renderBulkPreview(null);
+  if (bulkStatus) bulkStatus.textContent = "Preview again after changing the update mode.";
+});
+bulkCsv?.addEventListener("change", async event => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  const text = await file.text();
+  const converted = csvToRestockLines(text);
+  if (!converted) {
+    bulkStatus.textContent = "CSV did not include restock rows.";
+    return;
+  }
+  bulkLines.value = converted;
+  renderBulkPreview(null);
+  bulkStatus.textContent = "CSV loaded. Preview before applying.";
+});
 
 messagesList?.addEventListener("click", async event => {
   const card = event.target.closest(".admin-message-card");

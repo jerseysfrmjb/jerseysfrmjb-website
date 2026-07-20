@@ -95,9 +95,192 @@ function normalizeFeaturedOrder(value) {
   return Number.isFinite(order) && order >= 1 && order <= FEATURED_LIMIT ? order : 0;
 }
 
+function requestId() {
+  return typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + "-" + Math.random().toString(16).slice(2);
+}
+
+function normalizeText(value = "") {
+  return String(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[#|/()&.+,'"-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeSizeInput(value = "") {
+  const raw = String(value || "").trim();
+  const compact = raw.toUpperCase().replace(/\s+/g, "");
+  if (SIZE_ORDER.includes(compact)) return compact;
+  const match = SIZE_WORDS.find(([, pattern]) => pattern.test(raw));
+  return match ? match[0] : "";
+}
+
+function parseRestockQuantity(value = "") {
+  const match = String(value || "").trim().match(/^([+-]?)(\d+)$/);
+  if (!match) return null;
+  const amount = Math.floor(Number(match[2]));
+  return match[1] === "-" ? -amount : amount;
+}
+
+function parseRestockLines(rawLines = "") {
+  return String(rawLines || "")
+    .split(/\r?\n/)
+    .map((line, index) => ({ input: line.trim(), lineNumber: index + 1 }))
+    .filter(line => line.input)
+    .map(line => {
+      const parts = line.input.split("|").map(part => part.trim());
+      const product = parts[0] || "";
+      const size = normalizeSizeInput(parts[1] || "");
+      const quantity = parseRestockQuantity(parts[2] || "");
+      return {
+        ...line,
+        product,
+        size,
+        quantity,
+        error: parts.length < 3 ? "Use Product | Size | Quantity" : (!size ? "Size was not recognized" : (quantity === null || quantity < 0 ? "Quantity must be a number like +2 or 2" : ""))
+      };
+    });
+}
+
+function matchScore(query, item) {
+  const ignored = new Set(["jersey", "kit", "world", "cup", "2026", "fc"]);
+  const normalizedQuery = normalizeText(query);
+  const normalizedName = normalizeText([item.name, item.category].join(" "));
+  if (!normalizedQuery) return 0;
+  if (normalizedName === normalizedQuery) return 1000;
+  if (normalizedName.includes(normalizedQuery)) return 900;
+
+  const queryTokens = normalizedQuery.split(" ").filter(token => token && !ignored.has(token));
+  if (!queryTokens.length) return 0;
+  const nameTokens = new Set(normalizedName.split(" "));
+  let score = 0;
+  for (const token of queryTokens) {
+    if (nameTokens.has(token)) score += 20;
+    else if (normalizedName.includes(token)) score += 8;
+  }
+  return score + Math.min(queryTokens.length, 6);
+}
+
+function findProductMatch(items, productName) {
+  const candidates = items
+    .map(item => ({ item, score: matchScore(productName, item) }))
+    .filter(candidate => candidate.score > 0)
+    .sort((a, b) => b.score - a.score || a.item.name.localeCompare(b.item.name));
+  const best = candidates[0];
+  const second = candidates[1];
+  const ambiguous = best && second && best.score < 900 && second.score >= best.score - 8;
+  return {
+    item: best && best.score >= 28 && !ambiguous ? best.item : null,
+    suggestions: candidates.slice(0, 5).map(candidate => ({ id: candidate.item.id, name: candidate.item.name, category: candidate.item.category, score: candidate.score })),
+    ambiguous
+  };
+}
+
+function buildBulkPreview(items, rawLines = "", mode = "add", corrections = {}) {
+  const parsedLines = parseRestockLines(rawLines);
+  const byId = new Map(items.map(item => [item.id, item]));
+  const matchedItems = [];
+  const unmatchedItems = [];
+
+  for (const line of parsedLines) {
+    const correction = corrections?.[line.lineNumber] || {};
+    const correctedItem = correction.itemId ? byId.get(String(correction.itemId)) : null;
+    const correctedSize = normalizeSizeInput(correction.size || line.size);
+    const correctedQuantity = Object.prototype.hasOwnProperty.call(correction, "quantity") && correction.quantity !== "" ? Math.max(0, Math.floor(Number(correction.quantity))) : line.quantity;
+
+    if (line.error && !correctedItem) {
+      unmatchedItems.push({ ...line, reason: line.error, suggestions: [] });
+      continue;
+    }
+
+    if (mode === "add" && correctedQuantity <= 0) {
+      unmatchedItems.push({ ...line, quantity: correctedQuantity, reason: "Add mode needs a positive quantity like +2.", suggestions: [] });
+      continue;
+    }
+
+    const match = correctedItem ? { item: correctedItem, suggestions: [], ambiguous: false } : findProductMatch(items, line.product);
+    if (!match.item || !correctedSize) {
+      unmatchedItems.push({
+        ...line,
+        size: correctedSize || line.size,
+        quantity: correctedQuantity,
+        reason: match.ambiguous ? "Multiple jerseys look similar. Choose the correct one." : (line.error || "No matching jersey found"),
+        suggestions: match.suggestions
+      });
+      continue;
+    }
+
+    const currentQuantity = Math.max(0, Math.floor(Number(match.item.sizes?.[correctedSize] || 0)));
+    matchedItems.push({
+      lineNumber: line.lineNumber,
+      input: line.input,
+      itemId: match.item.id,
+      itemName: match.item.name,
+      category: match.item.category,
+      size: correctedSize,
+      changeQuantity: correctedQuantity,
+      currentQuantity,
+      newQuantity: mode === "set" ? Math.max(0, correctedQuantity) : Math.max(0, currentQuantity + correctedQuantity)
+    });
+  }
+
+  const groups = new Map();
+  for (const item of matchedItems) {
+    const key = `${item.itemId}::${item.size}`;
+    const group = groups.get(key) || { itemId: item.itemId, itemName: item.itemName, size: item.size, lineNumbers: [], currentQuantity: item.currentQuantity, totalChange: 0 };
+    group.lineNumbers.push(item.lineNumber);
+    group.totalChange += item.changeQuantity;
+    groups.set(key, group);
+  }
+
+  const duplicateItems = [...groups.values()].filter(group => group.lineNumbers.length > 1).map(group => ({
+    ...group,
+    newQuantity: mode === "set" ? group.totalChange : Math.max(0, group.currentQuantity + group.totalChange),
+    conflicting: mode === "set"
+  }));
+
+  for (const item of matchedItems) {
+    const group = groups.get(`${item.itemId}::${item.size}`);
+    if (group) item.newQuantity = mode === "set" ? item.changeQuantity : Math.max(0, group.currentQuantity + group.totalChange);
+  }
+
+  return {
+    mode,
+    lineCount: parsedLines.length,
+    matchedItems,
+    unmatchedItems,
+    duplicateItems,
+    canApply: matchedItems.length > 0 && unmatchedItems.length === 0 && !duplicateItems.some(item => item.conflicting)
+  };
+}
+
+async function loadRestockPresets(env) {
+  const result = await env.DB.prepare("SELECT id, name, lines, created_at, updated_at FROM restock_presets ORDER BY updated_at DESC, name").all();
+  return result.results || [];
+}
+
+async function loadLastBulkRestock(env) {
+  const row = await env.DB.prepare("SELECT id, created_at, undone_at FROM bulk_restock_runs ORDER BY created_at DESC LIMIT 1").first();
+  return row || null;
+}
+
 async function loadInventory(env) {
   const result = await env.DB.prepare("SELECT * FROM inventory ORDER BY CASE WHEN quantity > 0 THEN 0 ELSE 1 END, category, sort_order, name").all();
   return result.results.map(parseItem);
+}
+
+async function fullAdminPayload(env, extra = {}) {
+  return {
+    items: await loadInventory(env),
+    settings: await getSettings(env),
+    featuredLimit: FEATURED_LIMIT,
+    sizeOptions: SIZE_ORDER,
+    restockPresets: await loadRestockPresets(env),
+    lastBulkRestock: await loadLastBulkRestock(env),
+    ...extra
+  };
 }
 
 async function handleGet({ request, env }) {
@@ -106,7 +289,99 @@ async function handleGet({ request, env }) {
   if (!(await isAuthorized(request, env))) return unauthorized();
   await ensureInventory(env);
 
-  return json({ items: await loadInventory(env), settings: await getSettings(env), featuredLimit: FEATURED_LIMIT, sizeOptions: SIZE_ORDER });
+  return json(await fullAdminPayload(env));
+}
+
+async function saveRestockPreset(env, preset = {}) {
+  const name = String(preset.name || "").trim();
+  const lines = String(preset.lines || "").trim();
+  if (!name) return json({ error: "Preset name is required." }, 400);
+  if (!lines) return json({ error: "Preset lines are required." }, 400);
+  const id = String(preset.id || requestId()).trim();
+  await env.DB.prepare(`
+    INSERT INTO restock_presets (id, name, lines, updated_at)
+    VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(id) DO UPDATE SET name = excluded.name, lines = excluded.lines, updated_at = CURRENT_TIMESTAMP
+  `).bind(id, name, lines).run();
+  return json(await fullAdminPayload(env, { restockPresetSaved: id }));
+}
+
+async function deleteRestockPreset(env, id = "") {
+  if (!id) return json({ error: "Choose a preset to delete." }, 400);
+  await env.DB.prepare("DELETE FROM restock_presets WHERE id = ?").bind(String(id)).run();
+  return json(await fullAdminPayload(env));
+}
+
+async function applyBulkRestock(env, body = {}) {
+  const mode = body.mode === "set" ? "set" : "add";
+  const items = await loadInventory(env);
+  const preview = buildBulkPreview(items, body.lines || "", mode, body.corrections || {});
+  if (!preview.matchedItems.length) return json({ error: "No matched jerseys to update.", preview }, 400);
+  if (preview.unmatchedItems.length) return json({ error: "Fix unmatched lines before applying the restock.", preview }, 400);
+  if (preview.duplicateItems.some(item => item.conflicting)) {
+    return json({ error: "Set quantity mode has duplicate lines for the same jersey and size. Remove the duplicate or use Add mode.", preview }, 400);
+  }
+
+  const grouped = new Map();
+  for (const item of preview.matchedItems) {
+    const key = item.itemId;
+    const group = grouped.get(key) || { itemId: item.itemId, changes: [] };
+    group.changes.push(item);
+    grouped.set(key, group);
+  }
+
+  const undoChanges = [];
+  for (const group of grouped.values()) {
+    const current = items.find(item => item.id === group.itemId);
+    if (!current) continue;
+    const nextSizes = { ...(current.sizes || {}) };
+    const before = { id: current.id, name: current.name, size: current.size, sizes: current.sizes || {}, quantity: current.quantity };
+
+    const sizeChanges = new Map();
+    for (const change of group.changes) {
+      const previous = sizeChanges.get(change.size) || 0;
+      sizeChanges.set(change.size, previous + change.changeQuantity);
+    }
+
+    for (const [size, quantity] of sizeChanges.entries()) {
+      const currentQty = Math.max(0, Math.floor(Number(nextSizes[size] || 0)));
+      const nextQty = mode === "set" ? Math.max(0, quantity) : Math.max(0, currentQty + quantity);
+      if (nextQty > 0) nextSizes[size] = nextQty;
+      else delete nextSizes[size];
+    }
+
+    const normalized = normalizeSizes(nextSizes);
+    const nextQuantity = totalQuantity(normalized, 0);
+    const nextSizeLabel = sizesLabel(normalized, current.size);
+    await env.DB.prepare("UPDATE inventory SET size = ?, sizes_json = ?, quantity = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+      .bind(nextSizeLabel, JSON.stringify(normalized), nextQuantity, current.id)
+      .run();
+    undoChanges.push({ before, after: { id: current.id, size: nextSizeLabel, sizes: normalized, quantity: nextQuantity } });
+  }
+
+  await env.DB.prepare("INSERT INTO bulk_restock_runs (id, changes_json) VALUES (?, ?)")
+    .bind(requestId(), JSON.stringify({ mode, changes: undoChanges }))
+    .run();
+  await setSetting(env, "inventory_updated_at", new Date().toISOString());
+  return json(await fullAdminPayload(env, { bulkPreview: preview, bulkApplied: true }));
+}
+
+async function undoBulkRestock(env) {
+  const run = await env.DB.prepare("SELECT * FROM bulk_restock_runs WHERE undone_at IS NULL ORDER BY created_at DESC LIMIT 1").first();
+  if (!run) return json({ error: "No recent bulk restock to undo." }, 400);
+  const payload = parseJson(run.changes_json, { changes: [] });
+  for (const change of payload.changes || []) {
+    const before = change.before || {};
+    const normalized = normalizeSizes(before.sizes || {}, before.size, before.quantity);
+    const quantity = totalQuantity(normalized, before.quantity);
+    const size = sizesLabel(normalized, before.size);
+    await env.DB.prepare("UPDATE inventory SET size = ?, sizes_json = ?, quantity = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+      .bind(size, JSON.stringify(normalized), quantity, before.id)
+      .run();
+  }
+  await env.DB.prepare("UPDATE bulk_restock_runs SET undone_at = CURRENT_TIMESTAMP WHERE id = ?").bind(run.id).run();
+  await setSetting(env, "inventory_updated_at", new Date().toISOString());
+  return json(await fullAdminPayload(env, { bulkUndone: true }));
 }
 
 async function handlePatch({ request, env }) {
@@ -118,7 +393,30 @@ async function handlePatch({ request, env }) {
   const body = await request.json().catch(() => ({}));
 
   if (body.settings) {
-    return json({ settings: await updateSettings(env, body.settings), items: await loadInventory(env), featuredLimit: FEATURED_LIMIT, sizeOptions: SIZE_ORDER });
+    await updateSettings(env, body.settings);
+    return json(await fullAdminPayload(env));
+  }
+
+  if (body.bulkRestockPreview) {
+    const items = await loadInventory(env);
+    return json(await fullAdminPayload(env, {
+      bulkPreview: buildBulkPreview(items, body.lines || "", body.mode === "set" ? "set" : "add", body.corrections || {})
+    }));
+  }
+
+  if (body.bulkRestockApply) {
+    return applyBulkRestock(env, body);
+  }
+
+  if (body.bulkRestockUndo) {
+    return undoBulkRestock(env);
+  }
+
+  if (body.restockPreset) {
+    const action = body.restockPreset.action;
+    if (action === "save") return saveRestockPreset(env, body.restockPreset);
+    if (action === "delete") return deleteRestockPreset(env, body.restockPreset.id);
+    return json({ error: "Unknown preset action." }, 400);
   }
 
   if (Array.isArray(body.featuredOrder)) {
@@ -134,7 +432,7 @@ async function handlePatch({ request, env }) {
         .run();
     }
 
-    return json({ settings: await getSettings(env), items: await loadInventory(env), featuredLimit: FEATURED_LIMIT, sizeOptions: SIZE_ORDER });
+    return json(await fullAdminPayload(env));
   }
 
   const id = String(body.id || "").trim();
@@ -186,7 +484,7 @@ async function handlePatch({ request, env }) {
   await setSetting(env, "inventory_updated_at", new Date().toISOString());
 
   const updated = await env.DB.prepare("SELECT * FROM inventory WHERE id = ?").bind(id).first();
-  return json({ item: parseItem(updated), items: await loadInventory(env), settings: await getSettings(env), featuredLimit: FEATURED_LIMIT, sizeOptions: SIZE_ORDER });
+  return json(await fullAdminPayload(env, { item: parseItem(updated) }));
 }
 export async function onRequestGet(context) {
   try {

@@ -7,7 +7,7 @@
   <meta name="robots" content="noindex,nofollow">
   <link rel="icon" href="assets/jerseysfrmjb-logo.jpg" type="image/jpeg">
   <link rel="stylesheet" href="styles.css?v=filter-count-1">
-  <script src="admin.js?v=desktop-polish-1" defer></script>
+  <script src="admin.js?v=bulk-restock-1" defer></script>
 </head>
 <body class="admin-body">
   <main class="admin-shell">
@@ -74,6 +74,47 @@
         </div>
         <label class="banner-editor-label">Banner Text<textarea data-banner-message rows="4"></textarea></label>
         <button class="shop-button secondary-admin" type="button" data-save-banner>Save Banner</button>
+      </section>
+      <section class="admin-bulk-panel" aria-label="Bulk restock tool">
+        <div>
+          <span class="section-kicker">Bulk Restock</span>
+          <h2>Bulk Restock Tool</h2>
+          <p>Paste shipment lines, preview every quantity change, correct unmatched jerseys, then apply when everything looks right.</p>
+        </div>
+        <div class="bulk-mode-row">
+          <label>Update Mode
+            <select data-bulk-mode>
+              <option value="add">Add to current quantity</option>
+              <option value="set">Set quantity</option>
+            </select>
+          </label>
+          <label>Saved Preset
+            <select data-restock-preset-select>
+              <option value="">Load saved preset</option>
+            </select>
+          </label>
+        </div>
+        <label class="banner-editor-label">Restock Lines
+          <textarea data-bulk-lines rows="7" placeholder="Messi Argentina Home | M | +2&#10;Ronaldo Portugal Home | M | +2&#10;Mbappe France Home | 4XL | +1"></textarea>
+        </label>
+        <div class="bulk-upload-row">
+          <label>CSV Upload
+            <input type="file" accept=".csv,text/csv" data-bulk-csv>
+          </label>
+          <label>Preset Name
+            <input type="text" data-restock-preset-name placeholder="Small World Cup drop">
+          </label>
+        </div>
+        <div class="bulk-action-row">
+          <button class="shop-button secondary-admin" type="button" data-preview-restock>Preview Restock</button>
+          <button class="shop-button secondary-admin" type="button" data-apply-restock disabled>Apply Restock</button>
+          <button class="shop-button secondary-admin" type="button" data-save-restock-preset>Save as Restock Preset</button>
+          <button class="shop-button secondary-admin" type="button" data-load-restock-preset>Load Saved Preset</button>
+          <button class="shop-button secondary-admin" type="button" data-delete-restock-preset>Delete Preset</button>
+          <button class="shop-button secondary-admin danger-admin" type="button" data-undo-restock>Undo Last Restock</button>
+        </div>
+        <p class="form-status" data-bulk-status></p>
+        <div class="bulk-preview" data-bulk-preview></div>
       </section>
       <section class="admin-quick-panel" aria-label="Quick inventory sections">
         <div>

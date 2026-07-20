@@ -650,6 +650,23 @@ export async function ensureInventory(env) {
   )`).run();
   await env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_contact_messages_created ON contact_messages(created_at DESC)`).run();
   await env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_contact_messages_status ON contact_messages(status, created_at DESC)`).run();
+
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS restock_presets (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    lines TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`).run();
+
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS bulk_restock_runs (
+    id TEXT PRIMARY KEY,
+    changes_json TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    undone_at TEXT
+  )`).run();
+  await env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_bulk_restock_runs_created ON bulk_restock_runs(created_at DESC)`).run();
+
   await env.DB.prepare("INSERT OR IGNORE INTO site_settings (key, value) VALUES (?, ?)").bind("hide_sold_out_featured", "false").run();
   await env.DB.prepare("INSERT OR IGNORE INTO site_settings (key, value) VALUES (?, ?)").bind("homepage_banner_message", "Small Drop, Big Drop Coming Soon\nA small World Cup drop is available now. A bigger drop is coming soon. Fill out the contact form to request a jersey or DM @jerseysfrmjb with questions.").run();
   await env.DB.prepare("INSERT OR IGNORE INTO site_settings (key, value) VALUES (?, CURRENT_TIMESTAMP)").bind("inventory_updated_at").run();
