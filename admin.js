@@ -8,6 +8,8 @@ const featuredPreview = document.querySelector("[data-featured-preview]");
 const hideSoldFeatured = document.querySelector("[data-hide-sold-featured]");
 const saveFeaturedSettings = document.querySelector("[data-save-featured-settings]");
 const bannerMessage = document.querySelector("[data-banner-message]");
+const tickerMessage = document.querySelector("[data-ticker-message]");
+const statMessage = document.querySelector("[data-stat-message]");
 const saveBanner = document.querySelector("[data-save-banner]");
 const messagesList = document.querySelector("[data-admin-messages]");
 const messageCount = document.querySelector("[data-message-count]");
@@ -40,9 +42,21 @@ let lastBulkRestock = null;
 let currentBulkPreview = null;
 
 const bannerPresets = {
-  live: "World Cup Restock LIVE\nNew World Cup jerseys are in stock now. Message @jerseysfrmjb for questions or requests.",
-  almost: "Almost Sold Out\nThanks for all the support! Only a few jerseys remain. Next restock coming soon.",
-  soon: "Next Drop Coming Soon\nMore jerseys are coming soon. Fill out the contact form to request a jersey."
+  live: {
+    banner: "World Cup Jerseys Available Now!\nA few World Cup jerseys are now available in Small & Large. DM @jerseysfrmjb for questions or requests.",
+    ticker: "🔥 WORLD CUP JERSEYS AVAILABLE NOW • SMALL & LARGE SIZES IN STOCK • DM @JERSEYSFRMJB FOR REQUESTS ❤️",
+    stat: "Small & Large Available"
+  },
+  almost: {
+    banner: "Small Drop Almost Sold Out\nThanks for all the support! Only a few jerseys remain from the small drop. Fill out the contact form to request a jersey.",
+    ticker: "🚨 SMALL DROP ALMOST SOLD OUT • BIG DROP COMING SOON • TAP NEED HELP TO REQUEST ❤️",
+    stat: "Small Drop Almost Sold Out"
+  },
+  soon: {
+    banner: "Next Drop Coming Soon\nMore jerseys are coming soon. Fill out the contact form to request a jersey.",
+    ticker: "🔥 NEXT DROP COMING SOON • TAP NEED HELP TO REQUEST A JERSEY ❤️",
+    stat: "More Jerseys Coming Soon"
+  }
 };
 
 function escapeHtml(value = "") {
@@ -235,6 +249,7 @@ function renderBulkPreview(preview) {
       <span>${escapeHtml(preview.lineCount || 0)} lines checked</span>
       <span>${escapeHtml(preview.matchedItems?.length || 0)} matched</span>
       <span>${escapeHtml(preview.unmatchedItems?.length || 0)} unmatched</span>
+      <span>${escapeHtml(preview.totalQuantity || 0)} jerseys total added</span>
     </div>
     ${matched}
     ${duplicates}
@@ -438,7 +453,9 @@ function render() {
   const query = searchInput.value.trim().toLowerCase();
   const category = categorySelect.value;
   if (hideSoldFeatured) hideSoldFeatured.checked = settings.hide_sold_out_featured === "true";
-  if (bannerMessage) bannerMessage.value = settings.homepage_banner_message || bannerPresets.soon;
+  if (bannerMessage) bannerMessage.value = settings.homepage_banner_message || bannerPresets.soon.banner;
+  if (tickerMessage) tickerMessage.value = settings.homepage_ticker_message || bannerPresets.soon.ticker;
+  if (statMessage) statMessage.value = settings.homepage_stat_message || bannerPresets.soon.stat;
 
   const shown = inventory
     .filter(item => category === "all" || item.category === category)
@@ -689,7 +706,13 @@ saveBanner?.addEventListener("click", async () => {
   try {
     const data = await api("/api/admin/inventory", {
       method: "PATCH",
-      body: JSON.stringify({ settings: { homepage_banner_message: bannerMessage.value } })
+      body: JSON.stringify({
+        settings: {
+          homepage_banner_message: bannerMessage.value,
+          homepage_ticker_message: tickerMessage?.value || "",
+          homepage_stat_message: statMessage?.value || ""
+        }
+      })
     });
     applyAdminData(data);
     statusLine.textContent = "Banner saved.";
@@ -701,7 +724,11 @@ saveBanner?.addEventListener("click", async () => {
 
 document.querySelectorAll("[data-banner-preset]").forEach(button => {
   button.addEventListener("click", () => {
-    bannerMessage.value = bannerPresets[button.dataset.bannerPreset] || bannerMessage.value;
+    const preset = bannerPresets[button.dataset.bannerPreset];
+    if (!preset) return;
+    if (bannerMessage) bannerMessage.value = preset.banner;
+    if (tickerMessage) tickerMessage.value = preset.ticker;
+    if (statMessage) statMessage.value = preset.stat;
   });
 });
 

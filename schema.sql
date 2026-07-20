@@ -33,6 +33,10 @@ INSERT OR IGNORE INTO site_settings (key, value) VALUES ('inventory_updated_at',
 INSERT OR IGNORE INTO site_settings (key, value) VALUES ('homepage_banner_message', 'Small Drop, Big Drop Coming Soon
 A small World Cup drop is available now. A bigger drop is coming soon. Fill out the contact form to request a jersey or DM @jerseysfrmjb with questions.');
 
+INSERT OR IGNORE INTO site_settings (key, value) VALUES ('homepage_ticker_message', '🔥 SMALL DROP AVAILABLE NOW • BIG DROP COMING SOON • TAP NEED HELP TO REQUEST ❤️');
+
+INSERT OR IGNORE INTO site_settings (key, value) VALUES ('homepage_stat_message', 'Small Drop Almost Sold Out');
+
 
 CREATE TABLE IF NOT EXISTS contact_messages (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

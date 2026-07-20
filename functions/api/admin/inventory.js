@@ -84,6 +84,12 @@ async function updateSettings(env, settings = {}) {
   if (Object.prototype.hasOwnProperty.call(settings, "homepage_banner_message")) {
     await setSetting(env, "homepage_banner_message", String(settings.homepage_banner_message || "").trim());
   }
+  if (Object.prototype.hasOwnProperty.call(settings, "homepage_ticker_message")) {
+    await setSetting(env, "homepage_ticker_message", String(settings.homepage_ticker_message || "").trim());
+  }
+  if (Object.prototype.hasOwnProperty.call(settings, "homepage_stat_message")) {
+    await setSetting(env, "homepage_stat_message", String(settings.homepage_stat_message || "").trim());
+  }
   if (Object.prototype.hasOwnProperty.call(settings, "inventory_updated_at")) {
     await setSetting(env, "inventory_updated_at", settings.inventory_updated_at || new Date().toISOString());
   }
@@ -124,22 +130,35 @@ function parseRestockQuantity(value = "") {
   return match[1] === "-" ? -amount : amount;
 }
 
+function parseShipmentLine(input = "") {
+  const match = String(input || "").trim().match(/^(.*?)\s*(?:--|-|\u2013|\u2014)\s*(.*?)\s*(?:x|\u00d7)\s*(\d+)\s*\(([^)]+)\)\s*$/i);
+  if (!match) return null;
+  const teamAndStyle = match[1].trim();
+  const player = match[2].trim();
+  return {
+    product: [teamAndStyle, player].filter(Boolean).join(" "),
+    size: normalizeSizeInput(match[4]),
+    quantity: parseRestockQuantity("+" + match[3])
+  };
+}
+
 function parseRestockLines(rawLines = "") {
   return String(rawLines || "")
     .split(/\r?\n/)
     .map((line, index) => ({ input: line.trim(), lineNumber: index + 1 }))
     .filter(line => line.input)
     .map(line => {
-      const parts = line.input.split("|").map(part => part.trim());
-      const product = parts[0] || "";
-      const size = normalizeSizeInput(parts[1] || "");
-      const quantity = parseRestockQuantity(parts[2] || "");
+      const shipmentLine = parseShipmentLine(line.input);
+      const parts = shipmentLine ? [] : line.input.split("|").map(part => part.trim());
+      const product = shipmentLine ? shipmentLine.product : (parts[0] || "");
+      const size = shipmentLine ? shipmentLine.size : normalizeSizeInput(parts[1] || "");
+      const quantity = shipmentLine ? shipmentLine.quantity : parseRestockQuantity(parts[2] || "");
       return {
         ...line,
         product,
         size,
         quantity,
-        error: parts.length < 3 ? "Use Product | Size | Quantity" : (!size ? "Size was not recognized" : (quantity === null || quantity < 0 ? "Quantity must be a number like +2 or 2" : ""))
+        error: !shipmentLine && parts.length < 3 ? "Use Product | Size | Quantity, or Team Home - Player #Number x2 (M)" : (!size ? "Size was not recognized" : (quantity === null || quantity < 0 ? "Quantity must be a number like +2 or 2" : ""))
       };
     });
 }
@@ -249,6 +268,7 @@ function buildBulkPreview(items, rawLines = "", mode = "add", corrections = {}) 
   return {
     mode,
     lineCount: parsedLines.length,
+    totalQuantity: matchedItems.reduce((sum, item) => sum + Math.max(0, Number(item.changeQuantity || 0)), 0),
     matchedItems,
     unmatchedItems,
     duplicateItems,

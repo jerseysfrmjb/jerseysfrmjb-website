@@ -169,9 +169,24 @@ function applyHomepageBanner(message = "") {
   if (bodyNode && body) bodyNode.textContent = body;
 }
 
+function applyHomepageTicker(message = "") {
+  if (!message.trim()) return;
+  document.querySelectorAll(".ticker-line").forEach(line => {
+    line.textContent = message.trim();
+  });
+}
+
+function applyHomepageStat(message = "") {
+  if (!message.trim()) return;
+  const statCard = document.querySelector(".brand-stats div:nth-child(4) strong");
+  if (statCard) statCard.textContent = message.trim();
+}
+
 async function loadSiteSettings() {
   const settings = await fetchSiteSettings();
   applyHomepageBanner(settings.homepage_banner_message || "");
+  applyHomepageTicker(settings.homepage_ticker_message || "");
+  applyHomepageStat(settings.homepage_stat_message || "");
 }
 
 loadSiteSettings();
@@ -439,7 +454,6 @@ async function renderHomepageStats() {
   const availableProducts = (data.items || []).filter(isAvailable).length;
   const inventoryTotal = (data.items || []).reduce((sum, item) => sum + totalQuantity(item), 0);
   const statCards = [...stats.querySelectorAll("div")];
-  if (statCards[3]) statCards[3].querySelector("strong").textContent = "Small Drop Almost Sold Out";
   if (statCards[2] && availableProducts) statCards[2].querySelector("small")?.remove();
 }
 

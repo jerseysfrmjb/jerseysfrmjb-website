@@ -385,6 +385,150 @@ export const seedInventory = {
                       "featured":  false
                   },
                   {
+                      "sort_order":  170,
+                      "id":  "world-spain-yamal-away",
+                      "photos":  [
+                                     {
+                                         "src":  "assets/inventory/world-spain-yamal-away-front.jpg",
+                                         "alt":  "Lamine Yamal Spain 2026 World Cup away jersey front"
+                                     },
+                                     {
+                                         "src":  "assets/inventory/world-spain-yamal-away-back.jpg",
+                                         "alt":  "Lamine Yamal Spain 2026 World Cup away jersey back"
+                                     }
+                                 ],
+                      "size":  "Medium",
+                      "price":  55,
+                      "category":  "world",
+                      "name":  "Lamine Yamal #19 | Spain 2026 World Cup Away",
+                      "quantity":  0,
+                      "links":  {
+                                    "depop":  "https://www.depop.com/jerseysfrmjb/",
+                                    "ebay":  "https://www.ebay.com/usr/jerseysfrmjb"
+                                },
+                      "featured":  false
+                  },
+                  {
+                      "sort_order":  180,
+                      "id":  "world-usa-pulisic-away",
+                      "photos":  [
+                                     {
+                                         "src":  "assets/inventory/world-usa-pulisic-away-front.jpg",
+                                         "alt":  "Christian Pulisic USA 2026 World Cup away jersey front"
+                                     },
+                                     {
+                                         "src":  "assets/inventory/world-usa-pulisic-away-back.jpg",
+                                         "alt":  "Christian Pulisic USA 2026 World Cup away jersey back"
+                                     }
+                                 ],
+                      "size":  "Medium",
+                      "price":  55,
+                      "category":  "world",
+                      "name":  "Christian Pulisic #10 | USA 2026 World Cup Away",
+                      "quantity":  0,
+                      "links":  {
+                                    "depop":  "https://www.depop.com/jerseysfrmjb/",
+                                    "ebay":  "https://www.ebay.com/usr/jerseysfrmjb"
+                                },
+                      "featured":  false
+                  },
+                  {
+                      "sort_order":  190,
+                      "id":  "world-norway-haaland-away",
+                      "photos":  [
+                                     {
+                                         "src":  "assets/inventory/world-norway-haaland-away-front.jpg",
+                                         "alt":  "Erling Haaland Norway 2026 World Cup away jersey front"
+                                     },
+                                     {
+                                         "src":  "assets/inventory/world-norway-haaland-away-back.jpg",
+                                         "alt":  "Erling Haaland Norway 2026 World Cup away jersey back"
+                                     }
+                                 ],
+                      "size":  "Large",
+                      "price":  55,
+                      "category":  "world",
+                      "name":  "Erling Haaland #9 | Norway 2026 World Cup Away",
+                      "quantity":  0,
+                      "links":  {
+                                    "depop":  "https://www.depop.com/jerseysfrmjb/",
+                                    "ebay":  "https://www.ebay.com/usr/jerseysfrmjb"
+                                },
+                      "featured":  false
+                  },
+                  {
+                      "sort_order":  195,
+                      "id":  "world-colombia-luis-diaz-home",
+                      "photos":  [
+                                     {
+                                         "src":  "assets/inventory/world-colombia-luis-diaz-home-front.jpg",
+                                         "alt":  "Luis Diaz Colombia 2026 World Cup home jersey front"
+                                     },
+                                     {
+                                         "src":  "assets/inventory/world-colombia-luis-diaz-home-back.jpg",
+                                         "alt":  "Luis Diaz Colombia 2026 World Cup home jersey back"
+                                     }
+                                 ],
+                      "size":  "Medium",
+                      "price":  55,
+                      "category":  "world",
+                      "name":  "Luis Diaz #7 | Colombia 2026 World Cup Home",
+                      "quantity":  0,
+                      "links":  {
+                                    "depop":  "https://www.depop.com/jerseysfrmjb/",
+                                    "ebay":  "https://www.ebay.com/usr/jerseysfrmjb"
+                                },
+                      "featured":  false
+                  },
+                  {
+                      "sort_order":  196,
+                      "id":  "world-japan-blank-home",
+                      "photos":  [
+                                     {
+                                         "src":  "assets/inventory/world-japan-blank-home-front.jpg",
+                                         "alt":  "Japan 2026 World Cup home jersey front with no name or number"
+                                     },
+                                     {
+                                         "src":  "assets/inventory/world-japan-blank-home-back.jpg",
+                                         "alt":  "Japan 2026 World Cup home jersey back with no name or number"
+                                     }
+                                 ],
+                      "size":  "Medium",
+                      "price":  55,
+                      "category":  "world",
+                      "name":  "No Name/No Number | Japan 2026 World Cup Home",
+                      "quantity":  0,
+                      "links":  {
+                                    "depop":  "https://www.depop.com/jerseysfrmjb/",
+                                    "ebay":  "https://www.ebay.com/usr/jerseysfrmjb"
+                                },
+                      "featured":  false
+                  },
+                  {
+                      "sort_order":  197,
+                      "id":  "world-morocco-hakimi-away",
+                      "photos":  [
+                                     {
+                                         "src":  "assets/inventory/world-morocco-hakimi-away-front.jpg",
+                                         "alt":  "Achraf Hakimi Morocco 2026 World Cup away jersey front"
+                                     },
+                                     {
+                                         "src":  "assets/inventory/world-morocco-hakimi-away-back.jpg",
+                                         "alt":  "Achraf Hakimi Morocco 2026 World Cup away jersey back"
+                                     }
+                                 ],
+                      "size":  "Medium",
+                      "price":  55,
+                      "category":  "world",
+                      "name":  "Achraf Hakimi #2 | Morocco 2026 World Cup Away",
+                      "quantity":  0,
+                      "links":  {
+                                    "depop":  "https://www.depop.com/jerseysfrmjb/",
+                                    "ebay":  "https://www.ebay.com/usr/jerseysfrmjb"
+                                },
+                      "featured":  false
+                  },
+                  {
                       "sort_order":  200,
                       "id":  "club-real-home-2526",
                       "photos":  [
@@ -669,10 +813,9 @@ export async function ensureInventory(env) {
 
   await env.DB.prepare("INSERT OR IGNORE INTO site_settings (key, value) VALUES (?, ?)").bind("hide_sold_out_featured", "false").run();
   await env.DB.prepare("INSERT OR IGNORE INTO site_settings (key, value) VALUES (?, ?)").bind("homepage_banner_message", "Small Drop, Big Drop Coming Soon\nA small World Cup drop is available now. A bigger drop is coming soon. Fill out the contact form to request a jersey or DM @jerseysfrmjb with questions.").run();
+  await env.DB.prepare("INSERT OR IGNORE INTO site_settings (key, value) VALUES (?, ?)").bind("homepage_ticker_message", "🔥 SMALL DROP AVAILABLE NOW • BIG DROP COMING SOON • TAP NEED HELP TO REQUEST ❤️").run();
+  await env.DB.prepare("INSERT OR IGNORE INTO site_settings (key, value) VALUES (?, ?)").bind("homepage_stat_message", "Small Drop Almost Sold Out").run();
   await env.DB.prepare("INSERT OR IGNORE INTO site_settings (key, value) VALUES (?, CURRENT_TIMESTAMP)").bind("inventory_updated_at").run();
-
-  const row = await env.DB.prepare("SELECT COUNT(*) AS count FROM inventory").first();
-  if (Number(row?.count || 0) > 0) return;
 
   const insert = env.DB.prepare(
     `INSERT OR IGNORE INTO inventory (id, category, name, size, sizes_json, price, quantity, featured, featured_order, new_arrival, date_added, sort_order, photos, links)
