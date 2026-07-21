@@ -32,7 +32,10 @@ async function sendDiscordNotification(env, data) {
 
   const profileUrl = instagramProfileUrl(data.instagram_username);
   const payload = {
-    content: `New JerseysFrmJB Need Help message from @${data.instagram_username}`,
+    content: `@everyone New JerseysFrmJB Need Help message from @${data.instagram_username}`,
+    allowed_mentions: {
+      parse: ["everyone"]
+    },
     embeds: [
       {
         title: "New Need Help Message",
