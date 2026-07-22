@@ -813,12 +813,12 @@ export const seedInventory = {
       "id": "club-real-madrid-mbappe-home-2526",
       "photos": [
         {
-          "src": "assets/inventory/club-real-madrid-mbappe-home-2526-front.jpg",
-          "alt": "Kylian Mbappe Real Madrid 25/26 home jersey front"
-        },
-        {
           "src": "assets/inventory/club-real-madrid-mbappe-home-2526-back.jpg",
           "alt": "Kylian Mbappe Real Madrid 25/26 home jersey back"
+        },
+        {
+          "src": "assets/inventory/club-real-madrid-mbappe-home-2526-front.jpg",
+          "alt": "Kylian Mbappe Real Madrid 25/26 home jersey front"
         }
       ],
       "size": "Medium",
@@ -865,12 +865,12 @@ export const seedInventory = {
       "id": "club-real-madrid-bellingham-home-2526",
       "photos": [
         {
-          "src": "assets/inventory/club-real-madrid-bellingham-home-2526-front.jpg",
-          "alt": "Jude Bellingham Real Madrid 25/26 home jersey front"
-        },
-        {
           "src": "assets/inventory/club-real-madrid-bellingham-home-2526-back.jpg",
           "alt": "Jude Bellingham Real Madrid 25/26 home jersey back"
+        },
+        {
+          "src": "assets/inventory/club-real-madrid-bellingham-home-2526-front.jpg",
+          "alt": "Jude Bellingham Real Madrid 25/26 home jersey front"
         }
       ],
       "size": "Medium",
@@ -893,12 +893,12 @@ export const seedInventory = {
       "id": "club-barcelona-yamal-home-2526",
       "photos": [
         {
-          "src": "assets/inventory/club-barcelona-yamal-home-2526-front.jpg",
-          "alt": "Lamine Yamal Barcelona 25/26 home jersey front"
-        },
-        {
           "src": "assets/inventory/club-barcelona-yamal-home-2526-back.jpg",
           "alt": "Lamine Yamal Barcelona 25/26 home jersey back"
+        },
+        {
+          "src": "assets/inventory/club-barcelona-yamal-home-2526-front.jpg",
+          "alt": "Lamine Yamal Barcelona 25/26 home jersey front"
         }
       ],
       "size": "Medium",
@@ -921,12 +921,12 @@ export const seedInventory = {
       "id": "club-barcelona-raphinha-home-2526",
       "photos": [
         {
-          "src": "assets/inventory/club-barcelona-raphinha-home-2526-front.jpg",
-          "alt": "Raphinha Barcelona 25/26 home jersey front"
-        },
-        {
           "src": "assets/inventory/club-barcelona-raphinha-home-2526-back.jpg",
           "alt": "Raphinha Barcelona 25/26 home jersey back"
+        },
+        {
+          "src": "assets/inventory/club-barcelona-raphinha-home-2526-front.jpg",
+          "alt": "Raphinha Barcelona 25/26 home jersey front"
         }
       ],
       "size": "Medium",
