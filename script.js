@@ -73,8 +73,22 @@ function isNewArrival(item) {
   return (Date.now() - date.getTime()) / 86400000 <= 7;
 }
 
+const CLUB_TOP_ORDER = new Map([
+  ["club-barcelona-raphinha-home-2526", 200],
+  ["club-barcelona-yamal-home-2526", 210],
+  ["club-real-madrid-mbappe-home-2526", 220],
+  ["club-real-madrid-bellingham-home-2526", 230]
+]);
+
+function effectiveSortOrder(item) {
+  if (item?.category === "club" && CLUB_TOP_ORDER.has(item.id)) {
+    return CLUB_TOP_ORDER.get(item.id);
+  }
+  return Number(item?.sort_order || 0);
+}
+
 function sortInventory(items) {
-  return [...items].sort((a, b) => Number(isAvailable(b)) - Number(isAvailable(a)) || Number(a.sort_order || 0) - Number(b.sort_order || 0) || a.name.localeCompare(b.name));
+  return [...items].sort((a, b) => Number(isAvailable(b)) - Number(isAvailable(a)) || effectiveSortOrder(a) - effectiveSortOrder(b) || a.name.localeCompare(b.name));
 }
 
 function activeSizes(item) {

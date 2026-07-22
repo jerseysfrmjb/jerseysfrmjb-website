@@ -586,310 +586,34 @@ export const seedInventory = {
     },
     {
       "sort_order": 200,
-      "id": "club-real-home-2526",
+      "id": "club-barcelona-raphinha-home-2526",
       "photos": [
         {
-          "src": "assets/inventory/club-real-front.jpg",
-          "alt": "Real Madrid 25/26 home jersey front"
+          "src": "assets/inventory/club-barcelona-raphinha-home-2526-back.jpg",
+          "alt": "Raphinha Barcelona 25/26 home jersey back"
         },
         {
-          "src": "assets/inventory/club-real-back.jpg",
-          "alt": "Real Madrid 25/26 home jersey back"
+          "src": "assets/inventory/club-barcelona-raphinha-home-2526-front.jpg",
+          "alt": "Raphinha Barcelona 25/26 home jersey front"
         }
       ],
       "size": "Medium",
+      "sizes": {},
       "price": 40,
       "category": "club",
-      "name": "Real Madrid 25/26 Home Kit",
-      "quantity": 1,
+      "name": "Raphinha #11 | Barcelona 25/26 Home Kit",
+      "quantity": 0,
       "links": {
         "depop": "https://www.depop.com/jerseysfrmjb/",
         "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
       },
-      "featured": false
+      "featured": false,
+      "featured_order": 0,
+      "new_arrival": true,
+      "date_added": "2026-07-22"
     },
     {
       "sort_order": 210,
-      "id": "club-city-home-2526",
-      "photos": [
-        {
-          "src": "assets/inventory/club-city-front.jpg",
-          "alt": "Manchester City 25/26 home jersey front"
-        },
-        {
-          "src": "assets/inventory/club-city-back.jpg",
-          "alt": "Manchester City 25/26 home jersey back"
-        }
-      ],
-      "size": "Medium",
-      "price": 40,
-      "category": "club",
-      "name": "Manchester City 25/26 Home Kit",
-      "quantity": 1,
-      "links": {
-        "depop": "https://www.depop.com/jerseysfrmjb/",
-        "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
-      },
-      "featured": true
-    },
-    {
-      "sort_order": 220,
-      "id": "club-ac-milan-off-white",
-      "photos": [
-        {
-          "src": "assets/inventory/club-milan-front.jpg",
-          "alt": "AC Milan Off-White jersey front"
-        },
-        {
-          "src": "assets/inventory/club-milan-back.jpg",
-          "alt": "AC Milan Off-White jersey back"
-        }
-      ],
-      "size": "Medium",
-      "price": 40,
-      "category": "club",
-      "name": "AC Milan 24/25 Off-White Kit",
-      "quantity": 1,
-      "links": {
-        "depop": "https://www.depop.com/jerseysfrmjb/",
-        "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
-      },
-      "featured": false
-    },
-    {
-      "sort_order": 230,
-      "id": "club-dortmund-away-2425",
-      "photos": [
-        {
-          "src": "assets/inventory/club-dortmund-front.jpg",
-          "alt": "Borussia Dortmund 24/25 away jersey front"
-        },
-        {
-          "src": "assets/inventory/club-dortmund-back.jpg",
-          "alt": "Borussia Dortmund 24/25 away jersey back"
-        }
-      ],
-      "size": "Medium ?? Player Version",
-      "price": 40,
-      "category": "club",
-      "name": "Borussia Dortmund 24/25 Away Kit",
-      "quantity": 1,
-      "links": {
-        "depop": "https://www.depop.com/jerseysfrmjb/",
-        "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
-      },
-      "featured": false
-    },
-    {
-      "sort_order": 300,
-      "id": "retro-modric-real-away-1617",
-      "photos": [
-        {
-          "src": "assets/inventory/retro-modric-front.jpg",
-          "alt": "Luka Modric Real Madrid 2016/17 jersey front"
-        },
-        {
-          "src": "assets/inventory/retro-modric-back.jpg",
-          "alt": "Luka Modric Real Madrid 2016/17 jersey back"
-        }
-      ],
-      "size": "Medium",
-      "price": 50,
-      "category": "retro",
-      "name": "Luka Modric Real Madrid 2016/17 Away Long Sleeve",
-      "quantity": 1,
-      "links": {
-        "depop": "https://www.depop.com/jerseysfrmjb/",
-        "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
-      },
-      "featured": false
-    },
-    {
-      "sort_order": 305,
-      "id": "club-liverpool-home-2526-blank",
-      "photos": [
-        {
-          "src": "assets/inventory/club-liverpool-home-2526-blank-front.jpg",
-          "alt": "Liverpool 25/26 home jersey with no name or number front"
-        },
-        {
-          "src": "assets/inventory/club-liverpool-home-2526-blank-back.jpg",
-          "alt": "Liverpool 25/26 home jersey with no name or number back"
-        }
-      ],
-      "size": "Medium",
-      "sizes": {},
-      "price": 40,
-      "category": "club",
-      "name": "No Name/No Number | Liverpool 25/26 Home Kit",
-      "quantity": 0,
-      "links": {
-        "depop": "https://www.depop.com/jerseysfrmjb/",
-        "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
-      },
-      "featured": false,
-      "featured_order": 0,
-      "new_arrival": true,
-      "date_added": "2026-07-22"
-    },
-    {
-      "sort_order": 310,
-      "id": "retro-messi-2006-away",
-      "photos": [
-        {
-          "src": "assets/inventory/retro-messi-2006-away-front.jpg",
-          "alt": "Messi Argentina 2006 World Cup away jersey front"
-        },
-        {
-          "src": "assets/inventory/retro-messi-2006-away-back.jpg",
-          "alt": "Messi Argentina 2006 World Cup away jersey back"
-        }
-      ],
-      "size": "Medium",
-      "price": 50,
-      "category": "retro",
-      "name": "Messi 2006 World Cup Away Jersey",
-      "quantity": 1,
-      "links": {
-        "depop": "https://www.depop.com/jerseysfrmjb/",
-        "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
-      },
-      "featured": true
-    },
-    {
-      "sort_order": 315,
-      "id": "club-manchester-united-home-2526-blank",
-      "photos": [
-        {
-          "src": "assets/inventory/club-manchester-united-home-2526-blank-front.jpg",
-          "alt": "Manchester United 25/26 home jersey with no name or number front"
-        },
-        {
-          "src": "assets/inventory/club-manchester-united-home-2526-blank-back.jpg",
-          "alt": "Manchester United 25/26 home jersey with no name or number back"
-        }
-      ],
-      "size": "Medium",
-      "sizes": {},
-      "price": 40,
-      "category": "club",
-      "name": "No Name/No Number | Manchester United 25/26 Home Kit",
-      "quantity": 0,
-      "links": {
-        "depop": "https://www.depop.com/jerseysfrmjb/",
-        "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
-      },
-      "featured": false,
-      "featured_order": 0,
-      "new_arrival": true,
-      "date_added": "2026-07-22"
-    },
-    {
-      "sort_order": 320,
-      "id": "retro-ronaldo-united-long-0708",
-      "photos": [
-        {
-          "src": "assets/inventory/retro-ronaldo-long-front.jpg",
-          "alt": "Ronaldo Manchester United 2007/08 long sleeve jersey front"
-        },
-        {
-          "src": "assets/inventory/retro-ronaldo-long-back.jpg",
-          "alt": "Ronaldo Manchester United 2007/08 long sleeve jersey back"
-        }
-      ],
-      "size": "Medium",
-      "price": 55,
-      "category": "retro",
-      "name": "Ronaldo #7 2007/08 Manchester United Away Long Sleeve",
-      "quantity": 0,
-      "links": {
-        "depop": "https://www.depop.com/jerseysfrmjb/",
-        "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
-      },
-      "featured": false
-    },
-    {
-      "sort_order": 325,
-      "id": "club-real-madrid-mbappe-home-2526",
-      "photos": [
-        {
-          "src": "assets/inventory/club-real-madrid-mbappe-home-2526-back.jpg",
-          "alt": "Kylian Mbappe Real Madrid 25/26 home jersey back"
-        },
-        {
-          "src": "assets/inventory/club-real-madrid-mbappe-home-2526-front.jpg",
-          "alt": "Kylian Mbappe Real Madrid 25/26 home jersey front"
-        }
-      ],
-      "size": "Medium",
-      "sizes": {},
-      "price": 40,
-      "category": "club",
-      "name": "Kylian Mbappe #10 | Real Madrid 25/26 Home Kit",
-      "quantity": 0,
-      "links": {
-        "depop": "https://www.depop.com/jerseysfrmjb/",
-        "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
-      },
-      "featured": false,
-      "featured_order": 0,
-      "new_arrival": true,
-      "date_added": "2026-07-22"
-    },
-    {
-      "sort_order": 330,
-      "id": "retro-ronaldo-united-short-0708",
-      "photos": [
-        {
-          "src": "assets/inventory/retro-ronaldo-short-front.jpg",
-          "alt": "Ronaldo Manchester United 2007/08 short sleeve jersey front"
-        },
-        {
-          "src": "assets/inventory/retro-ronaldo-short-back.jpg",
-          "alt": "Ronaldo Manchester United 2007/08 short sleeve jersey back"
-        }
-      ],
-      "size": "Medium",
-      "price": 55,
-      "category": "retro",
-      "name": "Ronaldo #7 2007/08 Manchester United Away Short Sleeve",
-      "quantity": 0,
-      "links": {
-        "depop": "https://www.depop.com/jerseysfrmjb/",
-        "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
-      },
-      "featured": false
-    },
-    {
-      "sort_order": 335,
-      "id": "club-real-madrid-bellingham-home-2526",
-      "photos": [
-        {
-          "src": "assets/inventory/club-real-madrid-bellingham-home-2526-back.jpg",
-          "alt": "Jude Bellingham Real Madrid 25/26 home jersey back"
-        },
-        {
-          "src": "assets/inventory/club-real-madrid-bellingham-home-2526-front.jpg",
-          "alt": "Jude Bellingham Real Madrid 25/26 home jersey front"
-        }
-      ],
-      "size": "Medium",
-      "sizes": {},
-      "price": 40,
-      "category": "club",
-      "name": "Jude Bellingham #5 | Real Madrid 25/26 Home Kit",
-      "quantity": 0,
-      "links": {
-        "depop": "https://www.depop.com/jerseysfrmjb/",
-        "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
-      },
-      "featured": false,
-      "featured_order": 0,
-      "new_arrival": true,
-      "date_added": "2026-07-22"
-    },
-    {
-      "sort_order": 345,
       "id": "club-barcelona-yamal-home-2526",
       "photos": [
         {
@@ -917,23 +641,23 @@ export const seedInventory = {
       "date_added": "2026-07-22"
     },
     {
-      "sort_order": 355,
-      "id": "club-barcelona-raphinha-home-2526",
+      "sort_order": 220,
+      "id": "club-real-madrid-mbappe-home-2526",
       "photos": [
         {
-          "src": "assets/inventory/club-barcelona-raphinha-home-2526-back.jpg",
-          "alt": "Raphinha Barcelona 25/26 home jersey back"
+          "src": "assets/inventory/club-real-madrid-mbappe-home-2526-back.jpg",
+          "alt": "Kylian Mbappe Real Madrid 25/26 home jersey back"
         },
         {
-          "src": "assets/inventory/club-barcelona-raphinha-home-2526-front.jpg",
-          "alt": "Raphinha Barcelona 25/26 home jersey front"
+          "src": "assets/inventory/club-real-madrid-mbappe-home-2526-front.jpg",
+          "alt": "Kylian Mbappe Real Madrid 25/26 home jersey front"
         }
       ],
       "size": "Medium",
       "sizes": {},
       "price": 40,
       "category": "club",
-      "name": "Raphinha #11 | Barcelona 25/26 Home Kit",
+      "name": "Kylian Mbappe #10 | Real Madrid 25/26 Home Kit",
       "quantity": 0,
       "links": {
         "depop": "https://www.depop.com/jerseysfrmjb/",
@@ -943,6 +667,282 @@ export const seedInventory = {
       "featured_order": 0,
       "new_arrival": true,
       "date_added": "2026-07-22"
+    },
+    {
+      "sort_order": 230,
+      "id": "club-real-madrid-bellingham-home-2526",
+      "photos": [
+        {
+          "src": "assets/inventory/club-real-madrid-bellingham-home-2526-back.jpg",
+          "alt": "Jude Bellingham Real Madrid 25/26 home jersey back"
+        },
+        {
+          "src": "assets/inventory/club-real-madrid-bellingham-home-2526-front.jpg",
+          "alt": "Jude Bellingham Real Madrid 25/26 home jersey front"
+        }
+      ],
+      "size": "Medium",
+      "sizes": {},
+      "price": 40,
+      "category": "club",
+      "name": "Jude Bellingham #5 | Real Madrid 25/26 Home Kit",
+      "quantity": 0,
+      "links": {
+        "depop": "https://www.depop.com/jerseysfrmjb/",
+        "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
+      },
+      "featured": false,
+      "featured_order": 0,
+      "new_arrival": true,
+      "date_added": "2026-07-22"
+    },
+    {
+      "sort_order": 240,
+      "id": "club-real-home-2526",
+      "photos": [
+        {
+          "src": "assets/inventory/club-real-front.jpg",
+          "alt": "Real Madrid 25/26 home jersey front"
+        },
+        {
+          "src": "assets/inventory/club-real-back.jpg",
+          "alt": "Real Madrid 25/26 home jersey back"
+        }
+      ],
+      "size": "Medium",
+      "price": 40,
+      "category": "club",
+      "name": "Real Madrid 25/26 Home Kit",
+      "quantity": 1,
+      "links": {
+        "depop": "https://www.depop.com/jerseysfrmjb/",
+        "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
+      },
+      "featured": false
+    },
+    {
+      "sort_order": 250,
+      "id": "club-city-home-2526",
+      "photos": [
+        {
+          "src": "assets/inventory/club-city-front.jpg",
+          "alt": "Manchester City 25/26 home jersey front"
+        },
+        {
+          "src": "assets/inventory/club-city-back.jpg",
+          "alt": "Manchester City 25/26 home jersey back"
+        }
+      ],
+      "size": "Medium",
+      "price": 40,
+      "category": "club",
+      "name": "Manchester City 25/26 Home Kit",
+      "quantity": 1,
+      "links": {
+        "depop": "https://www.depop.com/jerseysfrmjb/",
+        "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
+      },
+      "featured": true
+    },
+    {
+      "sort_order": 260,
+      "id": "club-ac-milan-off-white",
+      "photos": [
+        {
+          "src": "assets/inventory/club-milan-front.jpg",
+          "alt": "AC Milan Off-White jersey front"
+        },
+        {
+          "src": "assets/inventory/club-milan-back.jpg",
+          "alt": "AC Milan Off-White jersey back"
+        }
+      ],
+      "size": "Medium",
+      "price": 40,
+      "category": "club",
+      "name": "AC Milan 24/25 Off-White Kit",
+      "quantity": 1,
+      "links": {
+        "depop": "https://www.depop.com/jerseysfrmjb/",
+        "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
+      },
+      "featured": false
+    },
+    {
+      "sort_order": 270,
+      "id": "club-dortmund-away-2425",
+      "photos": [
+        {
+          "src": "assets/inventory/club-dortmund-front.jpg",
+          "alt": "Borussia Dortmund 24/25 away jersey front"
+        },
+        {
+          "src": "assets/inventory/club-dortmund-back.jpg",
+          "alt": "Borussia Dortmund 24/25 away jersey back"
+        }
+      ],
+      "size": "Medium ?? Player Version",
+      "price": 40,
+      "category": "club",
+      "name": "Borussia Dortmund 24/25 Away Kit",
+      "quantity": 1,
+      "links": {
+        "depop": "https://www.depop.com/jerseysfrmjb/",
+        "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
+      },
+      "featured": false
+    },
+    {
+      "sort_order": 280,
+      "id": "club-liverpool-home-2526-blank",
+      "photos": [
+        {
+          "src": "assets/inventory/club-liverpool-home-2526-blank-front.jpg",
+          "alt": "Liverpool 25/26 home jersey with no name or number front"
+        },
+        {
+          "src": "assets/inventory/club-liverpool-home-2526-blank-back.jpg",
+          "alt": "Liverpool 25/26 home jersey with no name or number back"
+        }
+      ],
+      "size": "Medium",
+      "sizes": {},
+      "price": 40,
+      "category": "club",
+      "name": "No Name/No Number | Liverpool 25/26 Home Kit",
+      "quantity": 0,
+      "links": {
+        "depop": "https://www.depop.com/jerseysfrmjb/",
+        "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
+      },
+      "featured": false,
+      "featured_order": 0,
+      "new_arrival": true,
+      "date_added": "2026-07-22"
+    },
+    {
+      "sort_order": 290,
+      "id": "club-manchester-united-home-2526-blank",
+      "photos": [
+        {
+          "src": "assets/inventory/club-manchester-united-home-2526-blank-front.jpg",
+          "alt": "Manchester United 25/26 home jersey with no name or number front"
+        },
+        {
+          "src": "assets/inventory/club-manchester-united-home-2526-blank-back.jpg",
+          "alt": "Manchester United 25/26 home jersey with no name or number back"
+        }
+      ],
+      "size": "Medium",
+      "sizes": {},
+      "price": 40,
+      "category": "club",
+      "name": "No Name/No Number | Manchester United 25/26 Home Kit",
+      "quantity": 0,
+      "links": {
+        "depop": "https://www.depop.com/jerseysfrmjb/",
+        "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
+      },
+      "featured": false,
+      "featured_order": 0,
+      "new_arrival": true,
+      "date_added": "2026-07-22"
+    },
+    {
+      "sort_order": 300,
+      "id": "retro-modric-real-away-1617",
+      "photos": [
+        {
+          "src": "assets/inventory/retro-modric-front.jpg",
+          "alt": "Luka Modric Real Madrid 2016/17 jersey front"
+        },
+        {
+          "src": "assets/inventory/retro-modric-back.jpg",
+          "alt": "Luka Modric Real Madrid 2016/17 jersey back"
+        }
+      ],
+      "size": "Medium",
+      "price": 50,
+      "category": "retro",
+      "name": "Luka Modric Real Madrid 2016/17 Away Long Sleeve",
+      "quantity": 1,
+      "links": {
+        "depop": "https://www.depop.com/jerseysfrmjb/",
+        "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
+      },
+      "featured": false
+    },
+    {
+      "sort_order": 310,
+      "id": "retro-messi-2006-away",
+      "photos": [
+        {
+          "src": "assets/inventory/retro-messi-2006-away-front.jpg",
+          "alt": "Messi Argentina 2006 World Cup away jersey front"
+        },
+        {
+          "src": "assets/inventory/retro-messi-2006-away-back.jpg",
+          "alt": "Messi Argentina 2006 World Cup away jersey back"
+        }
+      ],
+      "size": "Medium",
+      "price": 50,
+      "category": "retro",
+      "name": "Messi 2006 World Cup Away Jersey",
+      "quantity": 1,
+      "links": {
+        "depop": "https://www.depop.com/jerseysfrmjb/",
+        "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
+      },
+      "featured": true
+    },
+    {
+      "sort_order": 320,
+      "id": "retro-ronaldo-united-long-0708",
+      "photos": [
+        {
+          "src": "assets/inventory/retro-ronaldo-long-front.jpg",
+          "alt": "Ronaldo Manchester United 2007/08 long sleeve jersey front"
+        },
+        {
+          "src": "assets/inventory/retro-ronaldo-long-back.jpg",
+          "alt": "Ronaldo Manchester United 2007/08 long sleeve jersey back"
+        }
+      ],
+      "size": "Medium",
+      "price": 55,
+      "category": "retro",
+      "name": "Ronaldo #7 2007/08 Manchester United Away Long Sleeve",
+      "quantity": 0,
+      "links": {
+        "depop": "https://www.depop.com/jerseysfrmjb/",
+        "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
+      },
+      "featured": false
+    },
+    {
+      "sort_order": 330,
+      "id": "retro-ronaldo-united-short-0708",
+      "photos": [
+        {
+          "src": "assets/inventory/retro-ronaldo-short-front.jpg",
+          "alt": "Ronaldo Manchester United 2007/08 short sleeve jersey front"
+        },
+        {
+          "src": "assets/inventory/retro-ronaldo-short-back.jpg",
+          "alt": "Ronaldo Manchester United 2007/08 short sleeve jersey back"
+        }
+      ],
+      "size": "Medium",
+      "price": 55,
+      "category": "retro",
+      "name": "Ronaldo #7 2007/08 Manchester United Away Short Sleeve",
+      "quantity": 0,
+      "links": {
+        "depop": "https://www.depop.com/jerseysfrmjb/",
+        "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
+      },
+      "featured": false
     }
   ]
 };
