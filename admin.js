@@ -423,6 +423,132 @@ async function submitQuickSale(event) {
   }
 }
 
+function sizeQuantityDecreases(original, nextSizes) {
+  const previousSizes = itemSizes(original);
+  return sizeOptions
+    .map(size => {
+      const previousQuantity = Math.max(0, Math.floor(Number(previousSizes[size] || 0)));
+      const nextQuantity = Math.max(0, Math.floor(Number(nextSizes[size] || 0)));
+      return nextQuantity < previousQuantity
+        ? { size, quantity: previousQuantity - nextQuantity, previousQuantity, nextQuantity }
+        : null;
+    })
+    .filter(Boolean);
+}
+
+function showInventorySaleForm(item, decreases) {
+  return new Promise(resolve => {
+    const overlay = document.createElement("div");
+    overlay.style.cssText = [
+      "position:fixed",
+      "inset:0",
+      "z-index:9999",
+      "display:grid",
+      "place-items:center",
+      "padding:20px",
+      "background:rgba(15,10,10,.72)"
+    ].join(";");
+
+    const form = document.createElement("form");
+    form.style.cssText = [
+      "width:min(460px,100%)",
+      "max-height:calc(100vh - 40px)",
+      "overflow:auto",
+      "background:#fff",
+      "border:1px solid #d8d1cb",
+      "box-shadow:0 22px 60px rgba(0,0,0,.28)",
+      "padding:22px",
+      "border-radius:8px",
+      "color:#1c1413"
+    ].join(";");
+
+    const decreaseSummary = decreases
+      .map(decrease => `${escapeHtml(quickSaleSizeLabel(decrease.size))}: ${decrease.quantity}`)
+      .join(", ");
+
+    form.innerHTML = `
+      <h3 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;">Record Sale</h3>
+      <p style="margin:0 0 14px;line-height:1.45;"><strong>${escapeHtml(quickSaleProductName(item))}</strong><br>${decreaseSummary} sold</p>
+      <label style="display:grid;gap:6px;margin-bottom:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;font-size:12px;color:#7b1d3d;">
+        Platform
+        <select data-sale-platform style="padding:10px;border:1px solid #d8d1cb;border-radius:6px;">
+          <option>Depop</option>
+          <option>eBay</option>
+          <option>Facebook</option>
+          <option>Website</option>
+          <option>Local</option>
+          <option>Other</option>
+        </select>
+      </label>
+      <label style="display:grid;gap:6px;margin-bottom:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;font-size:12px;color:#7b1d3d;">
+        Sale Price <span style="text-transform:none;letter-spacing:0;color:#6f6863;font-weight:600;">optional</span>
+        <input data-sale-price type="number" min="0" step="0.01" placeholder="55" style="padding:10px;border:1px solid #d8d1cb;border-radius:6px;">
+      </label>
+      <label style="display:grid;gap:6px;margin-bottom:16px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;font-size:12px;color:#7b1d3d;">
+        Notes <span style="text-transform:none;letter-spacing:0;color:#6f6863;font-weight:600;">optional</span>
+        <textarea data-sale-notes rows="3" style="padding:10px;border:1px solid #d8d1cb;border-radius:6px;resize:vertical;"></textarea>
+      </label>
+      <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
+        <button type="button" data-cancel style="padding:10px 16px;border-radius:999px;border:1px solid #d8d1cb;background:#fff;font-weight:800;">Cancel</button>
+        <button type="submit" class="shop-button" style="border:0;">Record Sale</button>
+      </div>
+    `;
+
+    const cleanup = result => {
+      overlay.remove();
+      resolve(result);
+    };
+
+    overlay.addEventListener("click", event => {
+      if (event.target === overlay) cleanup(null);
+    });
+    form.querySelector("[data-cancel]").addEventListener("click", () => cleanup(null));
+    form.addEventListener("submit", event => {
+      event.preventDefault();
+      const submit = form.querySelector('button[type="submit"]');
+      submit.disabled = true;
+      submit.textContent = "Recording...";
+      const priceText = form.querySelector("[data-sale-price]").value.trim();
+      const salePrice = priceText ? Number(priceText) : null;
+      if (priceText && !Number.isFinite(salePrice)) {
+        submit.disabled = false;
+        submit.textContent = "Record Sale";
+        form.querySelector("[data-sale-price]").focus();
+        return;
+      }
+      cleanup({
+        platform: form.querySelector("[data-sale-platform]").value,
+        sale_price: salePrice,
+        notes: form.querySelector("[data-sale-notes]").value.trim()
+      });
+    });
+
+    overlay.appendChild(form);
+    document.body.appendChild(overlay);
+    form.querySelector("[data-sale-platform]").focus();
+  });
+}
+
+async function recordInventoryDecreaseSales(item, decreases, details) {
+  for (const decrease of decreases) {
+    await api("/api/admin/sales", {
+      method: "POST",
+      body: JSON.stringify({
+        product_id: item.id,
+        product_name: quickSaleProductName(item),
+        jersey_name: quickSaleProductName(item),
+        player: quickSalePlayer(item),
+        team_country: quickSaleTeam(item),
+        size: decrease.size,
+        quantity: decrease.quantity,
+        platform: details.platform,
+        sale_price: details.sale_price,
+        notes: details.notes
+      })
+    });
+  }
+}
+
 function renderPresetOptions() {
   if (!presetSelect) return;
   const selected = presetSelect.value;
@@ -846,6 +972,10 @@ async function loadInventory() {
 async function saveCard(card) {
   const id = card.dataset.id;
   const original = inventory.find(item => item.id === id);
+  if (!original) throw new Error("Inventory item not found.");
+  const saveButton = card.querySelector("[data-save]");
+  if (saveButton?.disabled) return;
+
   const links = { ...(original.links || {}) };
   links.depop = card.querySelector('[data-field="depop"]').value.trim();
   links.ebay = card.querySelector('[data-field="ebay"]').value.trim();
@@ -854,6 +984,16 @@ async function saveCard(card) {
   const featuredOrder = Number(card.querySelector('[data-field="featured_order"]').value);
   const sizes = readSizeControls(card);
   const quantity = Object.values(sizes).reduce((sum, qty) => sum + Number(qty), 0);
+  const decreases = sizeQuantityDecreases(original, sizes);
+  let saleDetails = null;
+
+  if (decreases.length && window.confirm("Record this as a sale?")) {
+    saleDetails = await showInventorySaleForm(original, decreases);
+    if (!saleDetails) {
+      statusLine.textContent = "Save canceled.";
+      return;
+    }
+  }
 
   const payload = {
     id,
@@ -867,11 +1007,24 @@ async function saveCard(card) {
     links
   };
 
-  statusLine.textContent = "Saving...";
-  const data = await api("/api/admin/inventory", { method: "PATCH", body: JSON.stringify(payload) });
-  applyAdminData(data);
-  statusLine.textContent = "Saved.";
-  render();
+  try {
+    if (saveButton) {
+      saveButton.disabled = true;
+      saveButton.textContent = "Saving...";
+    }
+    statusLine.textContent = "Saving...";
+    const data = await api("/api/admin/inventory", { method: "PATCH", body: JSON.stringify(payload) });
+    applyAdminData(data);
+    render();
+    if (saleDetails) await recordInventoryDecreaseSales(original, decreases, saleDetails);
+    statusLine.textContent = saleDetails ? "Saved and sale recorded." : "Saved.";
+    if (saleDetails) await loadSales();
+  } finally {
+    if (saveButton) {
+      saveButton.disabled = false;
+      saveButton.textContent = "Save Changes";
+    }
+  }
 }
 
 async function previewBulkRestock() {
