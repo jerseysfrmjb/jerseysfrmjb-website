@@ -74,16 +74,28 @@ function isNewArrival(item) {
 }
 
 const CLUB_TOP_ORDER = new Map([
-  ["club-barcelona-raphinha-home-2526", 200],
-  ["club-barcelona-yamal-home-2526", 210],
-  ["club-real-madrid-mbappe-home-2526", 220],
-  ["club-real-madrid-bellingham-home-2526", 230]
+  ["club-barcelona-raphinha-home-2526", -400],
+  ["club-barcelona-yamal-home-2526", -390],
+  ["club-real-madrid-mbappe-home-2526", -380],
+  ["club-real-madrid-bellingham-home-2526", -370]
 ]);
+
+function clubFeaturedSortOrder(item) {
+  if (item?.category !== "club") return null;
+  const name = String(item.name || "").toLowerCase();
+  if (name.includes("raphinha") && name.includes("barcelona")) return -400;
+  if (name.includes("lamine yamal") && name.includes("barcelona")) return -390;
+  if (name.includes("mbappe") && name.includes("real madrid")) return -380;
+  if (name.includes("bellingham") && name.includes("real madrid")) return -370;
+  return null;
+}
 
 function effectiveSortOrder(item) {
   if (item?.category === "club" && CLUB_TOP_ORDER.has(item.id)) {
     return CLUB_TOP_ORDER.get(item.id);
   }
+  const clubOrder = clubFeaturedSortOrder(item);
+  if (clubOrder !== null) return clubOrder;
   return Number(item?.sort_order || 0);
 }
 
