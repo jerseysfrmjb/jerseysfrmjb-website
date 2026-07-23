@@ -132,11 +132,30 @@
             <span class="section-kicker">Sales Tracker</span>
             <h2>Sales</h2>
             <p>Recorded sales from the admin sales API.</p>
-          </div>
-          <button class="shop-button secondary-admin" type="button" data-refresh-sales>Refresh Sales</button>
-        </div>
-        <div class="sales-tools">
-          <input type="search" data-sales-search placeholder="Search jersey, player, team, or size">
+      </div>
+      <button class="shop-button secondary-admin" type="button" data-refresh-sales>Refresh Sales</button>
+    </div>
+    <form class="sales-tools" data-quick-sale-form>
+      <input type="search" data-quick-sale-search placeholder="Quick Mark Sold: Ronaldo Medium, Yamal L, Bellingham M" autocomplete="off">
+      <select data-quick-sale-match aria-label="Select matching jersey">
+        <option value="">Select a matching jersey and size</option>
+      </select>
+      <input type="number" min="1" step="1" value="1" data-quick-sale-quantity aria-label="Quantity sold">
+      <select data-quick-sale-platform aria-label="Selling platform">
+        <option value="Website">Website</option>
+        <option value="Depop">Depop</option>
+        <option value="eBay">eBay</option>
+        <option value="Facebook">Facebook</option>
+        <option value="Local">Local</option>
+        <option value="Other">Other</option>
+      </select>
+      <input type="number" min="0" step="0.01" data-quick-sale-price aria-label="Sale price" placeholder="Sale price">
+      <input type="text" data-quick-sale-notes aria-label="Notes" placeholder="Notes">
+      <button class="shop-button secondary-admin" type="submit" data-quick-sale-submit disabled>Record Sale</button>
+    </form>
+    <p class="form-status" data-quick-sale-status></p>
+    <div class="sales-tools">
+      <input type="search" data-sales-search placeholder="Search jersey, player, team, or size">
           <select data-sales-platform aria-label="Filter by platform">
             <option value="all">All platforms</option>
             <option value="Depop">Depop</option>

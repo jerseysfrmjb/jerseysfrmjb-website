@@ -39,6 +39,15 @@ const salesDate = document.querySelector("[data-sales-date]");
 const salesExport = document.querySelector("[data-sales-export]");
 const salesStatus = document.querySelector("[data-sales-status]");
 const refreshSales = document.querySelector("[data-refresh-sales]");
+const quickSaleForm = document.querySelector("[data-quick-sale-form]");
+const quickSaleSearch = document.querySelector("[data-quick-sale-search]");
+const quickSaleMatch = document.querySelector("[data-quick-sale-match]");
+const quickSaleQuantity = document.querySelector("[data-quick-sale-quantity]");
+const quickSalePlatform = document.querySelector("[data-quick-sale-platform]");
+const quickSalePrice = document.querySelector("[data-quick-sale-price]");
+const quickSaleNotes = document.querySelector("[data-quick-sale-notes]");
+const quickSaleSubmit = document.querySelector("[data-quick-sale-submit]");
+const quickSaleStatus = document.querySelector("[data-quick-sale-status]");
 let inventory = [];
 let settings = {};
 let featuredLimit = 3;
@@ -51,6 +60,7 @@ let lastBulkRestock = null;
 let currentBulkPreview = null;
 let sales = [];
 let salesLoaded = false;
+let quickSaleMatches = [];
 let currentAdminTab = "dashboard";
 
 const bannerPresets = {
@@ -230,6 +240,187 @@ function itemSizes(item) {
 function activeSizeText(item) {
   const active = sizeOptions.filter(size => Number(itemSizes(item)[size]) > 0);
   return active.length ? active.join(", ") : item.size;
+}
+
+function normalizeQuickSaleText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function quickSaleSizeCode(value) {
+  const text = normalizeQuickSaleText(value);
+  const sizes = {
+    s: "S",
+    small: "S",
+    m: "M",
+    medium: "M",
+    l: "L",
+    large: "L",
+    xl: "XL",
+    "2xl": "2XL",
+    "3xl": "3XL",
+    "4xl": "4XL"
+  };
+  return sizes[text] || "";
+}
+
+function quickSaleSizeLabel(size) {
+  return {
+    S: "Small",
+    M: "Medium",
+    L: "Large",
+    XL: "XL",
+    "2XL": "2XL",
+    "3XL": "3XL",
+    "4XL": "4XL"
+  }[size] || size || "-";
+}
+
+function quickSaleProductName(item) {
+  return item.name || item.title || item.jersey_name || item.product_name || "Jersey";
+}
+
+function quickSalePlayer(item) {
+  return item.player || "";
+}
+
+function quickSaleTeam(item) {
+  return item.team_country || item.team || item.country || "";
+}
+
+function parseQuickSaleQuery(query) {
+  const parts = normalizeQuickSaleText(query).split(/\s+/).filter(Boolean);
+  let size = "";
+  const terms = parts.filter(part => {
+    const parsedSize = quickSaleSizeCode(part);
+    if (parsedSize && !size) {
+      size = parsedSize;
+      return false;
+    }
+    return true;
+  });
+  return { terms, size };
+}
+
+function quickSaleSearchText(item) {
+  return normalizeQuickSaleText([
+    quickSaleProductName(item),
+    quickSalePlayer(item),
+    quickSaleTeam(item),
+    item.category,
+    activeSizeText(item)
+  ].join(" "));
+}
+
+function findQuickSaleMatches(query) {
+  const parsed = parseQuickSaleQuery(query);
+  if (!parsed.terms.length && !parsed.size) return [];
+
+  return inventory.flatMap(item => {
+    const sizes = itemSizes(item);
+    const availableSizes = sizeOptions
+      .map(size => ({ size, quantity: Number(sizes[size]) || 0 }))
+      .filter(entry => entry.quantity > 0 && (!parsed.size || entry.size === parsed.size));
+
+    if (!availableSizes.length) return [];
+
+    const searchable = quickSaleSearchText(item);
+    if (parsed.terms.some(term => !searchable.includes(term))) return [];
+
+    return availableSizes.map(entry => ({ item, ...entry }));
+  }).slice(0, 20);
+}
+
+function updateQuickSaleSubmit() {
+  if (!quickSaleSubmit) return;
+  const index = Number(quickSaleMatch?.value);
+  quickSaleSubmit.disabled = !Number.isInteger(index) || index < 0 || index >= quickSaleMatches.length;
+}
+
+function updateQuickSaleMatches() {
+  if (!quickSaleMatch) return;
+
+  quickSaleMatches = findQuickSaleMatches(quickSaleSearch?.value || "");
+  quickSaleMatch.innerHTML = `<option value="">Select a matching jersey and size</option>${quickSaleMatches.map((match, index) => `
+    <option value="${index}">${escapeHtml(quickSaleProductName(match.item))} - ${escapeHtml(quickSaleSizeLabel(match.size))} (${match.quantity} available)</option>
+  `).join("")}`;
+
+  if (quickSaleStatus) {
+    quickSaleStatus.textContent = quickSaleMatches.length
+      ? "Choose the matching jersey before recording the sale."
+      : "Type a jersey/player and size to find a match.";
+  }
+  updateQuickSaleSubmit();
+}
+
+function selectedQuickSaleMatch() {
+  const index = Number(quickSaleMatch?.value);
+  if (!Number.isInteger(index) || index < 0 || index >= quickSaleMatches.length) return null;
+  return quickSaleMatches[index];
+}
+
+async function submitQuickSale(event) {
+  event.preventDefault();
+  const match = selectedQuickSaleMatch();
+  if (!match) {
+    if (quickSaleStatus) quickSaleStatus.textContent = "Select a matching jersey and size first.";
+    return;
+  }
+
+  const quantity = Math.floor(Number(quickSaleQuantity?.value || 1));
+  if (!Number.isFinite(quantity) || quantity < 1) {
+    if (quickSaleStatus) quickSaleStatus.textContent = "Enter a quantity of at least 1.";
+    return;
+  }
+
+  const priceText = quickSalePrice?.value.trim() || "";
+  const salePrice = priceText ? Number(priceText) : null;
+  if (priceText && !Number.isFinite(salePrice)) {
+    if (quickSaleStatus) quickSaleStatus.textContent = "Enter a valid sale price or leave it blank.";
+    return;
+  }
+
+  const item = match.item;
+  const payload = {
+    product_id: item.id,
+    product_name: quickSaleProductName(item),
+    jersey_name: quickSaleProductName(item),
+    player: quickSalePlayer(item),
+    team_country: quickSaleTeam(item),
+    size: match.size,
+    quantity,
+    platform: quickSalePlatform?.value || "Website",
+    sale_price: salePrice,
+    notes: quickSaleNotes?.value.trim() || ""
+  };
+
+  if (quickSaleSubmit) {
+    quickSaleSubmit.disabled = true;
+    quickSaleSubmit.textContent = "Saving...";
+  }
+  if (quickSaleStatus) quickSaleStatus.textContent = "Saving sale...";
+
+  try {
+    await api("/api/admin/sales", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+    if (quickSaleStatus) quickSaleStatus.textContent = "Sale recorded.";
+    quickSaleForm.reset();
+    if (quickSaleQuantity) quickSaleQuantity.value = "1";
+    quickSaleMatches = [];
+    if (quickSaleMatch) quickSaleMatch.innerHTML = `<option value="">Select a matching jersey and size</option>`;
+    await loadSales();
+  } catch (error) {
+    if (quickSaleStatus) quickSaleStatus.textContent = error.message || "Could not record sale.";
+  } finally {
+    if (quickSaleSubmit) quickSaleSubmit.textContent = "Record Sale";
+    updateQuickSaleSubmit();
+  }
 }
 
 function renderPresetOptions() {
@@ -1042,6 +1233,9 @@ salesSearch?.addEventListener("input", renderSales);
 salesPlatform?.addEventListener("change", renderSales);
 salesDate?.addEventListener("change", renderSales);
 salesExport?.addEventListener("click", exportSalesCsv);
+quickSaleSearch?.addEventListener("input", updateQuickSaleMatches);
+quickSaleMatch?.addEventListener("change", updateQuickSaleSubmit);
+quickSaleForm?.addEventListener("submit", submitQuickSale);
 
 searchInput.addEventListener("input", render);
 categorySelect.addEventListener("change", render);
