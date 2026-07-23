@@ -30,6 +30,15 @@ const presetName = document.querySelector("[data-restock-preset-name]");
 const saveRestockPreset = document.querySelector("[data-save-restock-preset]");
 const loadRestockPreset = document.querySelector("[data-load-restock-preset]");
 const deleteRestockPreset = document.querySelector("[data-delete-restock-preset]");
+const adminTabs = [...document.querySelectorAll("[data-admin-tab]")];
+const adminSections = [...document.querySelectorAll("[data-admin-section]")];
+const salesTable = document.querySelector("[data-sales-table]");
+const salesSearch = document.querySelector("[data-sales-search]");
+const salesPlatform = document.querySelector("[data-sales-platform]");
+const salesDate = document.querySelector("[data-sales-date]");
+const salesExport = document.querySelector("[data-sales-export]");
+const salesStatus = document.querySelector("[data-sales-status]");
+const refreshSales = document.querySelector("[data-refresh-sales]");
 let inventory = [];
 let settings = {};
 let featuredLimit = 3;
@@ -40,27 +49,144 @@ let adminFilter = "all";
 let restockPresets = [];
 let lastBulkRestock = null;
 let currentBulkPreview = null;
+let sales = [];
+let salesLoaded = false;
+let currentAdminTab = "dashboard";
 
 const bannerPresets = {
   live: {
     banner: "World Cup Jerseys Available Now!\nA few World Cup jerseys are now available in Small & Large. DM @jerseysfrmjb for questions or requests.",
-    ticker: "🔥 WORLD CUP JERSEYS AVAILABLE NOW • SMALL & LARGE SIZES IN STOCK • DM @JERSEYSFRMJB FOR REQUESTS ❤️",
+    ticker: "ðŸ”¥ WORLD CUP JERSEYS AVAILABLE NOW â€¢ SMALL & LARGE SIZES IN STOCK â€¢ DM @JERSEYSFRMJB FOR REQUESTS â¤ï¸",
     stat: "Small & Large Available"
   },
   almost: {
     banner: "Small Drop Almost Sold Out\nThanks for all the support! Only a few jerseys remain from the small drop. Fill out the contact form to request a jersey.",
-    ticker: "🚨 SMALL DROP ALMOST SOLD OUT • BIG DROP COMING SOON • TAP NEED HELP TO REQUEST ❤️",
+    ticker: "ðŸš¨ SMALL DROP ALMOST SOLD OUT â€¢ BIG DROP COMING SOON â€¢ TAP NEED HELP TO REQUEST â¤ï¸",
     stat: "Small Drop Almost Sold Out"
   },
   soon: {
     banner: "Next Drop Coming Soon\nMore jerseys are coming soon. Fill out the contact form to request a jersey.",
-    ticker: "🔥 NEXT DROP COMING SOON • TAP NEED HELP TO REQUEST A JERSEY ❤️",
+    ticker: "ðŸ”¥ NEXT DROP COMING SOON â€¢ TAP NEED HELP TO REQUEST A JERSEY â¤ï¸",
     stat: "More Jerseys Coming Soon"
   }
 };
 
 function escapeHtml(value = "") {
   return String(value).replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
+}
+
+function setAdminTab(tab = "dashboard") {
+  currentAdminTab = tab;
+  adminTabs.forEach(button => button.classList.toggle("active", button.dataset.adminTab === tab));
+  adminSections.forEach(section => {
+    section.hidden = section.dataset.adminSection !== tab;
+  });
+  if (tab === "sales" && !salesLoaded) loadSales();
+}
+
+function saleDateValue(sale) {
+  return sale.created_at || sale.timestamp || sale.date || "";
+}
+
+function formatSaleDate(value) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString(undefined, { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+function saleDateInputValue(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value).slice(0, 10);
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+function saleJerseyName(sale) {
+  return sale.product_name || sale.jersey || sale.name || "Unknown jersey";
+}
+
+function formatSalePrice(value) {
+  if (value === null || value === undefined || value === "") return "-";
+  const number = Number(value);
+  if (Number.isNaN(number)) return escapeHtml(value);
+  return `$${number.toFixed(2).replace(/\.00$/, "")}`;
+}
+
+function filteredSales() {
+  const query = (salesSearch?.value || "").trim().toLowerCase();
+  const platform = salesPlatform?.value || "all";
+  const dateFilter = salesDate?.value || "";
+  return sales.filter(sale => {
+    const saleText = [saleJerseyName(sale), sale.player, sale.team_country, sale.size, sale.platform].join(" ").toLowerCase();
+    const platformMatch = platform === "all" || String(sale.platform || "").toLowerCase() === platform.toLowerCase();
+    const dateMatch = !dateFilter || saleDateInputValue(saleDateValue(sale)) === dateFilter;
+    return (!query || saleText.includes(query)) && platformMatch && dateMatch;
+  });
+}
+
+function renderSales() {
+  if (!salesTable) return;
+  const rows = filteredSales();
+  if (!rows.length) {
+    salesTable.innerHTML = `<tr><td colspan="6" class="sales-empty">${salesLoaded ? "No sales match those filters." : "Log in to view sales."}</td></tr>`;
+    return;
+  }
+  salesTable.innerHTML = rows.map(sale => `
+    <tr>
+      <td>${escapeHtml(formatSaleDate(saleDateValue(sale)))}</td>
+      <td>${escapeHtml(saleJerseyName(sale))}</td>
+      <td>${escapeHtml(sale.size || "-")}</td>
+      <td>${escapeHtml(sale.quantity ?? 0)}</td>
+      <td>${escapeHtml(sale.platform || "-")}</td>
+      <td>${formatSalePrice(sale.sale_price)}</td>
+    </tr>
+  `).join("");
+}
+
+async function loadSales() {
+  if (!salesTable) return;
+  if (salesStatus) salesStatus.textContent = "Loading sales...";
+  try {
+    const data = await api("/api/admin/sales");
+    sales = Array.isArray(data) ? data : Array.isArray(data.sales) ? data.sales : [];
+    salesLoaded = true;
+    renderSales();
+    if (salesStatus) salesStatus.textContent = sales.length ? `${sales.length} sale${sales.length === 1 ? "" : "s"} loaded.` : "No sales recorded yet.";
+  } catch (error) {
+    if (salesStatus) salesStatus.textContent = error.message;
+    salesTable.innerHTML = `<tr><td colspan="6" class="sales-empty">Sales could not be loaded.</td></tr>`;
+  }
+}
+
+function csvValue(value) {
+  return `"${String(value ?? "").replace(/"/g, '""')}"`;
+}
+
+function exportSalesCsv() {
+  const rows = filteredSales();
+  const csvRows = [
+    ["Date", "Jersey", "Size", "Quantity", "Platform", "Sale Price"],
+    ...rows.map(sale => [
+      formatSaleDate(saleDateValue(sale)),
+      saleJerseyName(sale),
+      sale.size || "",
+      sale.quantity ?? 0,
+      sale.platform || "",
+      sale.sale_price ?? ""
+    ])
+  ];
+  const blob = new Blob([csvRows.map(row => row.map(csvValue).join(",")).join("\n")], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "jerseysfrmjb-sales.csv";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }
 
 function totalQuantity(item) {
@@ -297,6 +423,7 @@ async function api(path, options = {}) {
 function showPanel() {
   loginSection.hidden = true;
   panel.hidden = false;
+  setAdminTab(currentAdminTab || "dashboard");
 }
 
 function formatMessageDate(value = "") {
@@ -907,7 +1034,15 @@ adminQuick?.addEventListener("click", event => {
   window.setTimeout(() => card?.classList.remove("admin-card-highlight"), 1400);
 });
 
+adminTabs.forEach(button => {
+  button.addEventListener("click", () => setAdminTab(button.dataset.adminTab || "dashboard"));
+});
+refreshSales?.addEventListener("click", loadSales);
+salesSearch?.addEventListener("input", renderSales);
+salesPlatform?.addEventListener("change", renderSales);
+salesDate?.addEventListener("change", renderSales);
+salesExport?.addEventListener("click", exportSalesCsv);
+
 searchInput.addEventListener("input", render);
 categorySelect.addEventListener("change", render);
 loadInventory();
-

@@ -6,8 +6,8 @@
   <title>Inventory Admin | JerseysFrmJB</title>
   <meta name="robots" content="noindex,nofollow">
   <link rel="icon" href="assets/jerseysfrmjb-logo.jpg" type="image/jpeg">
-  <link rel="stylesheet" href="styles.css?v=filter-count-1">
-  <script src="admin.js?v=bulk-restock-1" defer></script>
+  <link rel="stylesheet" href="styles.css?v=sales-ui-1">
+  <script src="admin.js?v=sales-ui-1" defer></script>
 </head>
 <body class="admin-body">
   <main class="admin-shell">
@@ -31,7 +31,15 @@
         </div>
         <button class="shop-button secondary-admin" type="button" data-logout>Log Out</button>
       </div>
-      <section class="admin-summary-panel" aria-label="Inventory summary">
+      <nav class="admin-section-tabs" aria-label="Admin sections">
+        <button class="active" type="button" data-admin-tab="dashboard">Dashboard</button>
+        <button type="button" data-admin-tab="inventory">Inventory</button>
+        <button type="button" data-admin-tab="bulk">Bulk Restock</button>
+        <button type="button" data-admin-tab="sales">Sales</button>
+        <button type="button" data-admin-tab="messages">Messages</button>
+        <button type="button" data-admin-tab="homepage">Homepage</button>
+      </nav>
+      <section class="admin-summary-panel" data-admin-section="dashboard" aria-label="Inventory summary">
         <div>
           <span class="section-kicker">Inventory Snapshot</span>
           <h2>Dashboard Summary</h2>
@@ -39,7 +47,7 @@
         <div class="admin-summary-grid" data-admin-summary></div>
       </section>
 
-      <section class="admin-messages-panel" aria-label="Customer messages">
+      <section class="admin-messages-panel" data-admin-section="messages" aria-label="Customer messages" hidden>
         <div class="admin-messages-head">
           <div>
             <span class="section-kicker">Customer Messages</span>
@@ -50,7 +58,7 @@
         </div>
         <div class="admin-message-list" data-admin-messages><p class="empty-featured">Log in to view messages.</p></div>
       </section>
-      <section class="admin-featured-panel" aria-label="Featured jersey controls">
+      <section class="admin-featured-panel" data-admin-section="homepage" aria-label="Featured jersey controls" hidden>
         <div>
           <span class="section-kicker">Homepage Featured</span>
           <h2>Featured Jerseys</h2>
@@ -61,7 +69,7 @@
         <div class="admin-featured-preview" data-featured-preview></div>
       </section>
 
-      <section class="admin-banner-panel" aria-label="Homepage banner editor">
+      <section class="admin-banner-panel" data-admin-section="homepage" aria-label="Homepage banner editor" hidden>
         <div>
           <span class="section-kicker">Homepage Banner</span>
           <h2>Banner Message</h2>
@@ -77,7 +85,7 @@
         <label class="banner-editor-label">Homepage Stat Card<input type="text" data-stat-message placeholder="Small Drop Almost Sold Out"></label>
         <button class="shop-button secondary-admin" type="button" data-save-banner>Save Banner</button>
       </section>
-      <section class="admin-bulk-panel" aria-label="Bulk restock tool">
+      <section class="admin-bulk-panel" data-admin-section="bulk" aria-label="Bulk restock tool" hidden>
         <div>
           <span class="section-kicker">Bulk Restock</span>
           <h2>Bulk Restock Tool</h2>
@@ -118,7 +126,49 @@
         <p class="form-status" data-bulk-status></p>
         <div class="bulk-preview" data-bulk-preview></div>
       </section>
-      <section class="admin-quick-panel" aria-label="Quick inventory sections">
+      <section class="admin-sales-panel" data-admin-section="sales" aria-label="Sales tracker" hidden>
+        <div class="admin-messages-head">
+          <div>
+            <span class="section-kicker">Sales Tracker</span>
+            <h2>Sales</h2>
+            <p>Recorded sales from the admin sales API.</p>
+          </div>
+          <button class="shop-button secondary-admin" type="button" data-refresh-sales>Refresh Sales</button>
+        </div>
+        <div class="sales-tools">
+          <input type="search" data-sales-search placeholder="Search jersey, player, team, or size">
+          <select data-sales-platform aria-label="Filter by platform">
+            <option value="all">All platforms</option>
+            <option value="Depop">Depop</option>
+            <option value="eBay">eBay</option>
+            <option value="Facebook">Facebook</option>
+            <option value="Website">Website</option>
+            <option value="Local">Local</option>
+            <option value="Other">Other</option>
+          </select>
+          <input type="date" data-sales-date aria-label="Filter sales by date">
+          <button class="shop-button secondary-admin" type="button" data-sales-export>CSV Export</button>
+        </div>
+        <p class="form-status" data-sales-status></p>
+        <div class="sales-table-wrap">
+          <table class="sales-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Jersey</th>
+                <th>Size</th>
+                <th>Quantity</th>
+                <th>Platform</th>
+                <th>Sale Price</th>
+              </tr>
+            </thead>
+            <tbody data-sales-table>
+              <tr><td colspan="6" class="sales-empty">Log in to view sales.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section class="admin-quick-panel" data-admin-section="dashboard" aria-label="Quick inventory sections">
         <div>
           <span class="section-kicker">Quick Lists</span>
           <h2>Low Stock, Sold Out &amp; Recently Added</h2>
@@ -126,26 +176,28 @@
         <div class="admin-quick-grid" data-admin-quick></div>
       </section>
 
-      <div class="admin-filter-row" data-admin-filters>
-        <button class="active" type="button" data-admin-filter="all">All</button>
-        <button type="button" data-admin-filter="available">Available</button>
-        <button type="button" data-admin-filter="sold-out">Sold Out</button>
-        <button type="button" data-admin-filter="low-stock">Low Stock</button>
-        <button type="button" data-admin-filter="world">World Cup</button>
-        <button type="button" data-admin-filter="club">Club</button>
-        <button type="button" data-admin-filter="retro">Retro</button>
-      </div>
-      <div class="admin-tools">
-        <input type="search" data-admin-search placeholder="Search player, team, country, or jersey name">
-        <select data-admin-category>
-          <option value="all">All categories</option>
-          <option value="world">World Cup</option>
-          <option value="retro">Retro</option>
-          <option value="club">Club</option>
-        </select>
-      </div>
-      <div class="admin-list" data-admin-list></div>
-      <p class="form-status" data-admin-status></p>
+      <section class="admin-inventory-panel" data-admin-section="inventory" aria-label="Inventory editor" hidden>
+        <div class="admin-filter-row" data-admin-filters>
+          <button class="active" type="button" data-admin-filter="all">All</button>
+          <button type="button" data-admin-filter="available">Available</button>
+          <button type="button" data-admin-filter="sold-out">Sold Out</button>
+          <button type="button" data-admin-filter="low-stock">Low Stock</button>
+          <button type="button" data-admin-filter="world">World Cup</button>
+          <button type="button" data-admin-filter="club">Club</button>
+          <button type="button" data-admin-filter="retro">Retro</button>
+        </div>
+        <div class="admin-tools">
+          <input type="search" data-admin-search placeholder="Search player, team, country, or jersey name">
+          <select data-admin-category>
+            <option value="all">All categories</option>
+            <option value="world">World Cup</option>
+            <option value="retro">Retro</option>
+            <option value="club">Club</option>
+          </select>
+        </div>
+        <div class="admin-list" data-admin-list></div>
+        <p class="form-status" data-admin-status></p>
+      </section>
     </section>
   </main>
 </body>

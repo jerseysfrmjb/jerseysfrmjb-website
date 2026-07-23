@@ -709,3 +709,151 @@
   }
   .footer-links section:last-child{grid-column:1 / -1!important;}
 }
+
+.admin-panel [hidden] {
+  display: none !important;
+}
+
+.admin-section-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 0 16px;
+}
+
+.admin-section-tabs button {
+  border: 1px solid #d9d1ca;
+  background: #fff;
+  color: #211819;
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  cursor: pointer;
+  box-shadow: 0 8px 18px #0000000b;
+}
+
+.admin-section-tabs button.active {
+  background: var(--maroon);
+  color: #fff;
+  border-color: var(--maroon);
+}
+
+.admin-inventory-panel,
+.admin-sales-panel {
+  background: #fff;
+  border: 1px solid #ddd4cc;
+  border-radius: 10px;
+  padding: 18px;
+  display: grid;
+  gap: 14px;
+  margin: 18px 0;
+  box-shadow: 0 12px 30px #00000014;
+}
+
+.admin-inventory-panel .admin-filter-row,
+.admin-inventory-panel .admin-tools {
+  margin-bottom: 0;
+}
+
+.admin-sales-panel h2 {
+  margin: 4px 0;
+  font-size: clamp(28px, 4vw, 42px);
+  line-height: 1;
+}
+
+.sales-tools {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 170px 150px auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.sales-tools input,
+.sales-tools select {
+  width: 100%;
+  border: 1px solid #d9d1ca;
+  border-radius: 8px;
+  padding: 12px 13px;
+  font: 700 14px Arial, sans-serif;
+  color: #161313;
+  background: #fff;
+}
+
+.sales-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #e3dbd3;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.sales-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 720px;
+}
+
+.sales-table th,
+.sales-table td {
+  padding: 12px 13px;
+  border-bottom: 1px solid #eee5df;
+  text-align: left;
+  font-size: 12px;
+  color: #2f2926;
+}
+
+.sales-table th {
+  color: var(--maroon);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  background: #f7f5f1;
+}
+
+.sales-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.sales-empty {
+  text-align: center;
+  color: #6d615c !important;
+  font-weight: 800;
+}
+
+@media (max-width: 780px) {
+  .admin-section-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-section-tabs button {
+    padding: 10px 9px;
+  }
+
+  .admin-inventory-panel,
+  .admin-sales-panel {
+    padding: 16px;
+  }
+
+  .sales-tools {
+    grid-template-columns: 1fr;
+  }
+
+  .sales-tools .shop-button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 430px) {
+  .sales-table {
+    min-width: 660px;
+  }
+
+  .sales-table th,
+  .sales-table td {
+    padding: 10px 11px;
+  }
+}
