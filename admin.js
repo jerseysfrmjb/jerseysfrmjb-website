@@ -14,6 +14,11 @@ const saveBanner = document.querySelector("[data-save-banner]");
 const messagesList = document.querySelector("[data-admin-messages]");
 const messageCount = document.querySelector("[data-message-count]");
 const refreshMessages = document.querySelector("[data-refresh-messages]");
+const feedbackList = document.querySelector("[data-admin-feedback]");
+const feedbackCount = document.querySelector("[data-feedback-count]");
+const feedbackStatus = document.querySelector("[data-feedback-status]");
+const refreshFeedback = document.querySelector("[data-refresh-feedback]");
+const addSampleFeedback = document.querySelector("[data-add-sample-feedback]");
 const adminSummary = document.querySelector("[data-admin-summary]");
 const adminQuick = document.querySelector("[data-admin-quick]");
 const adminFilterButtons = [...document.querySelectorAll("[data-admin-filter]")];
@@ -55,6 +60,9 @@ let featuredLimit = 3;
 let sizeOptions = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"];
 let messages = [];
 let unreadMessages = 0;
+let ebayFeedback = [];
+let feedbackLoaded = false;
+const savingFeedbackIds = new Set();
 let adminFilter = "all";
 let restockPresets = [];
 let lastBulkRestock = null;
@@ -102,6 +110,7 @@ function setAdminTab(tab = "dashboard") {
     section.hidden = section.dataset.adminSection !== tab;
   });
   if (tab === "sales" && !salesLoaded) loadSales();
+  if (tab === "feedback" && !feedbackLoaded) loadEbayFeedbackAdmin();
 }
 
 function saleDateValue(sale) {
@@ -1091,6 +1100,102 @@ async function deleteMessage(id) {
   statusLine.textContent = "Message deleted.";
 }
 
+function formatFeedbackDate(value = "") {
+  if (!value) return "Date unavailable";
+  const date = new Date(String(value).endsWith("Z") ? value : value + "Z");
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
+}
+
+function renderEbayFeedbackAdmin() {
+  if (!feedbackList) return;
+  const pending = ebayFeedback.filter(item => item.moderation_status === "pending").length;
+  if (feedbackCount) feedbackCount.textContent = `${pending} pending`;
+
+  feedbackList.innerHTML = ebayFeedback.length ? ebayFeedback.map(item => {
+    const feedbackId = String(item.feedback_id || "");
+    const moderation = item.moderation_status || "pending";
+    const visibility = item.visibility_status || "active";
+    const saving = savingFeedbackIds.has(feedbackId);
+    return `
+      <article class="admin-feedback-card" data-feedback-id="${escapeHtml(feedbackId)}">
+        <div class="admin-feedback-card-head">
+          <div>
+            <div class="admin-feedback-badges">
+              <span class="feedback-rating ${escapeHtml(String(item.rating_type || "").toLowerCase())}">${escapeHtml(item.rating_type || "UNKNOWN")}</span>
+              <span class="feedback-moderation ${escapeHtml(moderation)}">${escapeHtml(moderation)}</span>
+              <span class="feedback-visibility ${escapeHtml(visibility)}">${escapeHtml(visibility)}</span>
+            </div>
+            <h3>${escapeHtml(item.listing_title || "eBay purchase")}</h3>
+            <small>${escapeHtml(formatFeedbackDate(item.feedback_date))}${item.item_id ? ` &middot; Item ${escapeHtml(item.item_id)}` : ""}</small>
+          </div>
+        </div>
+        <blockquote>${escapeHtml(item.comment || "")}</blockquote>
+        <div class="admin-feedback-actions">
+          <button type="button" data-feedback-moderation="approved" ${saving || moderation === "approved" ? "disabled" : ""}>Approve</button>
+          <button type="button" data-feedback-moderation="rejected" ${saving || moderation === "rejected" ? "disabled" : ""}>Reject</button>
+          <button type="button" data-feedback-visibility="${visibility === "hidden" ? "active" : "hidden"}" ${saving ? "disabled" : ""}>${visibility === "hidden" ? "Unhide" : "Hide"}</button>
+        </div>
+      </article>`;
+  }).join("") : '<p class="empty-featured">No eBay feedback records yet.</p>';
+}
+
+function applyFeedbackData(data) {
+  if (Array.isArray(data.feedback)) ebayFeedback = data.feedback;
+  feedbackLoaded = true;
+  renderEbayFeedbackAdmin();
+}
+
+async function loadEbayFeedbackAdmin() {
+  if (!feedbackList) return;
+  feedbackList.innerHTML = '<p class="empty-featured">Loading eBay feedback...</p>';
+  if (feedbackStatus) feedbackStatus.textContent = "";
+  try {
+    applyFeedbackData(await api("/api/admin/ebay-feedback"));
+  } catch (error) {
+    feedbackLoaded = false;
+    feedbackList.innerHTML = `<p class="form-status error">${escapeHtml(error.message)}</p>`;
+  }
+}
+
+async function updateEbayFeedback(feedbackId, update) {
+  if (!feedbackId || savingFeedbackIds.has(feedbackId)) return;
+  savingFeedbackIds.add(feedbackId);
+  renderEbayFeedbackAdmin();
+  if (feedbackStatus) feedbackStatus.textContent = "Saving feedback update...";
+  try {
+    applyFeedbackData(await api("/api/admin/ebay-feedback", {
+      method: "PATCH",
+      body: JSON.stringify({ feedback_id: feedbackId, ...update })
+    }));
+    if (feedbackStatus) feedbackStatus.textContent = "Feedback updated.";
+  } catch (error) {
+    if (feedbackStatus) feedbackStatus.textContent = error.message;
+  } finally {
+    savingFeedbackIds.delete(feedbackId);
+    renderEbayFeedbackAdmin();
+  }
+}
+
+async function addDevelopmentSampleFeedback() {
+  if (!addSampleFeedback || addSampleFeedback.disabled) return;
+  addSampleFeedback.disabled = true;
+  if (feedbackStatus) feedbackStatus.textContent = "Adding local sample feedback...";
+  try {
+    const data = await api("/api/admin/ebay-feedback", { method: "POST", body: "{}" });
+    applyFeedbackData(data);
+    if (feedbackStatus) {
+      feedbackStatus.textContent = data.sample_created
+        ? "Sample pending feedback added."
+        : "The sample feedback record already exists.";
+    }
+  } catch (error) {
+    if (feedbackStatus) feedbackStatus.textContent = error.message;
+  } finally {
+    addSampleFeedback.disabled = false;
+  }
+}
+
 async function copyUsername(username) {
   const value = username.startsWith("@") ? username : "@" + username;
   try {
@@ -1685,6 +1790,11 @@ featuredPreview?.addEventListener("drop", async event => {
 });
 
 refreshMessages?.addEventListener("click", loadMessages);
+refreshFeedback?.addEventListener("click", loadEbayFeedbackAdmin);
+addSampleFeedback?.addEventListener("click", addDevelopmentSampleFeedback);
+if (addSampleFeedback && ["localhost", "127.0.0.1", "::1", "[::1]"].includes(location.hostname)) {
+  addSampleFeedback.hidden = false;
+}
 
 previewRestock?.addEventListener("click", previewBulkRestock);
 applyRestock?.addEventListener("click", applyBulkRestock);
@@ -1778,6 +1888,18 @@ list.addEventListener("click", async event => {
 
   if (event.target.matches("[data-toggle], [data-save]")) {
     try { await saveCard(card); } catch (error) { statusLine.textContent = error.message; }
+  }
+});
+
+feedbackList?.addEventListener("click", event => {
+  const card = event.target.closest("[data-feedback-id]");
+  if (!card) return;
+  const moderationButton = event.target.closest("[data-feedback-moderation]");
+  const visibilityButton = event.target.closest("[data-feedback-visibility]");
+  if (moderationButton) {
+    updateEbayFeedback(card.dataset.feedbackId, { moderation_status: moderationButton.dataset.feedbackModeration });
+  } else if (visibilityButton) {
+    updateEbayFeedback(card.dataset.feedbackId, { visibility_status: visibilityButton.dataset.feedbackVisibility });
   }
 });
 

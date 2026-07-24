@@ -6,8 +6,8 @@
   <title>Inventory Admin | JerseysFrmJB</title>
   <meta name="robots" content="noindex,nofollow">
   <link rel="icon" href="assets/jerseysfrmjb-logo.jpg" type="image/jpeg">
-  <link rel="stylesheet" href="styles.css?v=mobile-admin-nav-1">
-  <script src="admin.js?v=mobile-admin-nav-1" defer></script>
+  <link rel="stylesheet" href="styles.css?v=ebay-feedback-1">
+  <script src="admin.js?v=ebay-feedback-1" defer></script>
 </head>
 <body class="admin-body">
   <main class="admin-shell">
@@ -37,6 +37,7 @@
         <button type="button" data-admin-tab="bulk">Bulk Restock</button>
         <button type="button" data-admin-tab="sales">Sales</button>
         <button type="button" data-admin-tab="messages">Messages</button>
+        <button type="button" data-admin-tab="feedback">eBay Feedback</button>
         <button type="button" data-admin-tab="homepage">Homepage</button>
       </nav>
       <label class="admin-mobile-section-control">
@@ -47,6 +48,7 @@
           <option value="bulk">Bulk Restock</option>
           <option value="sales">Sales</option>
           <option value="messages">Messages</option>
+          <option value="feedback">eBay Feedback</option>
           <option value="homepage">Homepage</option>
         </select>
       </label>
@@ -68,6 +70,21 @@
           <button class="shop-button secondary-admin" type="button" data-refresh-messages>Refresh Messages</button>
         </div>
         <div class="admin-message-list" data-admin-messages><p class="empty-featured">Log in to view messages.</p></div>
+      </section>
+      <section class="admin-feedback-panel" data-admin-section="feedback" aria-label="eBay feedback moderation" hidden>
+        <div class="admin-messages-head">
+          <div>
+            <span class="section-kicker">eBay Feedback</span>
+            <h2>Feedback Moderation <span class="message-badge" data-feedback-count>0 pending</span></h2>
+            <p>Approve positive feedback before it appears publicly. Hidden feedback never appears on the website.</p>
+          </div>
+          <div class="admin-feedback-head-actions">
+            <button class="shop-button secondary-admin" type="button" data-refresh-feedback>Refresh Feedback</button>
+            <button class="shop-button secondary-admin" type="button" data-add-sample-feedback hidden>Add Sample Pending Feedback</button>
+          </div>
+        </div>
+        <p class="form-status" data-feedback-status></p>
+        <div class="admin-feedback-list" data-admin-feedback><p class="empty-featured">Open this section to load feedback.</p></div>
       </section>
       <section class="admin-featured-panel" data-admin-section="homepage" aria-label="Featured jersey controls" hidden>
         <div>

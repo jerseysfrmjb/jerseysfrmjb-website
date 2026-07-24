@@ -521,9 +521,54 @@ async function renderHomepageStats() {
   if (statCards[2] && availableProducts) statCards[2].querySelector("small")?.remove();
 }
 
+function formatFeedbackDate(value = "") {
+  if (!value) return "";
+  const date = new Date(String(value).endsWith("Z") ? value : value + "Z");
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
+}
+
+async function renderLiveEbayFeedback() {
+  const section = document.querySelector("[data-ebay-feedback-section]");
+  const list = section?.querySelector("[data-ebay-feedback-list]");
+  if (!section || !list) return;
+  section.hidden = true;
+  list.innerHTML = "";
+
+  try {
+    const response = await fetch("/api/ebay-feedback", {
+      cache: "no-store",
+      headers: { Accept: "application/json" }
+    });
+    if (!response.ok) return;
+    const data = await response.json();
+    const feedback = Array.isArray(data.feedback) ? data.feedback : [];
+    if (!feedback.length) return;
+
+    list.innerHTML = feedback.map(item => `
+      <article class="live-ebay-feedback-card">
+        <div class="review-card-top">
+          <i class="brand-icon ebay-icon" aria-hidden="true">e</i>
+          <span class="review-stars" aria-label="Positive eBay feedback">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
+        </div>
+        <p class="review-market">Verified eBay Feedback</p>
+        <h4>${escapeHtml(item.listing_title || "eBay purchase")}</h4>
+        <blockquote>&ldquo;${escapeHtml(item.comment || "")}&rdquo;</blockquote>
+        <div class="live-ebay-feedback-meta">
+          <span>Verified eBay Buyer</span>
+          <time datetime="${escapeHtml(item.feedback_date || "")}">${escapeHtml(formatFeedbackDate(item.feedback_date))}</time>
+        </div>
+      </article>`).join("");
+    section.hidden = false;
+  } catch (error) {
+    section.hidden = true;
+  }
+}
+
 renderInventoryGrids();
 renderFeaturedGrid();
 renderHomepageStats();
+renderLiveEbayFeedback();
 initSliders();
 function initReviewLightbox() {
   const triggers = document.querySelectorAll("[data-review-lightbox]");
