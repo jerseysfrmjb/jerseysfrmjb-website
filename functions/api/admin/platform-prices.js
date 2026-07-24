@@ -1,4 +1,5 @@
 import { adminConfigError, isAuthorized, json, unauthorized } from "./_auth.js";
+import { ensureProductPlatformPrices } from "../_inventorySeed.js";
 
 const PLATFORMS = ["Depop", "eBay", "Facebook", "Website", "Local", "Other"];
 const PLATFORM_SET = new Set(PLATFORMS);
@@ -26,6 +27,7 @@ async function requireAdmin(context) {
   const error = configError(context.env);
   if (error) return json({ ok: false, error }, 500);
   if (!(await isAuthorized(context.request, context.env))) return unauthorized();
+  await ensureProductPlatformPrices(context.env);
   return null;
 }
 
@@ -37,7 +39,7 @@ async function productExists(env, productId) {
   );
 }
 
-export async function onRequestGet(context) {
+async function getPlatformPrices(context) {
   const authResponse = await requireAdmin(context);
   if (authResponse) return authResponse;
 
@@ -74,7 +76,7 @@ export async function onRequestGet(context) {
   });
 }
 
-export async function onRequestPost(context) {
+async function savePlatformPrices(context) {
   const authResponse = await requireAdmin(context);
   if (authResponse) return authResponse;
 
@@ -126,6 +128,22 @@ export async function onRequestPost(context) {
 
   await context.env.DB.batch(statements);
   return json({ ok: true, product_id: productId, saved: entries.length });
+}
+
+export async function onRequestGet(context) {
+  try {
+    return await getPlatformPrices(context);
+  } catch (error) {
+    return json({ ok: false, error: `Platform prices server error: ${error?.message || "Unknown error"}` }, 500);
+  }
+}
+
+export async function onRequestPost(context) {
+  try {
+    return await savePlatformPrices(context);
+  } catch (error) {
+    return json({ ok: false, error: `Platform prices save error: ${error?.message || "Unknown error"}` }, 500);
+  }
 }
 
 export const onRequestPut = onRequestPost;
