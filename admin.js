@@ -62,6 +62,8 @@ let currentBulkPreview = null;
 let sales = [];
 let salesLoaded = false;
 let quickSaleMatches = [];
+let quickSalePriceManuallyEdited = false;
+let quickSalePriceRequest = 0;
 let currentAdminTab = "dashboard";
 let editingSaleId = null;
 let savingSaleEditId = null;
@@ -587,12 +589,32 @@ function updateQuickSaleMatches() {
       : "Type a jersey/player and size to find a match.";
   }
   updateQuickSaleSubmit();
+  applyQuickSalePlatformPrice();
 }
 
 function selectedQuickSaleMatch() {
   const index = Number(quickSaleMatch?.value);
   if (!Number.isInteger(index) || index < 0 || index >= quickSaleMatches.length) return null;
   return quickSaleMatches[index];
+}
+
+async function applyQuickSalePlatformPrice() {
+  const requestId = ++quickSalePriceRequest;
+  if (!quickSalePrice || quickSalePriceManuallyEdited) return;
+
+  const match = selectedQuickSaleMatch();
+  quickSalePrice.value = "";
+  if (!match) return;
+
+  try {
+    const prices = await loadPlatformPriceData(match.item.id);
+    if (requestId !== quickSalePriceRequest || quickSalePriceManuallyEdited) return;
+    quickSalePrice.value = prices[quickSalePlatform?.value || "Website"] ?? "";
+  } catch (error) {
+    if (requestId === quickSalePriceRequest && !quickSalePriceManuallyEdited) {
+      quickSalePrice.value = "";
+    }
+  }
 }
 
 async function submitQuickSale(event) {
@@ -643,6 +665,8 @@ async function submitQuickSale(event) {
     });
     if (quickSaleStatus) quickSaleStatus.textContent = "Sale recorded.";
     quickSaleForm.reset();
+    quickSalePriceManuallyEdited = false;
+    quickSalePriceRequest += 1;
     if (quickSaleQuantity) quickSaleQuantity.value = "1";
     quickSaleMatches = [];
     if (quickSaleMatch) quickSaleMatch.innerHTML = `<option value="">Select a matching jersey and size</option>`;
@@ -730,11 +754,33 @@ function showInventorySaleForm(item, decreases) {
       overlay.remove();
       resolve(result);
     };
+    const platformSelect = form.querySelector("[data-sale-platform]");
+    const priceInput = form.querySelector("[data-sale-price]");
+    let priceManuallyEdited = false;
+    let priceRequest = 0;
+
+    const applyPlatformPrice = async () => {
+      const requestId = ++priceRequest;
+      if (priceManuallyEdited) return;
+      priceInput.value = "";
+      try {
+        const prices = await loadPlatformPriceData(item.id);
+        if (requestId !== priceRequest || priceManuallyEdited || !overlay.isConnected) return;
+        priceInput.value = prices[platformSelect.value] ?? "";
+      } catch (error) {
+        if (requestId === priceRequest && !priceManuallyEdited) priceInput.value = "";
+      }
+    };
 
     overlay.addEventListener("click", event => {
       if (event.target === overlay) cleanup(null);
     });
     form.querySelector("[data-cancel]").addEventListener("click", () => cleanup(null));
+    priceInput.addEventListener("input", () => {
+      priceManuallyEdited = true;
+      priceRequest += 1;
+    });
+    platformSelect.addEventListener("change", applyPlatformPrice);
     form.addEventListener("submit", event => {
       event.preventDefault();
       const submit = form.querySelector('button[type="submit"]');
@@ -757,7 +803,8 @@ function showInventorySaleForm(item, decreases) {
 
     overlay.appendChild(form);
     document.body.appendChild(overlay);
-    form.querySelector("[data-sale-platform]").focus();
+    platformSelect.focus();
+    applyPlatformPrice();
   });
 }
 
@@ -1130,6 +1177,7 @@ function platformPriceState(productId) {
     platformPriceStates.set(productId, {
       loaded: false,
       loading: false,
+      loadPromise: null,
       saving: false,
       prices: Object.fromEntries(platformPriceNames.map(platform => [platform, ""])),
       message: "",
@@ -1137,6 +1185,33 @@ function platformPriceState(productId) {
     });
   }
   return platformPriceStates.get(productId);
+}
+
+async function loadPlatformPriceData(productId) {
+  const state = platformPriceState(productId);
+  if (state.loaded) return state.prices;
+  if (state.loadPromise) return state.loadPromise;
+
+  state.loading = true;
+  state.loadPromise = (async () => {
+    const data = await api("/api/admin/platform-prices?product_id=" + encodeURIComponent(productId));
+    const savedPrices = Object.fromEntries(platformPriceNames.map(platform => [platform, ""]));
+    (data.prices || []).forEach(entry => {
+      if (platformPriceNames.includes(entry.platform) && entry.price !== null && entry.price !== undefined) {
+        savedPrices[entry.platform] = String(entry.price);
+      }
+    });
+    state.prices = savedPrices;
+    state.loaded = true;
+    return savedPrices;
+  })();
+
+  try {
+    return await state.loadPromise;
+  } finally {
+    state.loading = false;
+    state.loadPromise = null;
+  }
 }
 
 function renderPlatformPriceContent(productId) {
@@ -1181,29 +1256,19 @@ function updatePlatformPriceEditor(card) {
 async function loadPlatformPrices(card) {
   const productId = card.dataset.id;
   const state = platformPriceState(productId);
-  if (state.loaded || state.loading) return;
+  if (state.loaded) return;
 
-  state.loading = true;
   state.message = "Loading prices...";
   state.tone = "";
   updatePlatformPriceEditor(card);
 
   try {
-    const data = await api("/api/admin/platform-prices?product_id=" + encodeURIComponent(productId));
-    const savedPrices = Object.fromEntries(platformPriceNames.map(platform => [platform, ""]));
-    (data.prices || []).forEach(entry => {
-      if (platformPriceNames.includes(entry.platform) && entry.price !== null && entry.price !== undefined) {
-        savedPrices[entry.platform] = String(entry.price);
-      }
-    });
-    state.prices = savedPrices;
-    state.loaded = true;
+    await loadPlatformPriceData(productId);
     state.message = "";
   } catch (error) {
     state.message = error.message;
     state.tone = "error";
   } finally {
-    state.loading = false;
     updatePlatformPriceEditor(card);
   }
 }
@@ -1824,7 +1889,15 @@ salesTable?.addEventListener("click", event => {
   }
 });
 quickSaleSearch?.addEventListener("input", updateQuickSaleMatches);
-quickSaleMatch?.addEventListener("change", updateQuickSaleSubmit);
+quickSaleMatch?.addEventListener("change", () => {
+  updateQuickSaleSubmit();
+  applyQuickSalePlatformPrice();
+});
+quickSalePlatform?.addEventListener("change", applyQuickSalePlatformPrice);
+quickSalePrice?.addEventListener("input", () => {
+  quickSalePriceManuallyEdited = true;
+  quickSalePriceRequest += 1;
+});
 quickSaleForm?.addEventListener("submit", submitQuickSale);
 
 searchInput.addEventListener("input", render);
