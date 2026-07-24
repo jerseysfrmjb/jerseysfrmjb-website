@@ -62,6 +62,8 @@ let sales = [];
 let salesLoaded = false;
 let quickSaleMatches = [];
 let currentAdminTab = "dashboard";
+let editingSaleId = null;
+let savingSaleEditId = null;
 
 const bannerPresets = {
   live: {
@@ -114,6 +116,21 @@ function saleDateInputValue(value) {
   return `${date.getFullYear()}-${month}-${day}`;
 }
 
+function saleDateTimeInputValue(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function saleIdValue(sale) {
+  return sale.id ?? sale.sale_id ?? sale.saleId;
+}
+
 function saleJerseyName(sale) {
   return sale.product_name || sale.jersey || sale.name || "Unknown jersey";
 }
@@ -144,16 +161,90 @@ function renderSales() {
     salesTable.innerHTML = `<tr><td colspan="6" class="sales-empty">${salesLoaded ? "No sales match those filters." : "Log in to view sales."}</td></tr>`;
     return;
   }
-  salesTable.innerHTML = rows.map(sale => `
-    <tr>
-      <td>${escapeHtml(formatSaleDate(saleDateValue(sale)))}</td>
+  salesTable.innerHTML = rows.map(sale => {
+    const saleId = saleIdValue(sale);
+    if (String(saleId) === String(editingSaleId)) return renderSaleEditRow(sale);
+    return `
+      <tr data-sale-row="${escapeHtml(saleId || "")}">
+        <td>${escapeHtml(formatSaleDate(saleDateValue(sale)))}</td>
+        <td>${escapeHtml(saleJerseyName(sale))}</td>
+        <td>${escapeHtml(sale.size || "-")}</td>
+        <td>${escapeHtml(sale.quantity ?? 0)}</td>
+        <td>${escapeHtml(sale.platform || "-")}</td>
+        <td>${formatSalePrice(sale.sale_price)} <button type="button" class="admin-small-button" data-sale-edit="${escapeHtml(saleId || "")}">Edit</button></td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function renderSaleEditRow(sale) {
+  const saleId = saleIdValue(sale);
+  const platform = sale.platform || "Website";
+  const platforms = ["Depop", "eBay", "Facebook", "Website", "Local", "Other"];
+  return `
+    <tr data-sale-edit-row="${escapeHtml(saleId || "")}">
+      <td><input type="datetime-local" value="${escapeHtml(saleDateTimeInputValue(saleDateValue(sale)))}" data-sale-edit-date></td>
       <td>${escapeHtml(saleJerseyName(sale))}</td>
       <td>${escapeHtml(sale.size || "-")}</td>
-      <td>${escapeHtml(sale.quantity ?? 0)}</td>
-      <td>${escapeHtml(sale.platform || "-")}</td>
-      <td>${formatSalePrice(sale.sale_price)}</td>
+      <td><input type="number" min="1" step="1" value="${escapeHtml(sale.quantity ?? 1)}" data-sale-edit-quantity></td>
+      <td>
+        <select data-sale-edit-platform>
+          ${platforms.map(option => `<option value="${escapeHtml(option)}"${option.toLowerCase() === String(platform).toLowerCase() ? " selected" : ""}>${escapeHtml(option)}</option>`).join("")}
+        </select>
+      </td>
+      <td>
+        <input type="number" min="0" step="0.01" value="${escapeHtml(sale.sale_price ?? "")}" placeholder="Price" data-sale-edit-price>
+        <input type="text" value="${escapeHtml(sale.notes || "")}" placeholder="Notes" data-sale-edit-notes>
+        <button type="button" class="admin-small-button" data-sale-save="${escapeHtml(saleId || "")}">Save</button>
+        <button type="button" class="admin-small-button" data-sale-cancel>Cancel</button>
+      </td>
     </tr>
-  `).join("");
+  `;
+}
+
+async function saveSaleEdit(saleId) {
+  if (!saleId || savingSaleEditId) return;
+  const row = salesTable?.querySelector(`[data-sale-edit-row="${CSS.escape(String(saleId))}"]`);
+  if (!row) return;
+  const quantity = Math.floor(Number(row.querySelector("[data-sale-edit-quantity]")?.value || 0));
+  if (!Number.isFinite(quantity) || quantity < 1) {
+    if (salesStatus) salesStatus.textContent = "Enter a quantity of at least 1.";
+    return;
+  }
+  const priceText = row.querySelector("[data-sale-edit-price]")?.value.trim() || "";
+  const salePrice = priceText ? Number(priceText) : null;
+  if (priceText && !Number.isFinite(salePrice)) {
+    if (salesStatus) salesStatus.textContent = "Enter a valid sale price or leave it blank.";
+    return;
+  }
+  const dateText = row.querySelector("[data-sale-edit-date]")?.value || "";
+  const payload = {
+    id: saleId,
+    quantity,
+    platform: row.querySelector("[data-sale-edit-platform]")?.value || "Website",
+    sale_price: salePrice,
+    notes: row.querySelector("[data-sale-edit-notes]")?.value.trim() || "",
+    created_at: dateText ? new Date(dateText).toISOString() : null
+  };
+
+  savingSaleEditId = saleId;
+  row.querySelectorAll("button, input, select").forEach(control => { control.disabled = true; });
+  if (salesStatus) salesStatus.textContent = "Saving sale edit...";
+
+  try {
+    await api("/api/admin/sales", {
+      method: "PATCH",
+      body: JSON.stringify(payload)
+    });
+    editingSaleId = null;
+    if (salesStatus) salesStatus.textContent = "Sale updated.";
+    await loadSales();
+  } catch (error) {
+    row.querySelectorAll("button, input, select").forEach(control => { control.disabled = false; });
+    if (salesStatus) salesStatus.textContent = error.message || "Could not update sale.";
+  } finally {
+    savingSaleEditId = null;
+  }
 }
 
 async function loadSales() {
@@ -1386,6 +1477,29 @@ salesSearch?.addEventListener("input", renderSales);
 salesPlatform?.addEventListener("change", renderSales);
 salesDate?.addEventListener("change", renderSales);
 salesExport?.addEventListener("click", exportSalesCsv);
+salesTable?.addEventListener("click", event => {
+  const editButton = event.target.closest("[data-sale-edit]");
+  const saveButton = event.target.closest("[data-sale-save]");
+  const cancelButton = event.target.closest("[data-sale-cancel]");
+
+  if (editButton) {
+    editingSaleId = editButton.dataset.saleEdit;
+    renderSales();
+    if (salesStatus) salesStatus.textContent = "Editing sale. Save when finished.";
+    return;
+  }
+
+  if (saveButton) {
+    saveSaleEdit(saveButton.dataset.saleSave);
+    return;
+  }
+
+  if (cancelButton) {
+    editingSaleId = null;
+    renderSales();
+    if (salesStatus) salesStatus.textContent = "Sale edit canceled.";
+  }
+});
 quickSaleSearch?.addEventListener("input", updateQuickSaleMatches);
 quickSaleMatch?.addEventListener("change", updateQuickSaleSubmit);
 quickSaleForm?.addEventListener("submit", submitQuickSale);
