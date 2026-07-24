@@ -64,6 +64,7 @@ let quickSaleMatches = [];
 let currentAdminTab = "dashboard";
 let editingSaleId = null;
 let savingSaleEditId = null;
+let deletingSaleId = null;
 
 const bannerPresets = {
   live: {
@@ -171,7 +172,11 @@ function renderSales() {
         <td>${escapeHtml(sale.size || "-")}</td>
         <td>${escapeHtml(sale.quantity ?? 0)}</td>
         <td>${escapeHtml(sale.platform || "-")}</td>
-        <td>${formatSalePrice(sale.sale_price)} <button type="button" class="admin-small-button" data-sale-edit="${escapeHtml(saleId || "")}">Edit</button></td>
+        <td>
+          ${formatSalePrice(sale.sale_price)}
+          <button type="button" class="admin-small-button" data-sale-edit="${escapeHtml(saleId || "")}">Edit</button>
+          <button type="button" class="admin-small-button" data-sale-delete="${escapeHtml(saleId || "")}">Delete</button>
+        </td>
       </tr>
     `;
   }).join("");
@@ -244,6 +249,36 @@ async function saveSaleEdit(saleId) {
     if (salesStatus) salesStatus.textContent = error.message || "Could not update sale.";
   } finally {
     savingSaleEditId = null;
+  }
+}
+
+async function deleteSaleRecord(saleId) {
+  if (!saleId || deletingSaleId) return;
+  const sale = sales.find(item => String(saleIdValue(item)) === String(saleId));
+  const saleName = sale ? saleJerseyName(sale) : "this sale";
+
+  if (!window.confirm(`Delete ${saleName} from sales history?`)) return;
+  const restoreInventory = window.confirm("Return this quantity to inventory?");
+  const row = salesTable?.querySelector(`[data-sale-row="${CSS.escape(String(saleId))}"]`);
+
+  deletingSaleId = saleId;
+  row?.querySelectorAll("button").forEach(button => { button.disabled = true; });
+  if (salesStatus) salesStatus.textContent = restoreInventory ? "Restoring inventory and deleting sale..." : "Deleting sale...";
+
+  try {
+    const result = await api("/api/admin/sales", {
+      method: "DELETE",
+      body: JSON.stringify({ id: saleId, restore_inventory: restoreInventory })
+    });
+    const warning = result?.restore_warning || "";
+    await loadSales();
+    await loadInventory();
+    if (salesStatus) salesStatus.textContent = warning || (restoreInventory ? "Sale deleted and inventory restored." : "Sale deleted.");
+  } catch (error) {
+    row?.querySelectorAll("button").forEach(button => { button.disabled = false; });
+    if (salesStatus) salesStatus.textContent = error.message || "Could not delete sale.";
+  } finally {
+    deletingSaleId = null;
   }
 }
 
@@ -1481,6 +1516,7 @@ salesTable?.addEventListener("click", event => {
   const editButton = event.target.closest("[data-sale-edit]");
   const saveButton = event.target.closest("[data-sale-save]");
   const cancelButton = event.target.closest("[data-sale-cancel]");
+  const deleteButton = event.target.closest("[data-sale-delete]");
 
   if (editButton) {
     editingSaleId = editButton.dataset.saleEdit;
@@ -1498,6 +1534,11 @@ salesTable?.addEventListener("click", event => {
     editingSaleId = null;
     renderSales();
     if (salesStatus) salesStatus.textContent = "Sale edit canceled.";
+    return;
+  }
+
+  if (deleteButton) {
+    deleteSaleRecord(deleteButton.dataset.saleDelete);
   }
 });
 quickSaleSearch?.addEventListener("input", updateQuickSaleMatches);

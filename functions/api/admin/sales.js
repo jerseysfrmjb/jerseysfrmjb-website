@@ -250,29 +250,41 @@ async function deleteSale(request, env) {
   const body = await parseBody(request);
   const id = Number(url.searchParams.get("id") || body.id);
   const restoreInventory = url.searchParams.get("restore_inventory") === "true" || body.restore_inventory || body.restoreInventory;
-  const undoOnly = url.searchParams.get("undo") === "true" || body.undo;
 
   if (!Number.isFinite(id) || id <= 0) return json({ error: "Sale ID is required." }, 400);
 
   const sale = await env.DB.prepare("SELECT * FROM sales WHERE id = ?").bind(id).first();
   if (!sale) return json({ error: "Sale not found." }, 404);
 
+  let restoreWarning = "";
   if (restoreInventory && sale.product_id) {
     const product = await loadProduct(env, sale.product_id);
-    await adjustInventory(env, product, sale.size, positiveInt(sale.quantity, 1));
+    if (product) {
+      try {
+        await adjustInventory(env, product, sale.size, positiveInt(sale.quantity, 1));
+      } catch (error) {
+        const message = error?.message || "Unknown error";
+        if (/size is required/i.test(message)) {
+          restoreWarning = "Sale deleted, but inventory could not be restored because this sale is missing a size.";
+        } else {
+          throw error;
+        }
+      }
+    } else {
+      restoreWarning = "Sale deleted, but inventory could not be restored because the original product no longer exists.";
+    }
+  } else if (restoreInventory) {
+    restoreWarning = "Sale deleted, but inventory could not be restored because this sale is missing a product ID.";
   }
 
-  if (restoreInventory || undoOnly) {
-    await env.DB.prepare(`
-      UPDATE sales
-      SET undone_at = COALESCE(undone_at, CURRENT_TIMESTAMP), inventory_restored = ?
-      WHERE id = ?
-    `).bind(restoreInventory ? 1 : Number(sale.inventory_restored || 0), id).run();
-  } else {
-    await env.DB.prepare("DELETE FROM sales WHERE id = ?").bind(id).run();
-  }
+  await env.DB.prepare("DELETE FROM sales WHERE id = ?").bind(id).run();
 
-  return json({ success: true, sale_id: id, inventory_restored: Boolean(restoreInventory), undone: Boolean(restoreInventory || undoOnly) });
+  return json({
+    success: true,
+    sale_id: id,
+    inventory_restored: Boolean(restoreInventory && !restoreWarning),
+    restore_warning: restoreWarning
+  });
 }
 
 export async function onRequestGet({ request, env }) {
