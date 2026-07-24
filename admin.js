@@ -66,6 +66,8 @@ let currentAdminTab = "dashboard";
 let editingSaleId = null;
 let savingSaleEditId = null;
 let deletingSaleId = null;
+const platformPriceNames = ["Depop", "eBay", "Facebook", "Website", "Local", "Other"];
+const platformPriceStates = new Map();
 
 const bannerPresets = {
   live: {
@@ -1123,6 +1125,148 @@ function readSizeControls(card) {
   return sizes;
 }
 
+function platformPriceState(productId) {
+  if (!platformPriceStates.has(productId)) {
+    platformPriceStates.set(productId, {
+      loaded: false,
+      loading: false,
+      saving: false,
+      prices: Object.fromEntries(platformPriceNames.map(platform => [platform, ""])),
+      message: "",
+      tone: ""
+    });
+  }
+  return platformPriceStates.get(productId);
+}
+
+function renderPlatformPriceContent(productId) {
+  const state = platformPriceState(productId);
+  if (!state.loaded) {
+    return `
+      <p class="platform-prices-status ${escapeHtml(state.tone)}" role="status" aria-live="polite">${escapeHtml(state.message || "Open this section to load saved prices.")}</p>
+      ${state.tone === "error" && !state.loading ? '<button class="platform-prices-retry" type="button" data-retry-platform-prices>Retry</button>' : ""}`;
+  }
+
+  return `
+    <div class="platform-prices-grid">
+      ${platformPriceNames.map(platform => `
+        <label>
+          ${escapeHtml(platform)}
+          <span class="platform-price-input"><span aria-hidden="true">$</span><input type="number" min="0" step="0.01" inputmode="decimal" value="${escapeHtml(state.prices[platform] ?? "")}" data-platform-price="${escapeHtml(platform)}" aria-label="${escapeHtml(platform)} price in dollars" ${state.saving ? "disabled" : ""}></span>
+        </label>`).join("")}
+    </div>
+    <div class="platform-prices-actions">
+      <button class="shop-button" type="button" data-save-platform-prices ${state.saving ? "disabled" : ""}>${state.saving ? "Saving..." : "Save Prices"}</button>
+      <p class="platform-prices-status ${escapeHtml(state.tone)}" role="status" aria-live="polite">${escapeHtml(state.message)}</p>
+    </div>`;
+}
+
+function renderPlatformPriceEditor(productId) {
+  return `
+    <details class="platform-prices-editor" data-platform-prices>
+      <summary>Platform Prices</summary>
+      <div class="platform-prices-content" data-platform-prices-content>
+        ${renderPlatformPriceContent(productId)}
+      </div>
+    </details>`;
+}
+
+function updatePlatformPriceEditor(card) {
+  const productId = card.dataset.id;
+  const activeCard = list.querySelector(`[data-id="${CSS.escape(productId)}"]`) || card;
+  const content = activeCard.querySelector("[data-platform-prices-content]");
+  if (content) content.innerHTML = renderPlatformPriceContent(productId);
+}
+
+async function loadPlatformPrices(card) {
+  const productId = card.dataset.id;
+  const state = platformPriceState(productId);
+  if (state.loaded || state.loading) return;
+
+  state.loading = true;
+  state.message = "Loading prices...";
+  state.tone = "";
+  updatePlatformPriceEditor(card);
+
+  try {
+    const data = await api("/api/admin/platform-prices?product_id=" + encodeURIComponent(productId));
+    const savedPrices = Object.fromEntries(platformPriceNames.map(platform => [platform, ""]));
+    (data.prices || []).forEach(entry => {
+      if (platformPriceNames.includes(entry.platform) && entry.price !== null && entry.price !== undefined) {
+        savedPrices[entry.platform] = String(entry.price);
+      }
+    });
+    state.prices = savedPrices;
+    state.loaded = true;
+    state.message = "";
+  } catch (error) {
+    state.message = error.message;
+    state.tone = "error";
+  } finally {
+    state.loading = false;
+    updatePlatformPriceEditor(card);
+  }
+}
+
+async function savePlatformPrices(card) {
+  const productId = card.dataset.id;
+  const state = platformPriceState(productId);
+  if (!state.loaded || state.saving) return;
+
+  const draftPrices = { ...state.prices };
+  let invalidPlatform = "";
+  let validationMessage = "";
+
+  card.querySelectorAll("[data-platform-price]").forEach(input => {
+    const platform = input.dataset.platformPrice;
+    const value = input.value.trim();
+    draftPrices[platform] = value;
+    if (invalidPlatform || !value) return;
+    if (value.startsWith("-")) {
+      invalidPlatform = platform;
+      validationMessage = `${platform} price cannot be negative.`;
+    } else if (!/^\d+(?:\.\d{1,2})?$/.test(value)) {
+      invalidPlatform = platform;
+      validationMessage = `${platform} price must be a dollar amount with no more than two decimal places.`;
+    }
+  });
+
+  state.prices = draftPrices;
+  if (invalidPlatform) {
+    state.message = validationMessage;
+    state.tone = "error";
+    updatePlatformPriceEditor(card);
+    card.querySelector(`[data-platform-price="${invalidPlatform}"]`)?.focus();
+    return;
+  }
+
+  state.saving = true;
+  state.message = "Saving prices...";
+  state.tone = "";
+  updatePlatformPriceEditor(card);
+
+  try {
+    await api("/api/admin/platform-prices", {
+      method: "POST",
+      body: JSON.stringify({
+        product_id: productId,
+        prices: platformPriceNames.map(platform => ({
+          platform,
+          price: draftPrices[platform] === "" ? null : draftPrices[platform]
+        }))
+      })
+    });
+    state.message = "Platform prices saved.";
+    state.tone = "success";
+  } catch (error) {
+    state.message = error.message;
+    state.tone = "error";
+  } finally {
+    state.saving = false;
+    updatePlatformPriceEditor(card);
+  }
+}
+
 function render() {
   const query = searchInput.value.trim().toLowerCase();
   const category = categorySelect.value;
@@ -1168,6 +1312,7 @@ function render() {
             <label>Depop Link<input data-field="depop" value="${escapeHtml(links.depop || "")}"></label>
             <label>eBay Link<input data-field="ebay" value="${escapeHtml(links.ebay || "")}"></label>
           </details>
+          ${renderPlatformPriceEditor(item.id)}
           <button class="shop-button save-admin" type="button" data-save>Save Changes</button>
         </div>
       </article>`;
@@ -1540,6 +1685,16 @@ list.addEventListener("click", async event => {
   const card = event.target.closest(".admin-card");
   if (!card) return;
 
+  if (event.target.matches("[data-save-platform-prices]")) {
+    await savePlatformPrices(card);
+    return;
+  }
+
+  if (event.target.matches("[data-retry-platform-prices]")) {
+    await loadPlatformPrices(card);
+    return;
+  }
+
   if (event.target.matches("[data-toggle]")) {
     const sizes = readSizeControls(card);
     const hasStock = Object.values(sizes).some(qty => Number(qty) > 0);
@@ -1557,6 +1712,28 @@ list.addEventListener("click", async event => {
 
   if (event.target.matches("[data-toggle], [data-save]")) {
     try { await saveCard(card); } catch (error) { statusLine.textContent = error.message; }
+  }
+});
+
+list.addEventListener("toggle", event => {
+  const editor = event.target.closest("[data-platform-prices]");
+  if (!editor?.open) return;
+  const card = editor.closest(".admin-card");
+  if (card) loadPlatformPrices(card);
+}, true);
+
+list.addEventListener("input", event => {
+  if (!event.target.matches("[data-platform-price]")) return;
+  const card = event.target.closest(".admin-card");
+  if (!card) return;
+  const state = platformPriceState(card.dataset.id);
+  state.prices[event.target.dataset.platformPrice] = event.target.value.trim();
+  state.message = "";
+  state.tone = "";
+  const priceStatus = card.querySelector(".platform-prices-status");
+  if (priceStatus) {
+    priceStatus.textContent = "";
+    priceStatus.classList.remove("success", "error");
   }
 });
 
