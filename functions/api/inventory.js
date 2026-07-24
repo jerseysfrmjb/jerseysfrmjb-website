@@ -53,7 +53,7 @@ function parseItem(row) {
     name: row.name,
     size: sizesLabel(sizes, row.size),
     sizes,
-    price: row.price,
+    price: row.website_price ?? row.price,
     quantity: totalQuantity(sizes, row.quantity),
     featured: Boolean(row.featured),
     featured_order: row.featured_order || 0,
@@ -83,21 +83,29 @@ export async function onRequestGet({ env, request }) {
   const featured = url.searchParams.get("featured");
   const params = [];
   const where = [];
-  let order = "ORDER BY CASE WHEN quantity > 0 THEN 0 ELSE 1 END, sort_order, name";
+  let order = "ORDER BY CASE WHEN inventory.quantity > 0 THEN 0 ELSE 1 END, inventory.sort_order, inventory.name";
 
   if (category) {
-    where.push("category = ?");
+    where.push("inventory.category = ?");
     params.push(category);
   }
 
   if (featured === "true") {
-    where.push("featured = 1");
+    where.push("inventory.featured = 1");
     const hideSoldOut = (await getSetting(env, "hide_sold_out_featured", "false")) === "true";
-    if (hideSoldOut) where.push("quantity > 0");
-    order = "ORDER BY CASE WHEN featured_order BETWEEN 1 AND 3 THEN featured_order ELSE 999 END, sort_order, name";
+    if (hideSoldOut) where.push("inventory.quantity > 0");
+    order = "ORDER BY CASE WHEN inventory.featured_order BETWEEN 1 AND 3 THEN inventory.featured_order ELSE 999 END, inventory.sort_order, inventory.name";
   }
 
-  const sql = `SELECT * FROM inventory ${where.length ? "WHERE " + where.join(" AND ") : ""} ${order}`;
+  const sql = `
+    SELECT inventory.*, website_prices.price AS website_price
+    FROM inventory
+    LEFT JOIN product_platform_prices AS website_prices
+      ON website_prices.product_id = inventory.id
+      AND website_prices.platform = 'Website'
+    ${where.length ? "WHERE " + where.join(" AND ") : ""}
+    ${order}
+  `;
   const result = await env.DB.prepare(sql).bind(...params).all();
   const settingsResult = await env.DB.prepare("SELECT key, value FROM site_settings").all();
   const settings = Object.fromEntries((settingsResult.results || []).map(row => [row.key, row.value]));
