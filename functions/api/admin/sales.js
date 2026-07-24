@@ -215,6 +215,36 @@ async function createSale(request, env) {
   return json({ sale }, 201);
 }
 
+async function updateSale(request, env) {
+  const url = new URL(request.url);
+  const body = await parseBody(request);
+  const id = Number(url.searchParams.get("id") || body.id);
+
+  if (!Number.isFinite(id) || id <= 0) return json({ error: "Sale ID is required." }, 400);
+
+  const sale = await env.DB.prepare("SELECT * FROM sales WHERE id = ?").bind(id).first();
+  if (!sale) return json({ error: "Sale not found." }, 404);
+
+  const quantity = positiveInt(body.quantity ?? sale.quantity, positiveInt(sale.quantity, 1));
+  const platform = normalizePlatform(body.platform ?? sale.platform);
+  const salePrice = optionalPrice(body.sale_price ?? body.salePrice ?? sale.sale_price);
+  const notes = String(body.notes ?? sale.notes ?? "").trim();
+  const createdAt = String(body.created_at || body.createdAt || body.timestamp || sale.created_at || "").trim();
+
+  await env.DB.prepare(`
+    UPDATE sales
+    SET quantity = ?,
+        platform = ?,
+        sale_price = ?,
+        notes = ?,
+        created_at = ?
+    WHERE id = ?
+  `).bind(quantity, platform, salePrice, notes, createdAt || sale.created_at, id).run();
+
+  const updated = await env.DB.prepare("SELECT * FROM sales WHERE id = ?").bind(id).first();
+  return json({ sale: updated });
+}
+
 async function deleteSale(request, env) {
   const url = new URL(request.url);
   const body = await parseBody(request);
@@ -262,6 +292,26 @@ export async function onRequestPost({ request, env }) {
     return createSale(request, env);
   } catch (error) {
     return json({ error: `Sales save error: ${error?.message || "Unknown error"}` }, 500);
+  }
+}
+
+export async function onRequestPut({ request, env }) {
+  try {
+    const auth = await requireAdmin(request, env);
+    if (auth) return auth;
+    return updateSale(request, env);
+  } catch (error) {
+    return json({ error: `Sales update error: ${error?.message || "Unknown error"}` }, 500);
+  }
+}
+
+export async function onRequestPatch({ request, env }) {
+  try {
+    const auth = await requireAdmin(request, env);
+    if (auth) return auth;
+    return updateSale(request, env);
+  } catch (error) {
+    return json({ error: `Sales update error: ${error?.message || "Unknown error"}` }, 500);
   }
 }
 
