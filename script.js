@@ -144,15 +144,51 @@ function categoryLabel(category = "") {
   return { world: "World Cup", club: "Club", retro: "Retro" }[category] || category;
 }
 
-function publicProductPrice(item = {}) {
-  const websitePrice = item.website_price;
-  const value = websitePrice !== null && websitePrice !== undefined && String(websitePrice).trim() !== ""
-    ? websitePrice
-    : item.price ?? item.base_price ?? "";
+const PUBLIC_MARKETPLACES = [
+  { name: "Depop", linkKey: "depop", icon: "\u{1F6CD}" },
+  { name: "eBay", linkKey: "ebay", icon: "\u{1F6D2}" },
+  { name: "Facebook", linkKey: "facebook", icon: "\u{1F465}" },
+  { name: "Local", linkKey: "local", icon: "\u{1F4CD}" },
+  { name: "Other", linkKey: "other", icon: "\u{1F517}" }
+];
+const DEFAULT_PURCHASE_URL = "https://www.depop.com/jerseysfrmjb/";
+
+function formatPriceValue(value) {
   const raw = String(value).trim();
   if (!raw) return "";
   const number = Number(raw);
   return Number.isFinite(number) ? number.toFixed(2).replace(/\.00$/, "") : String(value);
+}
+
+function renderPlatformAvailability(item = {}, available = true) {
+  const savedPrices = item.platform_prices || {};
+  const links = item.links || {};
+  const offers = PUBLIC_MARKETPLACES.flatMap(platform => {
+    const value = savedPrices[platform.name];
+    if (value === null || value === undefined || String(value).trim() === "") return [];
+    const amount = Number(value);
+    if (!Number.isFinite(amount) || amount < 0) return [];
+    return [{ ...platform, price: formatPriceValue(amount) }];
+  });
+
+  if (!offers.length) return "";
+
+  return `
+    <section class="platform-availability" aria-label="Available marketplaces">
+      <h4>Available On</h4>
+      <div class="platform-offers">
+        ${offers.map(offer => {
+          const action = available
+            ? `<a class="platform-buy-button" href="${escapeHtml(links[offer.linkKey] || links.depop || DEFAULT_PURCHASE_URL)}" target="_blank" rel="noopener">Buy on ${escapeHtml(offer.name)}</a>`
+            : `<span class="platform-buy-button disabled" aria-disabled="true">Sold Out</span>`;
+          return `
+            <div class="platform-offer">
+              <div class="platform-offer-label"><div class="platform-name"><span aria-hidden="true">${escapeHtml(offer.icon)}</span>${escapeHtml(offer.name)}</div><b>&mdash; $${escapeHtml(offer.price)}</b></div>
+              ${action}
+            </div>`;
+        }).join("")}
+      </div>
+    </section>`;
 }
 
 function formatInventoryUpdated(value = "") {
@@ -258,11 +294,7 @@ function renderSlides(item) {
 
 function renderProductCard(item) {
   const available = isAvailable(item);
-  const links = item.links || {};
   const sizes = displaySize(item);
-  const buy = available
-    ? `<a class="buy-link" href="${escapeHtml(links.depop || "https://www.depop.com/jerseysfrmjb/")}" target="_blank" rel="noopener">Buy on Depop</a>`
-    : '<span class="buy-link disabled" aria-disabled="true">Sold Out</span>';
 
   return `
     <article data-stock="${available ? "available" : "sold-out"}" data-category="${escapeHtml(item.category || "")}" data-search="${escapeHtml(searchText(item))}" data-size="${escapeHtml(filterSizeTokens(item).join("|"))}" data-size-display="${escapeHtml(sizes)}" data-id="${escapeHtml(item.id)}">
@@ -274,18 +306,13 @@ function renderProductCard(item) {
       ${available ? "" : '<p class="notice sold">Out of Stock</p>'}
       <h2>${escapeHtml(item.name)}</h2>
       <p data-card-size>${escapeHtml(sizes)}</p>
-      <strong>$${escapeHtml(publicProductPrice(item))}</strong>
-      ${buy}
+      ${renderPlatformAvailability(item, available)}
     </article>`;
 }
 
 function renderFeaturedCard(item, index) {
   const available = isAvailable(item);
   const image = item.photos?.[0] || {};
-  const links = item.links || {};
-  const buy = available
-    ? `<a class="buy-link featured-buy" href="${escapeHtml(links.depop || "https://www.depop.com/jerseysfrmjb/")}" target="_blank" rel="noopener">Buy on Depop</a>`
-    : '<span class="buy-link featured-buy disabled" aria-disabled="true">Sold Out</span>';
 
   return `
     <article class="featured-card" data-stock="${available ? "available" : "sold-out"}">
@@ -293,8 +320,8 @@ function renderFeaturedCard(item, index) {
       <div class="featured-copy">
         <span>FEATURED JERSEY ${String(index + 1).padStart(2, "0")}</span>
         <h3>${escapeHtml(item.name)}</h3>
-        <div class="featured-meta"><p>${escapeHtml(displaySize(item))}</p><strong>$${escapeHtml(publicProductPrice(item))}</strong></div>
-        ${buy}
+        <div class="featured-meta"><p>${escapeHtml(displaySize(item))}</p></div>
+        ${renderPlatformAvailability(item, available)}
       </div>
     </article>`;
 }

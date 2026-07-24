@@ -11,6 +11,7 @@ function json(data, status = 200) {
   });
 }
 const SIZE_ORDER = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"];
+const PUBLIC_PLATFORM_NAMES = ["Depop", "eBay", "Facebook", "Local", "Other"];
 const SIZE_WORDS = [
   ["4XL", /4\s*x\s*l/i],
   ["3XL", /3\s*x\s*l/i],
@@ -51,6 +52,16 @@ function totalQuantity(sizes, fallbackQuantity = 0) {
   return total || Math.max(0, Math.floor(Number(fallbackQuantity || 0)));
 }
 
+function publicPlatformPrices(value) {
+  const savedPrices = parseJson(value, {});
+  return Object.fromEntries(PUBLIC_PLATFORM_NAMES.flatMap(platform => {
+    const price = savedPrices?.[platform];
+    if (price === null || price === undefined || String(price).trim() === "") return [];
+    const amount = Number(price);
+    return Number.isFinite(amount) && amount >= 0 ? [[platform, amount]] : [];
+  }));
+}
+
 function parseItem(row) {
   const sizes = normalizeSizes(parseJson(row.sizes_json, {}), row.size, row.quantity);
   return {
@@ -68,6 +79,7 @@ function parseItem(row) {
     sort_order: row.sort_order,
     photos: parseJson(row.photos, []),
     links: parseJson(row.links, {}),
+    platform_prices: publicPlatformPrices(row.platform_prices_json),
     new_arrival: Boolean(row.new_arrival),
     date_added: row.date_added || "",
     updated_at: row.updated_at
@@ -106,7 +118,16 @@ export async function onRequestGet({ env, request }) {
   }
 
   const sql = `
-    SELECT inventory.*, website_prices.price AS website_price
+    SELECT
+      inventory.*,
+      website_prices.price AS website_price,
+      (
+        SELECT json_group_object(platform, price)
+        FROM product_platform_prices
+        WHERE product_id = inventory.id
+          AND platform IN ('Depop', 'eBay', 'Facebook', 'Local', 'Other')
+          AND price IS NOT NULL
+      ) AS platform_prices_json
     FROM inventory
     LEFT JOIN product_platform_prices AS website_prices
       ON website_prices.product_id = inventory.id
