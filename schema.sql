@@ -20,6 +20,18 @@ CREATE INDEX IF NOT EXISTS idx_inventory_category_stock ON inventory(category, q
 CREATE INDEX IF NOT EXISTS idx_inventory_featured ON inventory(featured, quantity);
 CREATE INDEX IF NOT EXISTS idx_inventory_featured_order ON inventory(featured, featured_order);
 
+CREATE TABLE IF NOT EXISTS product_platform_prices (
+  product_id TEXT NOT NULL,
+  platform TEXT NOT NULL CHECK (platform IN ('Depop', 'eBay', 'Facebook', 'Website', 'Local', 'Other')),
+  price REAL CHECK (price IS NULL OR price >= 0),
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (product_id, platform),
+  FOREIGN KEY (product_id) REFERENCES inventory(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_product_platform_prices_product
+  ON product_platform_prices(product_id);
+
 CREATE TABLE IF NOT EXISTS site_settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL,
