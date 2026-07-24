@@ -61,6 +61,7 @@ let lastBulkRestock = null;
 let currentBulkPreview = null;
 let sales = [];
 let salesLoaded = false;
+let salesAnalyticsPanel = null;
 let quickSaleMatches = [];
 let quickSalePriceManuallyEdited = false;
 let quickSalePriceRequest = 0;

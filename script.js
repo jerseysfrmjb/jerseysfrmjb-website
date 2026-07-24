@@ -144,6 +144,17 @@ function categoryLabel(category = "") {
   return { world: "World Cup", club: "Club", retro: "Retro" }[category] || category;
 }
 
+function publicProductPrice(item = {}) {
+  const websitePrice = item.website_price;
+  const value = websitePrice !== null && websitePrice !== undefined && String(websitePrice).trim() !== ""
+    ? websitePrice
+    : item.price ?? item.base_price ?? "";
+  const raw = String(value).trim();
+  if (!raw) return "";
+  const number = Number(raw);
+  return Number.isFinite(number) ? number.toFixed(2).replace(/\.00$/, "") : String(value);
+}
+
 function formatInventoryUpdated(value = "") {
   if (!value) return "";
   const date = new Date(String(value).includes("T") ? value : value + "Z");
@@ -221,11 +232,11 @@ async function fetchInventory(params = {}) {
   const query = new URLSearchParams(params);
   const apiUrl = `/api/inventory${query.toString() ? `?${query}` : ""}`;
   try {
-    const response = await fetch(apiUrl, { headers: { Accept: "application/json" } });
+    const response = await fetch(apiUrl, { cache: "no-store", headers: { Accept: "application/json" } });
     if (!response.ok) throw new Error("API unavailable");
     return await response.json();
   } catch (error) {
-    const fallback = await fetch("data/inventory.json", { headers: { Accept: "application/json" } });
+    const fallback = await fetch("data/inventory.json", { cache: "no-store", headers: { Accept: "application/json" } });
     const data = await fallback.json();
     let items = data.items || [];
     if (params.category) items = items.filter(item => item.category === params.category);
@@ -263,7 +274,7 @@ function renderProductCard(item) {
       ${available ? "" : '<p class="notice sold">Out of Stock</p>'}
       <h2>${escapeHtml(item.name)}</h2>
       <p data-card-size>${escapeHtml(sizes)}</p>
-      <strong>$${escapeHtml(item.price)}</strong>
+      <strong>$${escapeHtml(publicProductPrice(item))}</strong>
       ${buy}
     </article>`;
 }
@@ -282,7 +293,7 @@ function renderFeaturedCard(item, index) {
       <div class="featured-copy">
         <span>FEATURED JERSEY ${String(index + 1).padStart(2, "0")}</span>
         <h3>${escapeHtml(item.name)}</h3>
-        <div class="featured-meta"><p>${escapeHtml(displaySize(item))}</p><strong>$${escapeHtml(item.price)}</strong></div>
+        <div class="featured-meta"><p>${escapeHtml(displaySize(item))}</p><strong>$${escapeHtml(publicProductPrice(item))}</strong></div>
         ${buy}
       </div>
     </article>`;

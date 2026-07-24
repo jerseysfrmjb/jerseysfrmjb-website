@@ -2,7 +2,13 @@ import { ensureInventory } from "./_inventorySeed.js";
 
 
 function json(data, status = 200) {
-  return new Response(JSON.stringify(data), { status, headers: { "Content-Type": "application/json; charset=utf-8" } });
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store, no-cache, must-revalidate"
+    }
+  });
 }
 const SIZE_ORDER = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"];
 const SIZE_WORDS = [
@@ -53,6 +59,8 @@ function parseItem(row) {
     name: row.name,
     size: sizesLabel(sizes, row.size),
     sizes,
+    base_price: row.price,
+    website_price: row.website_price,
     price: row.website_price ?? row.price,
     quantity: totalQuantity(sizes, row.quantity),
     featured: Boolean(row.featured),
