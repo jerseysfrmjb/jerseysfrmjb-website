@@ -143,6 +143,107 @@ function formatSalePrice(value) {
   return `$${number.toFixed(2).replace(/\.00$/, "")}`;
 }
 
+function salesQuantityValue(sale) {
+  const quantity = Math.floor(Number(sale.quantity ?? 0));
+  return Number.isFinite(quantity) && quantity > 0 ? quantity : 0;
+}
+
+function saleRevenueValue(sale) {
+  if (sale.sale_price === null || sale.sale_price === undefined || sale.sale_price === "") return 0;
+  const price = Number(sale.sale_price);
+  return Number.isFinite(price) ? price : 0;
+}
+
+function startOfLocalDay(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function startOfLocalWeek(date) {
+  const start = startOfLocalDay(date);
+  const day = start.getDay();
+  const diff = day === 0 ? 6 : day - 1;
+  start.setDate(start.getDate() - diff);
+  return start;
+}
+
+function addSalesCount(map, key, quantity) {
+  const normalized = String(key || "").trim() || "Unknown";
+  map.set(normalized, (map.get(normalized) || 0) + quantity);
+}
+
+function rankedSalesList(map, emptyText = "No sales yet") {
+  const rows = Array.from(map.entries())
+    .filter(([, count]) => count > 0)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, 5);
+  if (!rows.length) return `<li>${escapeHtml(emptyText)}</li>`;
+  return rows.map(([label, count]) => `<li><span>${escapeHtml(label)}</span><strong>${count}</strong></li>`).join("");
+}
+
+function ensureSalesAnalyticsPanel() {
+  if (salesAnalyticsPanel || !salesTable) return salesAnalyticsPanel;
+  salesAnalyticsPanel = document.createElement("div");
+  salesAnalyticsPanel.setAttribute("data-sales-analytics", "");
+  const tableContainer = salesTable.closest(".admin-table-wrap") || salesTable;
+  tableContainer.parentElement?.insertBefore(salesAnalyticsPanel, tableContainer);
+  return salesAnalyticsPanel;
+}
+
+function renderSalesAnalytics() {
+  const panel = ensureSalesAnalyticsPanel();
+  if (!panel) return;
+
+  const now = new Date();
+  const todayStart = startOfLocalDay(now);
+  const weekStart = startOfLocalWeek(now);
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  let totalUnits = 0;
+  let todayUnits = 0;
+  let weekUnits = 0;
+  let monthUnits = 0;
+  let revenue = 0;
+  const byPlatform = new Map();
+  const byPlayer = new Map();
+  const byTeam = new Map();
+  const bySize = new Map();
+
+  sales.forEach(sale => {
+    const quantity = salesQuantityValue(sale);
+    totalUnits += quantity;
+    revenue += saleRevenueValue(sale);
+    addSalesCount(byPlatform, sale.platform, quantity);
+    addSalesCount(byPlayer, sale.player, quantity);
+    addSalesCount(byTeam, sale.team_country || sale.team || sale.country, quantity);
+    addSalesCount(bySize, sale.size, quantity);
+
+    const date = new Date(saleDateValue(sale));
+    if (!Number.isNaN(date.getTime())) {
+      if (date >= todayStart) todayUnits += quantity;
+      if (date >= weekStart) weekUnits += quantity;
+      if (date >= monthStart) monthUnits += quantity;
+    }
+  });
+
+  const revenueText = `${revenue.toFixed(2).replace(/\.00$/, "")}`;
+  panel.innerHTML = `
+    <div class="sales-analytics" style="display:grid;gap:12px;margin:0 0 18px;">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;">
+        <div class="admin-card" style="padding:12px;"><span class="eyebrow">Total Units</span><strong style="display:block;font-size:1.4rem;">${totalUnits}</strong></div>
+        <div class="admin-card" style="padding:12px;"><span class="eyebrow">Today</span><strong style="display:block;font-size:1.4rem;">${todayUnits}</strong></div>
+        <div class="admin-card" style="padding:12px;"><span class="eyebrow">This Week</span><strong style="display:block;font-size:1.4rem;">${weekUnits}</strong></div>
+        <div class="admin-card" style="padding:12px;"><span class="eyebrow">This Month</span><strong style="display:block;font-size:1.4rem;">${monthUnits}</strong></div>
+        <div class="admin-card" style="padding:12px;"><span class="eyebrow">Recorded Revenue</span><strong style="display:block;font-size:1.4rem;">${escapeHtml(revenueText)}</strong></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;">
+        <div class="admin-card" style="padding:12px;"><span class="eyebrow">By Platform</span><ul class="compact-sales-list">${rankedSalesList(byPlatform)}</ul></div>
+        <div class="admin-card" style="padding:12px;"><span class="eyebrow">Best Players</span><ul class="compact-sales-list">${rankedSalesList(byPlayer)}</ul></div>
+        <div class="admin-card" style="padding:12px;"><span class="eyebrow">Best Teams/Countries</span><ul class="compact-sales-list">${rankedSalesList(byTeam)}</ul></div>
+        <div class="admin-card" style="padding:12px;"><span class="eyebrow">Best Sizes</span><ul class="compact-sales-list">${rankedSalesList(bySize)}</ul></div>
+      </div>
+    </div>
+  `;
+}
+
 function filteredSales() {
   const query = (salesSearch?.value || "").trim().toLowerCase();
   const platform = salesPlatform?.value || "all";
@@ -157,6 +258,7 @@ function filteredSales() {
 
 function renderSales() {
   if (!salesTable) return;
+  renderSalesAnalytics();
   const rows = filteredSales();
   if (!rows.length) {
     salesTable.innerHTML = `<tr><td colspan="6" class="sales-empty">${salesLoaded ? "No sales match those filters." : "Log in to view sales."}</td></tr>`;
