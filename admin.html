@@ -6,8 +6,8 @@
   <title>Inventory Admin | JerseysFrmJB</title>
   <meta name="robots" content="noindex,nofollow">
   <link rel="icon" href="assets/jerseysfrmjb-logo.jpg" type="image/jpeg">
-  <link rel="stylesheet" href="styles.css?v=sales-ui-1">
-  <script src="admin.js?v=sales-ui-1" defer></script>
+  <link rel="stylesheet" href="styles.css?v=mobile-admin-nav-1">
+  <script src="admin.js?v=mobile-admin-nav-1" defer></script>
 </head>
 <body class="admin-body">
   <main class="admin-shell">
@@ -39,6 +39,17 @@
         <button type="button" data-admin-tab="messages">Messages</button>
         <button type="button" data-admin-tab="homepage">Homepage</button>
       </nav>
+      <label class="admin-mobile-section-control">
+        <span>Admin Section</span>
+        <select data-admin-mobile-tab aria-label="Admin section">
+          <option value="dashboard">Dashboard</option>
+          <option value="inventory">Inventory</option>
+          <option value="bulk">Bulk Restock</option>
+          <option value="sales">Sales</option>
+          <option value="messages">Messages</option>
+          <option value="homepage">Homepage</option>
+        </select>
+      </label>
       <section class="admin-summary-panel" data-admin-section="dashboard" aria-label="Inventory summary">
         <div>
           <span class="section-kicker">Inventory Snapshot</span>

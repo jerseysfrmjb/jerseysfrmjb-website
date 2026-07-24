@@ -741,6 +741,10 @@
   border-color: var(--maroon);
 }
 
+.admin-mobile-section-control {
+  display: none;
+}
+
 .admin-inventory-panel,
 .admin-sales-panel {
   background: #fff;
@@ -825,17 +829,44 @@
 
 @media (max-width: 780px) {
   .admin-section-tabs {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: none;
   }
 
-  .admin-section-tabs button {
-    padding: 10px 9px;
+  .admin-mobile-section-control {
+    display: grid;
+    gap: 8px;
+    margin: 0 0 16px;
+  }
+
+  .admin-mobile-section-control span {
+    color: var(--maroon);
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: .9px;
+    text-transform: uppercase;
+  }
+
+  .admin-mobile-section-control select {
+    width: 100%;
+    min-height: 46px;
+    border: 1px solid #d9d1ca;
+    border-radius: 10px;
+    background: #fff;
+    color: #211819;
+    padding: 11px 13px;
+    font: 900 13px Arial, sans-serif;
+    letter-spacing: .6px;
+    text-transform: uppercase;
+    box-shadow: 0 8px 18px #0000000b;
   }
 
   .admin-inventory-panel,
   .admin-sales-panel {
     padding: 16px;
+  }
+
+  [data-admin-section] {
+    scroll-behavior: smooth;
   }
 
   .sales-tools {

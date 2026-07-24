@@ -32,6 +32,7 @@ const loadRestockPreset = document.querySelector("[data-load-restock-preset]");
 const deleteRestockPreset = document.querySelector("[data-delete-restock-preset]");
 const adminTabs = [...document.querySelectorAll("[data-admin-tab]")];
 const adminSections = [...document.querySelectorAll("[data-admin-section]")];
+const adminMobileTab = document.querySelector("[data-admin-mobile-tab]");
 const salesTable = document.querySelector("[data-sales-table]");
 const salesSearch = document.querySelector("[data-sales-search]");
 const salesPlatform = document.querySelector("[data-sales-platform]");
@@ -91,6 +92,7 @@ function escapeHtml(value = "") {
 function setAdminTab(tab = "dashboard") {
   currentAdminTab = tab;
   adminTabs.forEach(button => button.classList.toggle("active", button.dataset.adminTab === tab));
+  if (adminMobileTab) adminMobileTab.value = tab;
   adminSections.forEach(section => {
     section.hidden = section.dataset.adminSection !== tab;
   });
@@ -1609,6 +1611,7 @@ adminQuick?.addEventListener("click", event => {
 adminTabs.forEach(button => {
   button.addEventListener("click", () => setAdminTab(button.dataset.adminTab || "dashboard"));
 });
+adminMobileTab?.addEventListener("change", () => setAdminTab(adminMobileTab.value || currentAdminTab));
 refreshSales?.addEventListener("click", loadSales);
 salesSearch?.addEventListener("input", renderSales);
 salesPlatform?.addEventListener("change", renderSales);
