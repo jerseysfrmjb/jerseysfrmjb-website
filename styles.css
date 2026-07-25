@@ -864,6 +864,219 @@
   font-weight: 800;
 }
 
+.sales-analytics {
+  display: grid;
+  gap: 14px;
+  margin: 6px 0 4px;
+  padding: 18px;
+  border: 1px solid #e1d8d1;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #fbfaf8 0%, #f3efeb 100%);
+}
+
+.sales-analytics-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.sales-analytics-heading h3 {
+  margin: 3px 0 0;
+  color: #171414;
+  font: 700 24px/1.05 Georgia, serif;
+}
+
+.sales-analytics-heading p {
+  margin: 0;
+  color: #766c67;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .55px;
+  text-transform: uppercase;
+}
+
+.sales-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.sales-kpi-card {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  padding: 14px;
+  border: 1px solid #e1d8d1;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 8px 18px #2d202008;
+}
+
+.sales-kpi-card span,
+.sales-breakdown-card > span {
+  color: #6d203a;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .85px;
+  text-transform: uppercase;
+}
+
+.sales-kpi-card strong {
+  overflow: hidden;
+  color: #1f1919;
+  font: 900 clamp(21px, 2.3vw, 30px)/1 Arial, sans-serif;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sales-kpi-card small {
+  color: #8b817c;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.sales-kpi-card.revenue {
+  border-color: #6d203a;
+  background: linear-gradient(145deg, #7c2442, #5e1831);
+  box-shadow: 0 12px 24px #6d203a24;
+}
+
+.sales-kpi-card.revenue span,
+.sales-kpi-card.revenue strong,
+.sales-kpi-card.revenue small {
+  color: #fff;
+}
+
+.sales-breakdown-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.sales-breakdown-card {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid #e1d8d1;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.compact-sales-list {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.compact-sales-list li {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #eee7e1;
+  color: #403936;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.compact-sales-list li:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.compact-sales-list li span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compact-sales-list li strong {
+  flex: 0 0 auto;
+  display: grid;
+  min-width: 25px;
+  height: 25px;
+  place-items: center;
+  border-radius: 50%;
+  background: #f2e8ec;
+  color: var(--maroon);
+  font-size: 10px;
+}
+
+.sale-price-cell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.sale-price-cell > strong {
+  color: var(--maroon);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.sale-row-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.admin-small-button {
+  border: 1px solid #d8cec7;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--maroon);
+  padding: 6px 9px;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .45px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.admin-small-button:hover {
+  border-color: var(--maroon);
+  background: #f7eef1;
+}
+
+.admin-small-button.danger {
+  color: #8a1c2d;
+}
+
+.sales-table tbody tr {
+  transition: background .16s ease;
+}
+
+.sales-table tbody tr:hover {
+  background: #fcf8f9;
+}
+
+.sales-table input,
+.sales-table select {
+  width: 100%;
+  min-width: 92px;
+  margin: 2px 0;
+  border: 1px solid #d9d1ca;
+  border-radius: 7px;
+  background: #fff;
+  color: #211819;
+  padding: 8px;
+  font: 700 11px Arial, sans-serif;
+}
+
+@media (max-width: 1100px) {
+  .sales-kpi-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .sales-breakdown-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 780px) {
   .admin-section-tabs {
     display: none;
@@ -913,6 +1126,24 @@
   .sales-tools .shop-button {
     width: 100%;
   }
+
+  .sales-analytics {
+    padding: 14px;
+  }
+
+  .sales-analytics-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .sales-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sales-breakdown-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 430px) {
@@ -923,6 +1154,14 @@
   .sales-table th,
   .sales-table td {
     padding: 10px 11px;
+  }
+
+  .sales-kpi-card.revenue {
+    grid-column: 1 / -1;
+  }
+
+  .sales-kpi-card strong {
+    font-size: 23px;
   }
 }
 

@@ -69,7 +69,7 @@ let lastBulkRestock = null;
 let currentBulkPreview = null;
 let sales = [];
 let salesLoaded = false;
-let salesAnalyticsPanel = null;
+let salesAnalyticsPanel = document.querySelector("[data-sales-analytics]");
 let quickSaleMatches = [];
 let quickSalePriceManuallyEdited = false;
 let quickSalePriceRequest = 0;
@@ -200,8 +200,8 @@ function ensureSalesAnalyticsPanel() {
   if (salesAnalyticsPanel || !salesTable) return salesAnalyticsPanel;
   salesAnalyticsPanel = document.createElement("div");
   salesAnalyticsPanel.setAttribute("data-sales-analytics", "");
-  const tableContainer = salesTable.closest(".admin-table-wrap") || salesTable;
-  tableContainer.parentElement?.insertBefore(salesAnalyticsPanel, tableContainer);
+  const tableContainer = salesTable.closest(".sales-table-wrap");
+  tableContainer?.parentElement?.insertBefore(salesAnalyticsPanel, tableContainer);
   return salesAnalyticsPanel;
 }
 
@@ -240,23 +240,30 @@ function renderSalesAnalytics() {
     }
   });
 
-  const revenueText = `${revenue.toFixed(2).replace(/\.00$/, "")}`;
+  const revenueText = revenue.toFixed(2).replace(/\.00$/, "");
   panel.innerHTML = `
-    <div class="sales-analytics" style="display:grid;gap:12px;margin:0 0 18px;">
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;">
-        <div class="admin-card" style="padding:12px;"><span class="eyebrow">Total Units</span><strong style="display:block;font-size:1.4rem;">${totalUnits}</strong></div>
-        <div class="admin-card" style="padding:12px;"><span class="eyebrow">Today</span><strong style="display:block;font-size:1.4rem;">${todayUnits}</strong></div>
-        <div class="admin-card" style="padding:12px;"><span class="eyebrow">This Week</span><strong style="display:block;font-size:1.4rem;">${weekUnits}</strong></div>
-        <div class="admin-card" style="padding:12px;"><span class="eyebrow">This Month</span><strong style="display:block;font-size:1.4rem;">${monthUnits}</strong></div>
-        <div class="admin-card" style="padding:12px;"><span class="eyebrow">Recorded Revenue</span><strong style="display:block;font-size:1.4rem;">${escapeHtml(revenueText)}</strong></div>
+    <section class="sales-analytics" aria-label="Sales overview">
+      <div class="sales-analytics-heading">
+        <div>
+          <span class="section-kicker">Performance</span>
+          <h3>Sales Overview</h3>
+        </div>
+        <p>Based on all recorded sales</p>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;">
-        <div class="admin-card" style="padding:12px;"><span class="eyebrow">By Platform</span><ul class="compact-sales-list">${rankedSalesList(byPlatform)}</ul></div>
-        <div class="admin-card" style="padding:12px;"><span class="eyebrow">Best Players</span><ul class="compact-sales-list">${rankedSalesList(byPlayer)}</ul></div>
-        <div class="admin-card" style="padding:12px;"><span class="eyebrow">Best Teams/Countries</span><ul class="compact-sales-list">${rankedSalesList(byTeam)}</ul></div>
-        <div class="admin-card" style="padding:12px;"><span class="eyebrow">Best Sizes</span><ul class="compact-sales-list">${rankedSalesList(bySize)}</ul></div>
+      <div class="sales-kpi-grid">
+        <article class="sales-kpi-card"><span>Total Units</span><strong>${totalUnits}</strong><small>All time</small></article>
+        <article class="sales-kpi-card"><span>Today</span><strong>${todayUnits}</strong><small>Units sold</small></article>
+        <article class="sales-kpi-card"><span>This Week</span><strong>${weekUnits}</strong><small>Since Monday</small></article>
+        <article class="sales-kpi-card"><span>This Month</span><strong>${monthUnits}</strong><small>Current month</small></article>
+        <article class="sales-kpi-card revenue"><span>Recorded Revenue</span><strong>$${escapeHtml(revenueText)}</strong><small>Sales with prices</small></article>
       </div>
-    </div>
+      <div class="sales-breakdown-grid">
+        <article class="sales-breakdown-card"><span>By Platform</span><ul class="compact-sales-list">${rankedSalesList(byPlatform)}</ul></article>
+        <article class="sales-breakdown-card"><span>Best Players</span><ul class="compact-sales-list">${rankedSalesList(byPlayer)}</ul></article>
+        <article class="sales-breakdown-card"><span>Best Teams / Countries</span><ul class="compact-sales-list">${rankedSalesList(byTeam)}</ul></article>
+        <article class="sales-breakdown-card"><span>Best Sizes</span><ul class="compact-sales-list">${rankedSalesList(bySize)}</ul></article>
+      </div>
+    </section>
   `;
 }
 
@@ -291,9 +298,13 @@ function renderSales() {
         <td>${escapeHtml(sale.quantity ?? 0)}</td>
         <td>${escapeHtml(sale.platform || "-")}</td>
         <td>
-          ${formatSalePrice(sale.sale_price)}
-          <button type="button" class="admin-small-button" data-sale-edit="${escapeHtml(saleId || "")}">Edit</button>
-          <button type="button" class="admin-small-button" data-sale-delete="${escapeHtml(saleId || "")}">Delete</button>
+          <div class="sale-price-cell">
+            <strong>${formatSalePrice(sale.sale_price)}</strong>
+            <div class="sale-row-actions">
+              <button type="button" class="admin-small-button" data-sale-edit="${escapeHtml(saleId || "")}">Edit</button>
+              <button type="button" class="admin-small-button danger" data-sale-delete="${escapeHtml(saleId || "")}">Delete</button>
+            </div>
+          </div>
         </td>
       </tr>
     `;
