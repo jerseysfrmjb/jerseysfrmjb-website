@@ -6,8 +6,8 @@
   <title>Inventory Admin | JerseysFrmJB</title>
   <meta name="robots" content="noindex,nofollow">
   <link rel="icon" href="assets/jerseysfrmjb-logo.jpg" type="image/jpeg">
-  <link rel="stylesheet" href="styles.css?v=sales-tracker-1">
-  <script src="admin.js?v=sales-tracker-1" defer></script>
+  <link rel="stylesheet" href="styles.css?v=feedback-import-1">
+  <script src="admin.js?v=feedback-import-1" defer></script>
 </head>
 <body class="admin-body">
   <main class="admin-shell">
@@ -83,6 +83,17 @@
             <button class="shop-button secondary-admin" type="button" data-add-sample-feedback hidden>Add Sample Pending Feedback</button>
           </div>
         </div>
+        <details class="feedback-importer">
+          <summary>Import copied eBay feedback</summary>
+          <div class="feedback-importer-content">
+            <p>Paste the complete feedback table copied from eBay. Buyer usernames are discarded, feedback you received as a buyer is skipped, and every imported review starts as Pending.</p>
+            <textarea rows="9" data-feedback-import-text placeholder="Paste copied eBay feedback here"></textarea>
+            <div class="feedback-importer-actions">
+              <button class="shop-button" type="button" data-import-feedback>Import Pending Feedback</button>
+              <small>Review unrelated items before approving them publicly.</small>
+            </div>
+          </div>
+        </details>
         <p class="form-status" data-feedback-status></p>
         <div class="admin-feedback-list" data-admin-feedback><p class="empty-featured">Open this section to load feedback.</p></div>
       </section>

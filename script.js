@@ -524,7 +524,7 @@ async function renderHomepageStats() {
 function formatFeedbackDate(value = "") {
   if (!value) return "";
   const date = new Date(String(value).endsWith("Z") ? value : value + "Z");
-  if (Number.isNaN(date.getTime())) return "";
+  if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
 }
 

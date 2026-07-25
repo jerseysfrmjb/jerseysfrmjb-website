@@ -5,6 +5,7 @@ const MODERATION_STATUSES = new Set(["pending", "approved", "rejected"]);
 const VISIBILITY_STATUSES = new Set(["active", "hidden"]);
 const DEVELOPMENT_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
 const SAMPLE_FEEDBACK_ID = "dev-sample-ebay-feedback";
+const IMPORT_LIMIT = 100;
 
 function normalizeFeedback(row) {
   return {
@@ -34,7 +35,16 @@ async function loadFeedback(env) {
   const result = await env.DB.prepare(`
     SELECT *
     FROM ebay_feedback
-    ORDER BY feedback_date DESC, created_at DESC
+    ORDER BY
+      CASE feedback_date
+        WHEN 'Past month' THEN 0
+        WHEN 'Past 6 months' THEN 1
+        WHEN 'Past year' THEN 2
+        WHEN 'More than a year ago' THEN 3
+        ELSE 0
+      END,
+      CASE WHEN feedback_date GLOB '????-??-??*' THEN feedback_date ELSE NULL END DESC,
+      created_at DESC
     LIMIT 250
   `).all();
   const feedback = (result.results || []).map(normalizeFeedback);
@@ -51,6 +61,75 @@ async function loadFeedback(env) {
 
 function isDevelopmentRequest(request) {
   return DEVELOPMENT_HOSTS.has(new URL(request.url).hostname);
+}
+
+function cleanImportedText(value, maxLength) {
+  return String(value || "").replace(/\s+/g, " ").trim().slice(0, maxLength);
+}
+
+async function importedFeedbackId(record) {
+  const source = [
+    cleanImportedText(record.item_id, 80),
+    cleanImportedText(record.listing_title, 500),
+    cleanImportedText(record.comment, 2000),
+    cleanImportedText(record.source_reference, 160)
+  ].map(value => value.toLowerCase()).join("|");
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(source));
+  const hash = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
+  return `manual-${hash.slice(0, 24)}`;
+}
+
+async function importFeedbackRecords(env, records) {
+  if (!records.length) return { imported: 0, duplicates: 0 };
+  if (records.length > IMPORT_LIMIT) throw new Error(`Paste no more than ${IMPORT_LIMIT} feedback entries at once.`);
+
+  const normalized = [];
+  for (const record of records) {
+    const comment = cleanImportedText(record.comment, 2000);
+    const listingTitle = cleanImportedText(record.listing_title, 500);
+    const itemId = cleanImportedText(record.item_id, 80);
+    const feedbackDate = cleanImportedText(record.feedback_date, 80);
+    const sourceReference = cleanImportedText(record.source_reference, 160);
+    const ratingType = cleanImportedText(record.rating_type || "POSITIVE", 20).toUpperCase();
+
+    if (!comment || !listingTitle || !itemId || !feedbackDate) continue;
+    if (!["POSITIVE", "NEUTRAL", "NEGATIVE"].includes(ratingType)) continue;
+    normalized.push({
+      feedbackId: await importedFeedbackId({
+        comment,
+        listing_title: listingTitle,
+        item_id: itemId,
+        source_reference: sourceReference
+      }),
+      comment,
+      listingTitle,
+      itemId,
+      feedbackDate,
+      ratingType
+    });
+  }
+
+  if (!normalized.length) throw new Error("No complete eBay feedback entries were found.");
+  const results = await env.DB.batch(normalized.map(record => env.DB.prepare(`
+    INSERT OR IGNORE INTO ebay_feedback (
+      feedback_id,
+      comment,
+      rating_type,
+      listing_title,
+      item_id,
+      feedback_date,
+      buyer_display_name
+    ) VALUES (?, ?, ?, ?, ?, ?, NULL)
+  `).bind(
+    record.feedbackId,
+    record.comment,
+    record.ratingType,
+    record.listingTitle,
+    record.itemId,
+    record.feedbackDate
+  )));
+  const imported = results.reduce((sum, result) => sum + Number(result?.meta?.changes || 0), 0);
+  return { imported, duplicates: normalized.length - imported };
 }
 
 export async function onRequestGet({ request, env }) {
@@ -107,6 +186,12 @@ export async function onRequestPost({ request, env }) {
   try {
     const authError = await requireAdmin(request, env);
     if (authError) return authError;
+    const body = await request.json().catch(() => ({}));
+    if (Array.isArray(body.records)) {
+      const result = await importFeedbackRecords(env, body.records);
+      return json({ ...(await loadFeedback(env)), ...result }, result.imported ? 201 : 200);
+    }
+
     if (!isDevelopmentRequest(request)) {
       return json({ error: "Sample feedback can only be added from a local development site." }, 403);
     }

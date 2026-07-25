@@ -19,6 +19,8 @@ const feedbackCount = document.querySelector("[data-feedback-count]");
 const feedbackStatus = document.querySelector("[data-feedback-status]");
 const refreshFeedback = document.querySelector("[data-refresh-feedback]");
 const addSampleFeedback = document.querySelector("[data-add-sample-feedback]");
+const feedbackImportText = document.querySelector("[data-feedback-import-text]");
+const importFeedbackButton = document.querySelector("[data-import-feedback]");
 const adminSummary = document.querySelector("[data-admin-summary]");
 const adminQuick = document.querySelector("[data-admin-quick]");
 const adminFilterButtons = [...document.querySelectorAll("[data-admin-filter]")];
@@ -397,11 +399,11 @@ function renderSalesAnalytics() {
         </div>
         <div class="sales-activity-grid">
           ${activity.map(day => {
-            const height = day.units ? Math.max(14, Math.round((day.units / maxDailyUnits) * 100)) : 0;
+            const width = day.units ? Math.max(14, Math.round((day.units / maxDailyUnits) * 100)) : 0;
             return `
               <div class="sales-activity-day${day.units ? " active" : ""}">
                 <strong>${day.units}</strong>
-                <span class="sales-activity-bar"><i style="--activity-height:${height}%"></i></span>
+                <span class="sales-activity-bar"><i style="--activity-width:${width}%"></i></span>
                 <small>${escapeHtml(easternDayLabel(day.key))}</small>
               </div>
             `;
@@ -435,9 +437,8 @@ function renderSaleJerseyCell(sale) {
   const product = saleInventoryItem(sale);
   const photo = product?.photos?.[0] || {};
   const name = saleJerseyName(sale);
-  const team = saleTeamValue(sale);
   const visual = photo.src
-    ? `<img src="${escapeHtml(photo.src)}" alt="" loading="lazy" decoding="async">`
+    ? `<img src="${escapeHtml(photo.src)}" alt="" width="22" height="22" loading="lazy" decoding="async">`
     : `<span class="sale-jersey-fallback" aria-hidden="true">&#9917;</span>`;
 
   return `
@@ -445,7 +446,6 @@ function renderSaleJerseyCell(sale) {
       ${visual}
       <div>
         <strong>${escapeHtml(name)}</strong>
-        ${team ? `<small>${escapeHtml(team)}</small>` : ""}
       </div>
     </div>
   `;
@@ -1366,6 +1366,95 @@ async function updateEbayFeedback(feedbackId, update) {
   }
 }
 
+function cleanEbayPasteLine(value = "") {
+  return String(value)
+    .replace(/\*\*/g, "")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function parseEbayFeedbackPaste(value = "") {
+  const lines = String(value)
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean);
+  const records = [];
+
+  lines.forEach((listingLine, index) => {
+    const itemMatch = listingLine.match(/#(?:\[)?(\d{9,})/);
+    if (!itemMatch || index === 0) return;
+
+    const partyIndex = lines.findIndex((line, candidateIndex) => (
+      candidateIndex > index
+      && candidateIndex <= index + 4
+      && /^(Buyer|Seller):/i.test(cleanEbayPasteLine(line))
+    ));
+    if (partyIndex < 0) return;
+
+    const partyLine = cleanEbayPasteLine(lines[partyIndex]);
+    if (/^Seller:/i.test(partyLine)) return;
+
+    const verifiedIndex = lines.findIndex((line, candidateIndex) => (
+      candidateIndex > partyIndex
+      && candidateIndex <= partyIndex + 5
+      && /^Verified purchase$/i.test(cleanEbayPasteLine(line))
+    ));
+    if (verifiedIndex < 0) return;
+
+    const dateLine = cleanEbayPasteLine(lines[verifiedIndex + 1] || "");
+    const comment = cleanEbayPasteLine(lines[index - 1]);
+    const listingTitle = cleanEbayPasteLine(listingLine)
+      .replace(/\s*\(#\d{9,}\)\s*$/, "")
+      .trim();
+    const sourceReference = partyLine.replace(/^Buyer:\s*/i, "").split(/\s|\(/)[0];
+
+    if (!comment || !listingTitle || !dateLine || /^Reply$/i.test(dateLine)) return;
+    records.push({
+      comment,
+      rating_type: "POSITIVE",
+      listing_title: listingTitle,
+      item_id: itemMatch[1],
+      feedback_date: dateLine,
+      source_reference: sourceReference
+    });
+  });
+
+  return records;
+}
+
+async function importPastedEbayFeedback() {
+  if (!feedbackImportText || !importFeedbackButton || importFeedbackButton.disabled) return;
+  const records = parseEbayFeedbackPaste(feedbackImportText.value);
+  if (!records.length) {
+    if (feedbackStatus) feedbackStatus.textContent = "No complete buyer feedback entries were found in that paste.";
+    feedbackImportText.focus();
+    return;
+  }
+
+  importFeedbackButton.disabled = true;
+  importFeedbackButton.textContent = "Importing...";
+  if (feedbackStatus) feedbackStatus.textContent = `Importing ${records.length} pending feedback record${records.length === 1 ? "" : "s"}...`;
+
+  try {
+    const data = await api("/api/admin/ebay-feedback", {
+      method: "POST",
+      body: JSON.stringify({ records })
+    });
+    applyFeedbackData(data);
+    feedbackImportText.value = "";
+    if (feedbackStatus) {
+      const duplicateText = data.duplicates ? ` ${data.duplicates} duplicate${data.duplicates === 1 ? " was" : "s were"} skipped.` : "";
+      feedbackStatus.textContent = `${data.imported || 0} feedback record${data.imported === 1 ? "" : "s"} imported as Pending.${duplicateText}`;
+    }
+  } catch (error) {
+    if (feedbackStatus) feedbackStatus.textContent = error.message;
+  } finally {
+    importFeedbackButton.disabled = false;
+    importFeedbackButton.textContent = "Import Pending Feedback";
+  }
+}
+
 async function addDevelopmentSampleFeedback() {
   if (!addSampleFeedback || addSampleFeedback.disabled) return;
   addSampleFeedback.disabled = true;
@@ -1981,6 +2070,7 @@ featuredPreview?.addEventListener("drop", async event => {
 refreshMessages?.addEventListener("click", loadMessages);
 refreshFeedback?.addEventListener("click", loadEbayFeedbackAdmin);
 addSampleFeedback?.addEventListener("click", addDevelopmentSampleFeedback);
+importFeedbackButton?.addEventListener("click", importPastedEbayFeedback);
 if (addSampleFeedback && ["localhost", "127.0.0.1", "::1", "[::1]"].includes(location.hostname)) {
   addSampleFeedback.hidden = false;
 }

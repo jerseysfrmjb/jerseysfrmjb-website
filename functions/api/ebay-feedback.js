@@ -33,7 +33,16 @@ export async function onRequestGet({ env }) {
       WHERE moderation_status = 'approved'
         AND visibility_status = 'active'
         AND rating_type = 'POSITIVE'
-      ORDER BY feedback_date DESC, created_at DESC
+      ORDER BY
+        CASE feedback_date
+          WHEN 'Past month' THEN 0
+          WHEN 'Past 6 months' THEN 1
+          WHEN 'Past year' THEN 2
+          WHEN 'More than a year ago' THEN 3
+          ELSE 0
+        END,
+        CASE WHEN feedback_date GLOB '????-??-??*' THEN feedback_date ELSE NULL END DESC,
+        created_at DESC
       LIMIT 24
     `).all();
 
