@@ -962,6 +962,97 @@
   background: #fff;
 }
 
+.sales-activity-card {
+  display: grid;
+  gap: 14px;
+  padding: 15px;
+  border: 1px solid #e1d8d1;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.sales-activity-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.sales-activity-heading > div {
+  display: grid;
+  gap: 4px;
+}
+
+.sales-activity-heading span {
+  color: var(--maroon);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .85px;
+  text-transform: uppercase;
+}
+
+.sales-activity-heading strong {
+  color: #211819;
+  font-size: 13px;
+}
+
+.sales-activity-heading small {
+  color: #766c67;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .45px;
+  text-transform: uppercase;
+}
+
+.sales-activity-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.sales-activity-day {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: auto minmax(65px, 1fr) auto;
+  gap: 6px;
+  text-align: center;
+}
+
+.sales-activity-day > strong {
+  color: #8b817c;
+  font-size: 11px;
+}
+
+.sales-activity-day.active > strong {
+  color: var(--maroon);
+}
+
+.sales-activity-bar {
+  position: relative;
+  display: block;
+  min-height: 65px;
+  overflow: hidden;
+  border-radius: 7px;
+  background: #f3efeb;
+}
+
+.sales-activity-bar i {
+  position: absolute;
+  inset: auto 0 0;
+  height: var(--activity-height);
+  border-radius: 7px 7px 0 0;
+  background: linear-gradient(180deg, #9b3659, #6d203a);
+}
+
+.sales-activity-day > small {
+  overflow: hidden;
+  color: #766c67;
+  font-size: 8px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .compact-sales-list {
   display: grid;
   gap: 8px;
@@ -1017,6 +1108,51 @@
   color: var(--maroon);
   font-size: 13px;
   white-space: nowrap;
+}
+
+.sale-jersey-cell {
+  min-width: 220px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sale-jersey-cell > img,
+.sale-jersey-fallback {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  border: 1px solid #ded7cf;
+  border-radius: 8px;
+  background: #211819;
+  object-fit: cover;
+}
+
+.sale-jersey-fallback {
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 18px;
+}
+
+.sale-jersey-cell > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.sale-jersey-cell strong {
+  color: #211819;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.sale-jersey-cell small {
+  color: #857a75;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .35px;
+  text-transform: uppercase;
 }
 
 .sale-row-actions {
@@ -1144,6 +1280,10 @@
   .sales-breakdown-grid {
     grid-template-columns: 1fr;
   }
+
+  .sales-activity-grid {
+    gap: 5px;
+  }
 }
 
 @media (max-width: 430px) {
@@ -1162,6 +1302,24 @@
 
   .sales-kpi-card strong {
     font-size: 23px;
+  }
+
+  .sales-activity-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .sales-activity-day {
+    grid-template-rows: auto minmax(52px, 1fr) auto;
+  }
+
+  .sales-activity-bar {
+    min-height: 52px;
+  }
+
+  .sales-activity-day > small {
+    font-size: 7px;
   }
 }
 

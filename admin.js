@@ -117,31 +117,110 @@ function saleDateValue(sale) {
   return sale.created_at || sale.timestamp || sale.date || "";
 }
 
+const SALES_TIME_ZONE = "America/New_York";
+
+function parseSaleDate(value) {
+  if (value instanceof Date) return value;
+  const text = String(value || "").trim();
+  if (!text) return new Date(NaN);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return new Date(`${text}T12:00:00Z`);
+  const includesTimeZone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(text);
+  return new Date(includesTimeZone ? text : `${text.replace(" ", "T")}Z`);
+}
+
+function easternDateParts(value) {
+  const date = value instanceof Date ? value : parseSaleDate(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: SALES_TIME_ZONE,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23"
+    }).formatToParts(date)
+      .filter(part => part.type !== "literal")
+      .map(part => [part.type, part.value])
+  );
+}
+
+function easternDateKey(value) {
+  const parts = easternDateParts(value);
+  return parts ? `${parts.year}-${parts.month}-${parts.day}` : "";
+}
+
+function addDaysToDateKey(key, days) {
+  const [year, month, day] = String(key).split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day + days, 12));
+  return date.toISOString().slice(0, 10);
+}
+
+function easternWeekStartKey(key) {
+  const [year, month, day] = String(key).split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day, 12));
+  const daysSinceMonday = date.getUTCDay() === 0 ? 6 : date.getUTCDay() - 1;
+  return addDaysToDateKey(key, -daysSinceMonday);
+}
+
+function easternDayLabel(key) {
+  const [year, month, day] = String(key).split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day, 12)).toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "numeric",
+    day: "numeric",
+    timeZone: "UTC"
+  });
+}
+
+function easternWallTimeToIso(value) {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
+  if (!match) return null;
+  const [, year, month, day, hour, minute] = match.map(Number);
+  const target = Date.UTC(year, month - 1, day, hour, minute);
+  let guess = target;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const parts = easternDateParts(new Date(guess));
+    if (!parts) return null;
+    const represented = Date.UTC(
+      Number(parts.year),
+      Number(parts.month) - 1,
+      Number(parts.day),
+      Number(parts.hour),
+      Number(parts.minute)
+    );
+    guess += target - represented;
+  }
+
+  return new Date(guess).toISOString();
+}
+
 function formatSaleDate(value) {
   if (!value) return "-";
-  const date = new Date(value);
+  const date = parseSaleDate(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString(undefined, { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+  return date.toLocaleString("en-US", {
+    timeZone: SALES_TIME_ZONE,
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short"
+  });
 }
 
 function saleDateInputValue(value) {
   if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value).slice(0, 10);
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${date.getFullYear()}-${month}-${day}`;
+  return easternDateKey(value) || String(value).slice(0, 10);
 }
 
 function saleDateTimeInputValue(value) {
   if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  return `${date.getFullYear()}-${month}-${day}T${hours}:${minutes}`;
+  const parts = easternDateParts(value);
+  return parts ? `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}` : "";
 }
 
 function saleIdValue(sale) {
@@ -222,18 +301,6 @@ function saleRevenueValue(sale) {
   return Number.isFinite(price) ? price : 0;
 }
 
-function startOfLocalDay(date) {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
-
-function startOfLocalWeek(date) {
-  const start = startOfLocalDay(date);
-  const day = start.getDay();
-  const diff = day === 0 ? 6 : day - 1;
-  start.setDate(start.getDate() - diff);
-  return start;
-}
-
 function addSalesCount(map, key, quantity) {
   const normalized = String(key || "").trim() || "Unknown";
   map.set(normalized, (map.get(normalized) || 0) + quantity);
@@ -261,10 +328,11 @@ function renderSalesAnalytics() {
   const panel = ensureSalesAnalyticsPanel();
   if (!panel) return;
 
-  const now = new Date();
-  const todayStart = startOfLocalDay(now);
-  const weekStart = startOfLocalWeek(now);
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const todayKey = easternDateKey(new Date());
+  const weekStartKey = easternWeekStartKey(todayKey);
+  const monthKey = todayKey.slice(0, 7);
+  const activityKeys = Array.from({ length: 7 }, (_, index) => addDaysToDateKey(todayKey, index - 6));
+  const dailyUnits = new Map(activityKeys.map(key => [key, 0]));
   let totalUnits = 0;
   let todayUnits = 0;
   let weekUnits = 0;
@@ -284,15 +352,19 @@ function renderSalesAnalytics() {
     addSalesCount(byTeam, saleTeamValue(sale), quantity);
     addSalesCount(bySize, sale.size, quantity);
 
-    const date = new Date(saleDateValue(sale));
-    if (!Number.isNaN(date.getTime())) {
-      if (date >= todayStart) todayUnits += quantity;
-      if (date >= weekStart) weekUnits += quantity;
-      if (date >= monthStart) monthUnits += quantity;
+    const saleKey = easternDateKey(saleDateValue(sale));
+    if (saleKey) {
+      if (saleKey === todayKey) todayUnits += quantity;
+      if (saleKey >= weekStartKey && saleKey <= todayKey) weekUnits += quantity;
+      if (saleKey.startsWith(monthKey) && saleKey <= todayKey) monthUnits += quantity;
+      if (dailyUnits.has(saleKey)) dailyUnits.set(saleKey, dailyUnits.get(saleKey) + quantity);
     }
   });
 
   const revenueText = revenue.toFixed(2).replace(/\.00$/, "");
+  const activity = activityKeys.map(key => ({ key, units: dailyUnits.get(key) || 0 }));
+  const maxDailyUnits = Math.max(1, ...activity.map(day => day.units));
+  const activeDays = activity.filter(day => day.units > 0).length;
   panel.innerHTML = `
     <section class="sales-analytics" aria-label="Sales overview">
       <div class="sales-analytics-heading">
@@ -315,6 +387,27 @@ function renderSalesAnalytics() {
         <article class="sales-breakdown-card"><span>Best Teams / Countries</span><ul class="compact-sales-list">${rankedSalesList(byTeam)}</ul></article>
         <article class="sales-breakdown-card"><span>Best Sizes</span><ul class="compact-sales-list">${rankedSalesList(bySize)}</ul></article>
       </div>
+      <article class="sales-activity-card">
+        <div class="sales-activity-heading">
+          <div>
+            <span>7-Day Sales Tracker</span>
+            <strong>Daily units sold in Eastern Time</strong>
+          </div>
+          <small>${activeDays} active day${activeDays === 1 ? "" : "s"}</small>
+        </div>
+        <div class="sales-activity-grid">
+          ${activity.map(day => {
+            const height = day.units ? Math.max(14, Math.round((day.units / maxDailyUnits) * 100)) : 0;
+            return `
+              <div class="sales-activity-day${day.units ? " active" : ""}">
+                <strong>${day.units}</strong>
+                <span class="sales-activity-bar"><i style="--activity-height:${height}%"></i></span>
+                <small>${escapeHtml(easternDayLabel(day.key))}</small>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      </article>
     </section>
   `;
 }
@@ -331,6 +424,33 @@ function filteredSales() {
   });
 }
 
+function saleInventoryItem(sale = {}) {
+  const productId = String(sale.product_id ?? sale.productId ?? "").trim();
+  return productId
+    ? inventory.find(item => String(item.id) === productId)
+    : null;
+}
+
+function renderSaleJerseyCell(sale) {
+  const product = saleInventoryItem(sale);
+  const photo = product?.photos?.[0] || {};
+  const name = saleJerseyName(sale);
+  const team = saleTeamValue(sale);
+  const visual = photo.src
+    ? `<img src="${escapeHtml(photo.src)}" alt="" loading="lazy" decoding="async">`
+    : `<span class="sale-jersey-fallback" aria-hidden="true">&#9917;</span>`;
+
+  return `
+    <div class="sale-jersey-cell">
+      ${visual}
+      <div>
+        <strong>${escapeHtml(name)}</strong>
+        ${team ? `<small>${escapeHtml(team)}</small>` : ""}
+      </div>
+    </div>
+  `;
+}
+
 function renderSales() {
   if (!salesTable) return;
   renderSalesAnalytics();
@@ -345,7 +465,7 @@ function renderSales() {
     return `
       <tr data-sale-row="${escapeHtml(saleId || "")}">
         <td>${escapeHtml(formatSaleDate(saleDateValue(sale)))}</td>
-        <td>${escapeHtml(saleJerseyName(sale))}</td>
+        <td>${renderSaleJerseyCell(sale)}</td>
         <td>${escapeHtml(sale.size || "-")}</td>
         <td>${escapeHtml(sale.quantity ?? 0)}</td>
         <td>${escapeHtml(sale.platform || "-")}</td>
@@ -370,7 +490,7 @@ function renderSaleEditRow(sale) {
   return `
     <tr data-sale-edit-row="${escapeHtml(saleId || "")}">
       <td><input type="datetime-local" value="${escapeHtml(saleDateTimeInputValue(saleDateValue(sale)))}" data-sale-edit-date></td>
-      <td>${escapeHtml(saleJerseyName(sale))}</td>
+      <td>${renderSaleJerseyCell(sale)}</td>
       <td>${escapeHtml(sale.size || "-")}</td>
       <td><input type="number" min="1" step="1" value="${escapeHtml(sale.quantity ?? 1)}" data-sale-edit-quantity></td>
       <td>
@@ -410,7 +530,7 @@ async function saveSaleEdit(saleId) {
     platform: row.querySelector("[data-sale-edit-platform]")?.value || "Website",
     sale_price: salePrice,
     notes: row.querySelector("[data-sale-edit-notes]")?.value.trim() || "",
-    created_at: dateText ? new Date(dateText).toISOString() : null
+    created_at: dateText ? easternWallTimeToIso(dateText) : null
   };
 
   savingSaleEditId = saleId;
@@ -703,6 +823,10 @@ async function submitQuickSale(event) {
     if (quickSaleStatus) quickSaleStatus.textContent = "Enter a quantity of at least 1.";
     return;
   }
+  if (quantity > match.quantity) {
+    if (quickSaleStatus) quickSaleStatus.textContent = `Only ${match.quantity} available in ${quickSaleSizeLabel(match.size)}.`;
+    return;
+  }
 
   const priceText = quickSalePrice?.value.trim() || "";
   const salePrice = priceText ? Number(priceText) : null;
@@ -722,7 +846,8 @@ async function submitQuickSale(event) {
     quantity,
     platform: quickSalePlatform?.value || "Website",
     sale_price: salePrice,
-    notes: quickSaleNotes?.value.trim() || ""
+    notes: quickSaleNotes?.value.trim() || "",
+    adjust_inventory: true
   };
 
   if (quickSaleSubmit) {
@@ -736,14 +861,15 @@ async function submitQuickSale(event) {
       method: "POST",
       body: JSON.stringify(payload)
     });
-    if (quickSaleStatus) quickSaleStatus.textContent = "Sale recorded.";
     quickSaleForm.reset();
     quickSalePriceManuallyEdited = false;
     quickSalePriceRequest += 1;
     if (quickSaleQuantity) quickSaleQuantity.value = "1";
     quickSaleMatches = [];
     if (quickSaleMatch) quickSaleMatch.innerHTML = `<option value="">Select a matching jersey and size</option>`;
+    await loadInventory();
     await loadSales();
+    if (quickSaleStatus) quickSaleStatus.textContent = "Sale recorded and inventory updated.";
   } catch (error) {
     if (quickSaleStatus) quickSaleStatus.textContent = error.message || "Could not record sale.";
   } finally {
