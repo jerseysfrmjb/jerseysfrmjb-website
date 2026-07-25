@@ -1734,8 +1734,33 @@
   background: #e93616;
 }
 
+.feedback-filter-label {
+  display: grid;
+  gap: 5px;
+  min-width: 140px;
+  color: #6d615c;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.feedback-filter-label select {
+  min-height: 39px;
+  border: 1px solid #d8cec7;
+  border-radius: 999px;
+  background: #fff;
+  color: #2d2523;
+  padding: 8px 34px 8px 13px;
+  font: 800 11px Arial, sans-serif;
+}
+
 .reviews-only .proof-slider > header {
   background: linear-gradient(135deg, #fff 0%, #faf7f4 100%);
+}
+
+.reviews-only .proof-slider {
+  min-height: 460px;
 }
 
 .marketplace-review-card {
@@ -1772,11 +1797,10 @@
 
 .marketplace-review-card blockquote {
   position: relative;
-  max-height: 118px;
-  overflow: auto;
+  max-height: none;
+  overflow: visible;
   padding-left: 14px;
   color: #3b3330;
-  scrollbar-width: thin;
 }
 
 .marketplace-review-card blockquote::before {
@@ -1812,6 +1836,10 @@
   text-align: center;
 }
 
+.depop-proof-card .review-meta-row span + span {
+  display: none;
+}
+
 .reviews-only .proof-slider > footer .slider-dots {
   max-width: 160px;
   overflow-x: auto;
@@ -1829,7 +1857,7 @@
   }
 
   .marketplace-review-card blockquote {
-    max-height: 108px;
+    max-height: none;
   }
 
   .marketplace-review-footer {

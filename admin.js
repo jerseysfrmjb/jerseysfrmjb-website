@@ -18,6 +18,7 @@ const feedbackList = document.querySelector("[data-admin-feedback]");
 const feedbackCount = document.querySelector("[data-feedback-count]");
 const feedbackStatus = document.querySelector("[data-feedback-status]");
 const refreshFeedback = document.querySelector("[data-refresh-feedback]");
+const feedbackFilter = document.querySelector("[data-feedback-filter]");
 const addSampleFeedback = document.querySelector("[data-add-sample-feedback]");
 const feedbackImportText = document.querySelector("[data-feedback-import-text]");
 const importFeedbackButton = document.querySelector("[data-import-feedback]");
@@ -1302,8 +1303,16 @@ function renderEbayFeedbackAdmin() {
   if (!feedbackList) return;
   const pending = ebayFeedback.filter(item => item.moderation_status === "pending").length;
   if (feedbackCount) feedbackCount.textContent = `${pending} pending`;
+  const selectedFilter = feedbackFilter?.value || "pending";
+  const visibleFeedback = ebayFeedback.filter(item => {
+    const moderation = item.moderation_status || "pending";
+    const visibility = item.visibility_status || "active";
+    if (selectedFilter === "all") return true;
+    if (selectedFilter === "hidden") return visibility === "hidden";
+    return visibility !== "hidden" && moderation === selectedFilter;
+  });
 
-  feedbackList.innerHTML = ebayFeedback.length ? ebayFeedback.map(item => {
+  feedbackList.innerHTML = visibleFeedback.length ? visibleFeedback.map(item => {
     const feedbackId = String(item.feedback_id || "");
     const marketplace = String(item.marketplace || "ebay").toLowerCase();
     const moderation = item.moderation_status || "pending";
@@ -1330,7 +1339,7 @@ function renderEbayFeedbackAdmin() {
           <button type="button" data-feedback-visibility="${visibility === "hidden" ? "active" : "hidden"}" ${saving ? "disabled" : ""}>${visibility === "hidden" ? "Unhide" : "Hide"}</button>
         </div>
       </article>`;
-  }).join("") : '<p class="empty-featured">No eBay feedback records yet.</p>';
+  }).join("") : `<p class="empty-featured">No ${escapeHtml(selectedFilter === "all" ? "" : selectedFilter + " ")}feedback records.</p>`;
 }
 
 function applyFeedbackData(data) {
@@ -1433,12 +1442,44 @@ function isDepopFeedbackDate(value = "") {
   return /^(?:(?:about\s+)?(?:a|an|\d+)\s+(?:minute|hour|day|week|month|year)s?\s+ago|today|yesterday)$/i.test(value);
 }
 
+function depopStarRating(value = "") {
+  const filledStars = (String(value).match(/\u2605/g) || []).length;
+  const numericMatch = String(value).match(/(?:^|\s)([1-5])(?:\s*\/\s*5|\s+(?:out of 5|stars?))(?:\s|$)/i);
+  return Math.min(5, Math.max(1, filledStars || Number(numericMatch?.[1] || 0) || 5));
+}
+
+function isDepopStarLine(value = "") {
+  return /[\u2605\u2606]/.test(value)
+    || /(?:^|\s)[1-5](?:\s*\/\s*5|\s+(?:out of 5|stars?))(?:\s|$)/i.test(value);
+}
+
 function parseDepopFeedbackPaste(value = "") {
   const lines = String(value)
-    .split(/\r?\n/)
+    .split(/\r?\n|\t+/)
     .map(cleanEbayPasteLine)
     .filter(Boolean);
   const records = [];
+  const recordKeys = new Set();
+
+  function addRecord({ username, stars, comment, date }) {
+    const cleanComment = cleanEbayPasteLine(comment);
+    const cleanDate = cleanEbayPasteLine(date);
+    if (!username || !cleanComment || !isDepopFeedbackDate(cleanDate)) return;
+    const starRating = depopStarRating(stars);
+    const key = `${username.toLowerCase()}|${cleanDate.toLowerCase()}|${cleanComment.toLowerCase()}`;
+    if (recordKeys.has(key)) return;
+    recordKeys.add(key);
+    records.push({
+      marketplace: "depop",
+      comment: cleanComment,
+      star_rating: starRating,
+      rating_type: starRating >= 4 ? "POSITIVE" : starRating === 3 ? "NEUTRAL" : "NEGATIVE",
+      listing_title: "Depop purchase",
+      item_id: "depop-profile",
+      feedback_date: cleanDate,
+      source_reference: username
+    });
+  }
 
   lines.forEach((line, index) => {
     const usernameMatch = line.match(/^@([a-z0-9._-]+)$/i);
@@ -1451,7 +1492,7 @@ function parseDepopFeedbackPaste(value = "") {
     const ratingIndex = lines.findIndex((candidate, candidateIndex) => (
       candidateIndex > index
       && candidateIndex < Math.min(entryEnd, index + 4)
-      && (/[★☆]/.test(candidate) || /^[1-5](?:\s*\/\s*5|\s+stars?)$/i.test(candidate))
+      && isDepopStarLine(candidate)
     ));
     if (ratingIndex < 0) return;
 
@@ -1465,21 +1506,25 @@ function parseDepopFeedbackPaste(value = "") {
     const comment = lines.slice(ratingIndex + 1, dateIndex).join(" ").trim();
     if (!comment) return;
     const starLine = lines[ratingIndex];
-    const filledStars = (starLine.match(/★/g) || []).length;
-    const numericStars = Number(starLine.match(/[1-5]/)?.[0] || 0);
-    const starRating = Math.min(5, Math.max(1, filledStars || numericStars || 5));
-
-    records.push({
-      marketplace: "depop",
+    addRecord({
+      username: usernameMatch[1],
+      stars: starLine,
       comment,
-      star_rating: starRating,
-      rating_type: starRating >= 4 ? "POSITIVE" : starRating === 3 ? "NEUTRAL" : "NEGATIVE",
-      listing_title: "Depop purchase",
-      item_id: "depop-profile",
-      feedback_date: lines[dateIndex],
-      source_reference: usernameMatch[1]
+      date: lines[dateIndex]
     });
   });
+
+  const compactText = cleanEbayPasteLine(value);
+  const compactEntry = /@([a-z0-9._-]+)\s+((?:[\u2605\u2606]\s*){1,5}|[1-5]\s*(?:\/\s*5|(?:out of 5|stars?)))\s+(.+?)\s+((?:about\s+)?(?:a|an|\d+)\s+(?:minute|hour|day|week|month|year)s?\s+ago|today|yesterday)(?=\s+@[a-z0-9._-]+|$)/gi;
+  let compactMatch;
+  while ((compactMatch = compactEntry.exec(compactText)) !== null) {
+    addRecord({
+      username: compactMatch[1],
+      stars: compactMatch[2],
+      comment: compactMatch[3],
+      date: compactMatch[4]
+    });
+  }
 
   return records;
 }
@@ -2162,6 +2207,7 @@ featuredPreview?.addEventListener("drop", async event => {
 
 refreshMessages?.addEventListener("click", loadMessages);
 refreshFeedback?.addEventListener("click", loadEbayFeedbackAdmin);
+feedbackFilter?.addEventListener("change", renderEbayFeedbackAdmin);
 addSampleFeedback?.addEventListener("click", addDevelopmentSampleFeedback);
 importFeedbackButton?.addEventListener("click", importPastedEbayFeedback);
 importDepopFeedbackButton?.addEventListener("click", importPastedDepopFeedback);

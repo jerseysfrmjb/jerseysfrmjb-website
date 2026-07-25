@@ -536,7 +536,7 @@ function marketplaceFeedbackSlide(item, marketplace, index) {
   const title = item.listing_title && item.listing_title !== "Depop purchase"
     ? item.listing_title
     : `${marketplaceLabel} buyer review`;
-  const dateLabel = formatFeedbackDate(item.feedback_date);
+  const dateLabel = isDepop ? "" : formatFeedbackDate(item.feedback_date);
 
   return `
     <div class="slide${index === 0 ? " active" : ""}">
