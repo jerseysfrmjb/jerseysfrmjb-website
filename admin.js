@@ -152,6 +152,58 @@ function saleJerseyName(sale) {
   return sale.product_name || sale.jersey || sale.name || "Unknown jersey";
 }
 
+function cleanSalePlayer(value = "") {
+  const player = String(value)
+    .replace(/\s+#\d+\b.*$/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return /^no name(?:\s*\/\s*no number)?$/i.test(player) ? "" : player;
+}
+
+function cleanSaleTeam(value = "") {
+  return String(value)
+    .replace(/\([^)]*\)/g, " ")
+    .replace(/\b(?:\d{2}|\d{4})\/(?:\d{2}|\d{4})\b/g, " ")
+    .replace(/\b(?:19|20)\d{2}\b/g, " ")
+    .replace(/\b(?:world cup|home|away|third|3rd|off[- ]white|white|black|long sleeve|short sleeve|player version|fan version|jersey|kit)\b/gi, " ")
+    .replace(/[|]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function inferSaleIdentity(value = "") {
+  const title = String(value || "").trim();
+  if (!title) return { player: "", team: "" };
+
+  if (title.includes("|")) {
+    const [playerPart, ...teamParts] = title.split("|");
+    return {
+      player: cleanSalePlayer(playerPart),
+      team: cleanSaleTeam(teamParts.join(" "))
+    };
+  }
+
+  const numbered = title.match(/^(.+?)\s+#\d+\b\s*(.*)$/);
+  if (numbered) {
+    return {
+      player: cleanSalePlayer(numbered[1]),
+      team: cleanSaleTeam(numbered[2])
+    };
+  }
+
+  return { player: "", team: "" };
+}
+
+function salePlayerValue(sale = {}) {
+  const saved = String(sale.player || "").trim();
+  return saved && !/^unknown$/i.test(saved) ? saved : inferSaleIdentity(saleJerseyName(sale)).player;
+}
+
+function saleTeamValue(sale = {}) {
+  const saved = String(sale.team_country || sale.team || sale.country || "").trim();
+  return saved && !/^unknown$/i.test(saved) ? saved : inferSaleIdentity(saleJerseyName(sale)).team;
+}
+
 function formatSalePrice(value) {
   if (value === null || value === undefined || value === "") return "-";
   const number = Number(value);
@@ -228,8 +280,8 @@ function renderSalesAnalytics() {
     totalUnits += quantity;
     revenue += saleRevenueValue(sale);
     addSalesCount(byPlatform, sale.platform, quantity);
-    addSalesCount(byPlayer, sale.player, quantity);
-    addSalesCount(byTeam, sale.team_country || sale.team || sale.country, quantity);
+    addSalesCount(byPlayer, salePlayerValue(sale), quantity);
+    addSalesCount(byTeam, saleTeamValue(sale), quantity);
     addSalesCount(bySize, sale.size, quantity);
 
     const date = new Date(saleDateValue(sale));
@@ -272,7 +324,7 @@ function filteredSales() {
   const platform = salesPlatform?.value || "all";
   const dateFilter = salesDate?.value || "";
   return sales.filter(sale => {
-    const saleText = [saleJerseyName(sale), sale.player, sale.team_country, sale.size, sale.platform].join(" ").toLowerCase();
+    const saleText = [saleJerseyName(sale), salePlayerValue(sale), saleTeamValue(sale), sale.size, sale.platform].join(" ").toLowerCase();
     const platformMatch = platform === "all" || String(sale.platform || "").toLowerCase() === platform.toLowerCase();
     const dateMatch = !dateFilter || saleDateInputValue(saleDateValue(sale)) === dateFilter;
     return (!query || saleText.includes(query)) && platformMatch && dateMatch;
@@ -540,11 +592,11 @@ function quickSaleProductName(item) {
 }
 
 function quickSalePlayer(item) {
-  return item.player || "";
+  return salePlayerValue({ ...item, product_name: quickSaleProductName(item) });
 }
 
 function quickSaleTeam(item) {
-  return item.team_country || item.team || item.country || "";
+  return saleTeamValue({ ...item, product_name: quickSaleProductName(item) });
 }
 
 function parseQuickSaleQuery(query) {
