@@ -1718,3 +1718,127 @@
     width: min(100%, 320px);
   }
 }
+
+/* Unified marketplace review presentation */
+.feedback-marketplace.ebay {
+  background: #eef3ff;
+  color: #2457a7;
+}
+
+.feedback-marketplace.depop {
+  background: #ffe8e3;
+  color: #b8230b;
+}
+
+.depop-import-button {
+  background: #e93616;
+}
+
+.reviews-only .proof-slider > header {
+  background: linear-gradient(135deg, #fff 0%, #faf7f4 100%);
+}
+
+.marketplace-review-card {
+  position: relative;
+  overflow: hidden;
+  padding: 20px;
+  background:
+    radial-gradient(circle at 100% 0%, #7a102e0b, transparent 38%),
+    linear-gradient(145deg, #fff 0%, #fbf8f5 100%);
+}
+
+.marketplace-review-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, #7a102e, #b55b79);
+}
+
+.marketplace-review-card.depop-review-card::before {
+  background: linear-gradient(90deg, #ff2300, #ff745e);
+}
+
+.marketplace-review-card .review-card-top {
+  padding-bottom: 8px;
+  border-bottom: 1px solid #ebe3dd;
+}
+
+.marketplace-review-card h4 {
+  max-width: 94%;
+  font-size: 18px;
+  line-height: 1.22;
+}
+
+.marketplace-review-card blockquote {
+  position: relative;
+  max-height: 118px;
+  overflow: auto;
+  padding-left: 14px;
+  color: #3b3330;
+  scrollbar-width: thin;
+}
+
+.marketplace-review-card blockquote::before {
+  content: "\201C";
+  position: absolute;
+  left: 0;
+  top: -5px;
+  color: #8f3151;
+  font: 700 27px/1 Georgia, serif;
+}
+
+.marketplace-review-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #ebe3dd;
+  color: #746a65;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.marketplace-feedback-loading {
+  width: 100%;
+  margin: auto;
+  padding: 40px 20px;
+  color: #776d68;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.reviews-only .proof-slider > footer .slider-dots {
+  max-width: 160px;
+  overflow-x: auto;
+  padding: 4px 2px;
+  scrollbar-width: none;
+}
+
+.reviews-only .proof-slider > footer .slider-dots::-webkit-scrollbar {
+  display: none;
+}
+
+@media (max-width: 430px) {
+  .marketplace-review-card {
+    padding: 17px;
+  }
+
+  .marketplace-review-card blockquote {
+    max-height: 108px;
+  }
+
+  .marketplace-review-footer {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .reviews-only .proof-slider > footer .slider-dots {
+    max-width: 118px;
+  }
+}

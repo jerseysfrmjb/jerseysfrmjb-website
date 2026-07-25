@@ -10,8 +10,10 @@ const IMPORT_LIMIT = 100;
 function normalizeFeedback(row) {
   return {
     feedback_id: row.feedback_id,
+    marketplace: row.marketplace || "ebay",
     comment: row.comment,
     rating_type: row.rating_type,
+    star_rating: Number(row.star_rating || 5),
     listing_title: row.listing_title,
     item_id: row.item_id,
     feedback_date: row.feedback_date,
@@ -68,12 +70,16 @@ function cleanImportedText(value, maxLength) {
 }
 
 async function importedFeedbackId(record) {
-  const source = [
+  const sourceParts = [
     cleanImportedText(record.item_id, 80),
     cleanImportedText(record.listing_title, 500),
     cleanImportedText(record.comment, 2000),
     cleanImportedText(record.source_reference, 160)
-  ].map(value => value.toLowerCase()).join("|");
+  ];
+  if (cleanImportedText(record.marketplace, 20).toLowerCase() !== "ebay") {
+    sourceParts.unshift(cleanImportedText(record.marketplace, 20));
+  }
+  const source = sourceParts.map(value => value.toLowerCase()).join("|");
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(source));
   const hash = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
   return `manual-${hash.slice(0, 24)}`;
@@ -86,44 +92,57 @@ async function importFeedbackRecords(env, records) {
   const normalized = [];
   for (const record of records) {
     const comment = cleanImportedText(record.comment, 2000);
+    const marketplace = cleanImportedText(record.marketplace || "ebay", 20).toLowerCase();
     const listingTitle = cleanImportedText(record.listing_title, 500);
     const itemId = cleanImportedText(record.item_id, 80);
     const feedbackDate = cleanImportedText(record.feedback_date, 80);
     const sourceReference = cleanImportedText(record.source_reference, 160);
-    const ratingType = cleanImportedText(record.rating_type || "POSITIVE", 20).toUpperCase();
+    const starRating = Math.min(5, Math.max(1, Math.floor(Number(record.star_rating || 5))));
+    const ratingType = cleanImportedText(
+      record.rating_type || (starRating >= 4 ? "POSITIVE" : starRating === 3 ? "NEUTRAL" : "NEGATIVE"),
+      20
+    ).toUpperCase();
 
     if (!comment || !listingTitle || !itemId || !feedbackDate) continue;
+    if (!["ebay", "depop"].includes(marketplace)) continue;
     if (!["POSITIVE", "NEUTRAL", "NEGATIVE"].includes(ratingType)) continue;
     normalized.push({
       feedbackId: await importedFeedbackId({
+        marketplace,
         comment,
         listing_title: listingTitle,
         item_id: itemId,
         source_reference: sourceReference
       }),
+      marketplace,
       comment,
       listingTitle,
       itemId,
       feedbackDate,
-      ratingType
+      ratingType,
+      starRating
     });
   }
 
-  if (!normalized.length) throw new Error("No complete eBay feedback entries were found.");
+  if (!normalized.length) throw new Error("No complete marketplace feedback entries were found.");
   const results = await env.DB.batch(normalized.map(record => env.DB.prepare(`
     INSERT OR IGNORE INTO ebay_feedback (
       feedback_id,
+      marketplace,
       comment,
       rating_type,
+      star_rating,
       listing_title,
       item_id,
       feedback_date,
       buyer_display_name
-    ) VALUES (?, ?, ?, ?, ?, ?, NULL)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)
   `).bind(
     record.feedbackId,
+    record.marketplace,
     record.comment,
     record.ratingType,
+    record.starRating,
     record.listingTitle,
     record.itemId,
     record.feedbackDate
@@ -138,7 +157,7 @@ export async function onRequestGet({ request, env }) {
     if (authError) return authError;
     return json(await loadFeedback(env));
   } catch (error) {
-    return json({ error: `eBay feedback server error: ${error?.message || "Unknown error"}` }, 500);
+    return json({ error: `Marketplace feedback server error: ${error?.message || "Unknown error"}` }, 500);
   }
 }
 
@@ -178,7 +197,7 @@ export async function onRequestPatch({ request, env }) {
 
     return json(await loadFeedback(env));
   } catch (error) {
-    return json({ error: `eBay feedback update error: ${error?.message || "Unknown error"}` }, 500);
+    return json({ error: `Marketplace feedback update error: ${error?.message || "Unknown error"}` }, 500);
   }
 }
 
@@ -206,13 +225,15 @@ export async function onRequestPost({ request, env }) {
     await env.DB.prepare(`
       INSERT INTO ebay_feedback (
         feedback_id,
+        marketplace,
         comment,
         rating_type,
+        star_rating,
         listing_title,
         item_id,
         feedback_date,
         buyer_display_name
-      ) VALUES (?, ?, 'POSITIVE', ?, ?, CURRENT_TIMESTAMP, ?)
+      ) VALUES (?, 'ebay', ?, 'POSITIVE', 5, ?, ?, CURRENT_TIMESTAMP, ?)
     `).bind(
       SAMPLE_FEEDBACK_ID,
       "Great jersey, fast shipping, and exactly as described.",
@@ -223,6 +244,6 @@ export async function onRequestPost({ request, env }) {
 
     return json({ ...(await loadFeedback(env)), sample_created: true }, 201);
   } catch (error) {
-    return json({ error: `Sample feedback error: ${error?.message || "Unknown error"}` }, 500);
+    return json({ error: `Marketplace feedback import error: ${error?.message || "Unknown error"}` }, 500);
   }
 }

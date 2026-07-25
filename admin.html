@@ -6,8 +6,8 @@
   <title>Inventory Admin | JerseysFrmJB</title>
   <meta name="robots" content="noindex,nofollow">
   <link rel="icon" href="assets/jerseysfrmjb-logo.jpg" type="image/jpeg">
-  <link rel="stylesheet" href="styles.css?v=feedback-import-1">
-  <script src="admin.js?v=feedback-import-1" defer></script>
+  <link rel="stylesheet" href="styles.css?v=marketplace-feedback-1">
+  <script src="admin.js?v=marketplace-feedback-1" defer></script>
 </head>
 <body class="admin-body">
   <main class="admin-shell">
@@ -37,7 +37,7 @@
         <button type="button" data-admin-tab="bulk">Bulk Restock</button>
         <button type="button" data-admin-tab="sales">Sales</button>
         <button type="button" data-admin-tab="messages">Messages</button>
-        <button type="button" data-admin-tab="feedback">eBay Feedback</button>
+        <button type="button" data-admin-tab="feedback">Marketplace Feedback</button>
         <button type="button" data-admin-tab="homepage">Homepage</button>
       </nav>
       <label class="admin-mobile-section-control">
@@ -48,7 +48,7 @@
           <option value="bulk">Bulk Restock</option>
           <option value="sales">Sales</option>
           <option value="messages">Messages</option>
-          <option value="feedback">eBay Feedback</option>
+          <option value="feedback">Marketplace Feedback</option>
           <option value="homepage">Homepage</option>
         </select>
       </label>
@@ -71,10 +71,10 @@
         </div>
         <div class="admin-message-list" data-admin-messages><p class="empty-featured">Log in to view messages.</p></div>
       </section>
-      <section class="admin-feedback-panel" data-admin-section="feedback" aria-label="eBay feedback moderation" hidden>
+      <section class="admin-feedback-panel" data-admin-section="feedback" aria-label="Marketplace feedback moderation" hidden>
         <div class="admin-messages-head">
           <div>
-            <span class="section-kicker">eBay Feedback</span>
+            <span class="section-kicker">Marketplace Feedback</span>
             <h2>Feedback Moderation <span class="message-badge" data-feedback-count>0 pending</span></h2>
             <p>Approve positive feedback before it appears publicly. Hidden feedback never appears on the website.</p>
           </div>
@@ -91,6 +91,17 @@
             <div class="feedback-importer-actions">
               <button class="shop-button" type="button" data-import-feedback>Import Pending Feedback</button>
               <small>Review unrelated items before approving them publicly.</small>
+            </div>
+          </div>
+        </details>
+        <details class="feedback-importer depop-feedback-importer">
+          <summary>Import copied Depop feedback</summary>
+          <div class="feedback-importer-content">
+            <p>Open your Depop feedback window on the Sold tab, click inside it, press Ctrl+A and Ctrl+C, then paste below. Buyer usernames are discarded and every review starts as Pending.</p>
+            <textarea rows="9" data-depop-feedback-import-text placeholder="Paste copied Depop feedback here"></textarea>
+            <div class="feedback-importer-actions">
+              <button class="shop-button depop-import-button" type="button" data-import-depop-feedback>Import Pending Depop Feedback</button>
+              <small>Depop does not include item titles in copied feedback, so imported cards use &ldquo;Depop purchase.&rdquo;</small>
             </div>
           </div>
         </details>

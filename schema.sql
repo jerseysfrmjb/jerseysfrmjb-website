@@ -34,8 +34,10 @@ CREATE INDEX IF NOT EXISTS idx_product_platform_prices_product
 
 CREATE TABLE IF NOT EXISTS ebay_feedback (
   feedback_id TEXT PRIMARY KEY,
+  marketplace TEXT NOT NULL DEFAULT 'ebay',
   comment TEXT NOT NULL,
   rating_type TEXT NOT NULL CHECK (rating_type IN ('POSITIVE', 'NEUTRAL', 'NEGATIVE')),
+  star_rating INTEGER NOT NULL DEFAULT 5,
   listing_title TEXT NOT NULL DEFAULT '',
   item_id TEXT NOT NULL DEFAULT '',
   feedback_date TEXT NOT NULL,
@@ -53,6 +55,9 @@ CREATE INDEX IF NOT EXISTS idx_ebay_feedback_public
 
 CREATE INDEX IF NOT EXISTS idx_ebay_feedback_moderation
   ON ebay_feedback(moderation_status, feedback_date DESC);
+
+CREATE INDEX IF NOT EXISTS idx_marketplace_feedback_public
+  ON ebay_feedback(marketplace, moderation_status, visibility_status, feedback_date DESC);
 
 CREATE TABLE IF NOT EXISTS site_settings (
   key TEXT PRIMARY KEY,

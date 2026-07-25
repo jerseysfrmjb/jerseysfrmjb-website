@@ -528,48 +528,78 @@ function formatFeedbackDate(value = "") {
   return date.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
 }
 
-async function renderLiveEbayFeedback() {
-  const section = document.querySelector("[data-ebay-feedback-section]");
-  const list = section?.querySelector("[data-ebay-feedback-list]");
-  if (!section || !list) return;
-  section.hidden = true;
-  list.innerHTML = "";
+function marketplaceFeedbackSlide(item, marketplace, index) {
+  const isDepop = marketplace === "depop";
+  const marketplaceLabel = isDepop ? "Depop" : "eBay";
+  const iconClass = isDepop ? "depop-icon" : "ebay-icon";
+  const stars = Math.min(5, Math.max(1, Number(item.star_rating || 5)));
+  const title = item.listing_title && item.listing_title !== "Depop purchase"
+    ? item.listing_title
+    : `${marketplaceLabel} buyer review`;
+  const dateLabel = formatFeedbackDate(item.feedback_date);
+
+  return `
+    <div class="slide${index === 0 ? " active" : ""}">
+      <article class="review-proof-card marketplace-review-card ${escapeHtml(marketplace)}-review-card">
+        <div class="review-card-top">
+          <i class="brand-icon ${iconClass}" aria-hidden="true">${isDepop ? "d" : "e"}</i>
+          <span class="review-stars" aria-label="${stars} out of 5 stars">${"&#9733;".repeat(stars)}</span>
+        </div>
+        <p class="review-market">Verified ${marketplaceLabel} Feedback</p>
+        <h4>${escapeHtml(title)}</h4>
+        <blockquote>&ldquo;${escapeHtml(item.comment || "")}&rdquo;</blockquote>
+        <div class="marketplace-review-footer">
+          <span>Verified ${marketplaceLabel} Buyer</span>
+          ${dateLabel ? `<time datetime="${escapeHtml(item.feedback_date || "")}">${escapeHtml(dateLabel)}</time>` : ""}
+        </div>
+      </article>
+    </div>`;
+}
+
+async function loadMarketplaceFeedback(marketplace) {
+  const slides = document.querySelector(`[data-marketplace-feedback="${marketplace}"]`);
+  if (!slides) return;
+  if (marketplace === "ebay") {
+    slides.innerHTML = '<div class="slide active"><p class="marketplace-feedback-loading">Loading approved eBay feedback...</p></div>';
+  }
 
   try {
-    const response = await fetch("/api/ebay-feedback", {
+    const response = await fetch(`/api/${marketplace}-feedback`, {
       cache: "no-store",
       headers: { Accept: "application/json" }
     });
-    if (!response.ok) return;
+    if (!response.ok) throw new Error("Feedback unavailable");
     const data = await response.json();
     const feedback = Array.isArray(data.feedback) ? data.feedback : [];
-    if (!feedback.length) return;
+    if (!feedback.length) {
+      if (marketplace === "ebay") {
+        slides.innerHTML = '<div class="slide active"><p class="marketplace-feedback-loading">Approved eBay feedback will appear here.</p></div>';
+      }
+      return;
+    }
 
-    list.innerHTML = feedback.map(item => `
-      <article class="live-ebay-feedback-card">
-        <div class="review-card-top">
-          <i class="brand-icon ebay-icon" aria-hidden="true">e</i>
-          <span class="review-stars" aria-label="Positive eBay feedback">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
-        </div>
-        <p class="review-market">Verified eBay Feedback</p>
-        <h4>${escapeHtml(item.listing_title || "eBay purchase")}</h4>
-        <blockquote>&ldquo;${escapeHtml(item.comment || "")}&rdquo;</blockquote>
-        <div class="live-ebay-feedback-meta">
-          <span>Verified eBay Buyer</span>
-          <time datetime="${escapeHtml(item.feedback_date || "")}">${escapeHtml(formatFeedbackDate(item.feedback_date))}</time>
-        </div>
-      </article>`).join("");
-    section.hidden = false;
+    slides.innerHTML = feedback.map((item, index) => marketplaceFeedbackSlide(item, marketplace, index)).join("");
   } catch (error) {
-    section.hidden = true;
+    if (marketplace === "ebay") {
+      slides.innerHTML = '<div class="slide active"><p class="marketplace-feedback-loading">eBay feedback is temporarily unavailable.</p></div>';
+    }
   }
+}
+
+async function renderMarketplaceFeedback() {
+  await Promise.all([
+    loadMarketplaceFeedback("ebay"),
+    loadMarketplaceFeedback("depop")
+  ]);
 }
 
 renderInventoryGrids();
 renderFeaturedGrid();
 renderHomepageStats();
-renderLiveEbayFeedback();
-initSliders();
+renderMarketplaceFeedback().finally(() => {
+  initSliders();
+  initReviewLightbox();
+});
 function initReviewLightbox() {
   const triggers = document.querySelectorAll("[data-review-lightbox]");
   if (!triggers.length) return;
@@ -632,7 +662,6 @@ function initReviewLightbox() {
     if (event.key === "Escape" && !lightbox.hidden) setOpen(false);
   });
 }
-initReviewLightbox();
 
 function createHelpWidget() {
   const instagramUrl = "https://www.instagram.com/jerseysfrmjb/";

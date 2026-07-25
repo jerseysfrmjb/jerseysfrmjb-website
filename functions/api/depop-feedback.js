@@ -17,9 +17,8 @@ function publicFeedback(row) {
     rating_type: row.rating_type,
     star_rating: Number(row.star_rating || 5),
     listing_title: row.listing_title,
-    item_id: row.item_id,
     feedback_date: row.feedback_date,
-    buyer_display_name: "Verified eBay Buyer"
+    buyer_display_name: "Verified Depop Buyer"
   };
 }
 
@@ -29,23 +28,14 @@ export async function onRequestGet({ env }) {
     await ensureEbayFeedback(env);
 
     const result = await env.DB.prepare(`
-      SELECT feedback_id, comment, rating_type, star_rating, listing_title, item_id, feedback_date
+      SELECT feedback_id, comment, rating_type, star_rating, listing_title, feedback_date
       FROM ebay_feedback
-      WHERE marketplace = 'ebay'
+      WHERE marketplace = 'depop'
         AND moderation_status = 'approved'
         AND visibility_status = 'active'
         AND rating_type = 'POSITIVE'
-      ORDER BY
-        CASE feedback_date
-          WHEN 'Past month' THEN 0
-          WHEN 'Past 6 months' THEN 1
-          WHEN 'Past year' THEN 2
-          WHEN 'More than a year ago' THEN 3
-          ELSE 0
-        END,
-        CASE WHEN feedback_date GLOB '????-??-??*' THEN feedback_date ELSE NULL END DESC,
-        created_at DESC
-      LIMIT 24
+      ORDER BY created_at DESC
+      LIMIT 50
     `).all();
 
     return json({ feedback: (result.results || []).map(publicFeedback) });

@@ -21,6 +21,8 @@ const refreshFeedback = document.querySelector("[data-refresh-feedback]");
 const addSampleFeedback = document.querySelector("[data-add-sample-feedback]");
 const feedbackImportText = document.querySelector("[data-feedback-import-text]");
 const importFeedbackButton = document.querySelector("[data-import-feedback]");
+const depopFeedbackImportText = document.querySelector("[data-depop-feedback-import-text]");
+const importDepopFeedbackButton = document.querySelector("[data-import-depop-feedback]");
 const adminSummary = document.querySelector("[data-admin-summary]");
 const adminQuick = document.querySelector("[data-admin-quick]");
 const adminFilterButtons = [...document.querySelectorAll("[data-admin-filter]")];
@@ -1303,6 +1305,7 @@ function renderEbayFeedbackAdmin() {
 
   feedbackList.innerHTML = ebayFeedback.length ? ebayFeedback.map(item => {
     const feedbackId = String(item.feedback_id || "");
+    const marketplace = String(item.marketplace || "ebay").toLowerCase();
     const moderation = item.moderation_status || "pending";
     const visibility = item.visibility_status || "active";
     const saving = savingFeedbackIds.has(feedbackId);
@@ -1311,12 +1314,13 @@ function renderEbayFeedbackAdmin() {
         <div class="admin-feedback-card-head">
           <div>
             <div class="admin-feedback-badges">
+              <span class="feedback-marketplace ${escapeHtml(marketplace)}">${escapeHtml(marketplace)}</span>
               <span class="feedback-rating ${escapeHtml(String(item.rating_type || "").toLowerCase())}">${escapeHtml(item.rating_type || "UNKNOWN")}</span>
               <span class="feedback-moderation ${escapeHtml(moderation)}">${escapeHtml(moderation)}</span>
               <span class="feedback-visibility ${escapeHtml(visibility)}">${escapeHtml(visibility)}</span>
             </div>
             <h3>${escapeHtml(item.listing_title || "eBay purchase")}</h3>
-            <small>${escapeHtml(formatFeedbackDate(item.feedback_date))}${item.item_id ? ` &middot; Item ${escapeHtml(item.item_id)}` : ""}</small>
+            <small>${marketplace === "depop" ? `${escapeHtml(item.star_rating || 5)} stars &middot; ` : ""}${escapeHtml(formatFeedbackDate(item.feedback_date))}${marketplace === "ebay" && item.item_id ? ` &middot; Item ${escapeHtml(item.item_id)}` : ""}</small>
           </div>
         </div>
         <blockquote>${escapeHtml(item.comment || "")}</blockquote>
@@ -1411,12 +1415,69 @@ function parseEbayFeedbackPaste(value = "") {
 
     if (!comment || !listingTitle || !dateLine || /^Reply$/i.test(dateLine)) return;
     records.push({
+      marketplace: "ebay",
       comment,
       rating_type: "POSITIVE",
+      star_rating: 5,
       listing_title: listingTitle,
       item_id: itemMatch[1],
       feedback_date: dateLine,
       source_reference: sourceReference
+    });
+  });
+
+  return records;
+}
+
+function isDepopFeedbackDate(value = "") {
+  return /^(?:(?:about\s+)?(?:a|an|\d+)\s+(?:minute|hour|day|week|month|year)s?\s+ago|today|yesterday)$/i.test(value);
+}
+
+function parseDepopFeedbackPaste(value = "") {
+  const lines = String(value)
+    .split(/\r?\n/)
+    .map(cleanEbayPasteLine)
+    .filter(Boolean);
+  const records = [];
+
+  lines.forEach((line, index) => {
+    const usernameMatch = line.match(/^@([a-z0-9._-]+)$/i);
+    if (!usernameMatch) return;
+
+    const nextUsernameIndex = lines.findIndex((candidate, candidateIndex) => (
+      candidateIndex > index && /^@[a-z0-9._-]+$/i.test(candidate)
+    ));
+    const entryEnd = nextUsernameIndex < 0 ? lines.length : nextUsernameIndex;
+    const ratingIndex = lines.findIndex((candidate, candidateIndex) => (
+      candidateIndex > index
+      && candidateIndex < Math.min(entryEnd, index + 4)
+      && (/[★☆]/.test(candidate) || /^[1-5](?:\s*\/\s*5|\s+stars?)$/i.test(candidate))
+    ));
+    if (ratingIndex < 0) return;
+
+    const dateIndex = lines.findIndex((candidate, candidateIndex) => (
+      candidateIndex > ratingIndex
+      && candidateIndex < entryEnd
+      && isDepopFeedbackDate(candidate)
+    ));
+    if (dateIndex < 0) return;
+
+    const comment = lines.slice(ratingIndex + 1, dateIndex).join(" ").trim();
+    if (!comment) return;
+    const starLine = lines[ratingIndex];
+    const filledStars = (starLine.match(/★/g) || []).length;
+    const numericStars = Number(starLine.match(/[1-5]/)?.[0] || 0);
+    const starRating = Math.min(5, Math.max(1, filledStars || numericStars || 5));
+
+    records.push({
+      marketplace: "depop",
+      comment,
+      star_rating: starRating,
+      rating_type: starRating >= 4 ? "POSITIVE" : starRating === 3 ? "NEUTRAL" : "NEGATIVE",
+      listing_title: "Depop purchase",
+      item_id: "depop-profile",
+      feedback_date: lines[dateIndex],
+      source_reference: usernameMatch[1]
     });
   });
 
@@ -1452,6 +1513,38 @@ async function importPastedEbayFeedback() {
   } finally {
     importFeedbackButton.disabled = false;
     importFeedbackButton.textContent = "Import Pending Feedback";
+  }
+}
+
+async function importPastedDepopFeedback() {
+  if (!depopFeedbackImportText || !importDepopFeedbackButton || importDepopFeedbackButton.disabled) return;
+  const records = parseDepopFeedbackPaste(depopFeedbackImportText.value);
+  if (!records.length) {
+    if (feedbackStatus) feedbackStatus.textContent = "No complete Depop reviews were found. Copy the text from the Sold feedback window and try again.";
+    depopFeedbackImportText.focus();
+    return;
+  }
+
+  importDepopFeedbackButton.disabled = true;
+  importDepopFeedbackButton.textContent = "Importing...";
+  if (feedbackStatus) feedbackStatus.textContent = `Importing ${records.length} pending Depop review${records.length === 1 ? "" : "s"}...`;
+
+  try {
+    const data = await api("/api/admin/ebay-feedback", {
+      method: "POST",
+      body: JSON.stringify({ records })
+    });
+    applyFeedbackData(data);
+    depopFeedbackImportText.value = "";
+    if (feedbackStatus) {
+      const duplicateText = data.duplicates ? ` ${data.duplicates} duplicate${data.duplicates === 1 ? " was" : "s were"} skipped.` : "";
+      feedbackStatus.textContent = `${data.imported || 0} Depop review${data.imported === 1 ? "" : "s"} imported as Pending.${duplicateText}`;
+    }
+  } catch (error) {
+    if (feedbackStatus) feedbackStatus.textContent = error.message;
+  } finally {
+    importDepopFeedbackButton.disabled = false;
+    importDepopFeedbackButton.textContent = "Import Pending Depop Feedback";
   }
 }
 
@@ -2071,6 +2164,7 @@ refreshMessages?.addEventListener("click", loadMessages);
 refreshFeedback?.addEventListener("click", loadEbayFeedbackAdmin);
 addSampleFeedback?.addEventListener("click", addDevelopmentSampleFeedback);
 importFeedbackButton?.addEventListener("click", importPastedEbayFeedback);
+importDepopFeedbackButton?.addEventListener("click", importPastedDepopFeedback);
 if (addSampleFeedback && ["localhost", "127.0.0.1", "::1", "[::1]"].includes(location.hostname)) {
   addSampleFeedback.hidden = false;
 }
