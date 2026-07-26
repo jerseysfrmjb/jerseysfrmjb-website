@@ -55,6 +55,21 @@ function escapeHtml(value = "") {
   return String(value).replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
 }
 
+const INVENTORY_IMAGE_REVISIONS = new Map([
+  ["assets/inventory/club-real-front.jpg", "20260726-1"],
+  ["assets/inventory/club-real-back.jpg", "20260726-1"],
+  ["assets/inventory/club-city-front.jpg", "20260726-1"],
+  ["assets/inventory/club-city-back.jpg", "20260726-1"]
+]);
+
+function inventoryImageSrc(src = "") {
+  const value = String(src);
+  const normalized = value.split(/[?#]/, 1)[0].replace(/^\//, "");
+  const revision = INVENTORY_IMAGE_REVISIONS.get(normalized);
+  if (!revision) return value;
+  return `${value}${value.includes("?") ? "&" : "?"}v=${revision}`;
+}
+
 function totalQuantity(item) {
   const sizes = item?.sizes || {};
   const sizeTotal = Object.values(sizes).reduce((sum, qty) => sum + Math.max(0, Math.floor(Number(qty || 0))), 0);
@@ -291,7 +306,7 @@ function renderSlides(item) {
   const newArrival = isNewArrival(item) ? '<p class="product-status new-arrival">New Arrival</p>' : "";
   return (item.photos || []).map((photo, index) => `
     <div class="slide${index === 0 ? " active" : ""}">
-      <img decoding="async" loading="lazy" src="${escapeHtml(photo.src)}" alt="${escapeHtml(photo.alt || item.name)}">
+      <img decoding="async" loading="lazy" src="${escapeHtml(inventoryImageSrc(photo.src))}" alt="${escapeHtml(photo.alt || item.name)}">
       ${sold && index === 0 ? '<p class="product-status out-of-stock">Out of Stock</p>' : ""}
       ${index === 0 ? newArrival : ""}
     </div>`).join("");
@@ -321,7 +336,7 @@ function renderFeaturedCard(item, index) {
 
   return `
     <article class="featured-card" data-stock="${available ? "available" : "sold-out"}">
-      <img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.alt || item.name)}">
+      <img src="${escapeHtml(inventoryImageSrc(image.src))}" alt="${escapeHtml(image.alt || item.name)}">
       <div class="featured-copy">
         <span>FEATURED JERSEY ${String(index + 1).padStart(2, "0")}</span>
         <h3>${escapeHtml(item.name)}</h3>
