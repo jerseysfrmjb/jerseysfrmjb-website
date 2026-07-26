@@ -24,6 +24,23 @@ const feedbackImportText = document.querySelector("[data-feedback-import-text]")
 const importFeedbackButton = document.querySelector("[data-import-feedback]");
 const depopFeedbackImportText = document.querySelector("[data-depop-feedback-import-text]");
 const importDepopFeedbackButton = document.querySelector("[data-import-depop-feedback]");
+const pinterestBadge = document.querySelector("[data-pinterest-badge]");
+const pinterestStatusLine = document.querySelector("[data-pinterest-status]");
+const pinterestConnect = document.querySelector("[data-pinterest-connect]");
+const refreshPinterest = document.querySelector("[data-refresh-pinterest]");
+const disconnectPinterestButton = document.querySelector("[data-disconnect-pinterest]");
+const pinterestPublisher = document.querySelector("[data-pinterest-publisher]");
+const pinterestForm = document.querySelector("[data-pinterest-form]");
+const pinterestProduct = document.querySelector("[data-pinterest-product]");
+const pinterestBoard = document.querySelector("[data-pinterest-board]");
+const pinterestImages = document.querySelector("[data-pinterest-images]");
+const pinterestTitle = document.querySelector("[data-pinterest-title]");
+const pinterestDescription = document.querySelector("[data-pinterest-description]");
+const pinterestLink = document.querySelector("[data-pinterest-link]");
+const pinterestTitleCount = document.querySelector("[data-pinterest-title-count]");
+const pinterestDescriptionCount = document.querySelector("[data-pinterest-description-count]");
+const pinterestPreview = document.querySelector("[data-pinterest-preview]");
+const pinterestPublish = document.querySelector("[data-pinterest-publish]");
 const adminSummary = document.querySelector("[data-admin-summary]");
 const adminQuick = document.querySelector("[data-admin-quick]");
 const adminFilterButtons = [...document.querySelectorAll("[data-admin-filter]")];
@@ -68,6 +85,10 @@ let unreadMessages = 0;
 let ebayFeedback = [];
 let feedbackLoaded = false;
 const savingFeedbackIds = new Set();
+let pinterestConnection = null;
+let pinterestBoards = [];
+let pinterestLoaded = false;
+let pinterestPublishing = false;
 let adminFilter = "all";
 let restockPresets = [];
 let lastBulkRestock = null;
@@ -78,7 +99,8 @@ let salesAnalyticsPanel = document.querySelector("[data-sales-analytics]");
 let quickSaleMatches = [];
 let quickSalePriceManuallyEdited = false;
 let quickSalePriceRequest = 0;
-let currentAdminTab = "dashboard";
+const pinterestCallback = new URLSearchParams(location.search).get("pinterest") || "";
+let currentAdminTab = location.hash === "#pinterest" || pinterestCallback ? "pinterest" : "dashboard";
 let editingSaleId = null;
 let savingSaleEditId = null;
 let deletingSaleId = null;
@@ -116,6 +138,7 @@ function setAdminTab(tab = "dashboard") {
   });
   if (tab === "sales" && !salesLoaded) loadSales();
   if (tab === "feedback" && !feedbackLoaded) loadEbayFeedbackAdmin();
+  if (tab === "pinterest" && !pinterestLoaded) loadPinterestStatus();
 }
 
 function saleDateValue(sale) {
@@ -1224,6 +1247,283 @@ function showPanel() {
   setAdminTab(currentAdminTab || "dashboard");
 }
 
+const PINTEREST_CATEGORY_PAGES = {
+  world: "worldcup-jerseys.html",
+  club: "club-jerseys.html",
+  retro: "retro-jerseys.html"
+};
+
+function pinterestAvailableProducts() {
+  return inventory
+    .filter(item => Number(item.quantity || 0) > 0 && Array.isArray(item.photos) && item.photos.some(photo => photo?.src))
+    .sort((left, right) => left.name.localeCompare(right.name));
+}
+
+function pinterestProductLink(item) {
+  const path = PINTEREST_CATEGORY_PAGES[item?.category] || "shop-all.html";
+  return `https://jerseysfrmjb.com/${path}`;
+}
+
+function pinterestDefaultDescription(item) {
+  const sizes = Object.entries(item?.sizes || {})
+    .filter(([, quantity]) => Number(quantity) > 0)
+    .map(([size]) => size);
+  const sizeText = sizes.length ? ` Available sizes: ${sizes.join(", ")}.` : "";
+  return `${item.name}.${sizeText} Browse current football jersey inventory from JerseysFrmJB.`;
+}
+
+function selectedPinterestProduct() {
+  return inventory.find(item => String(item.id) === String(pinterestProduct?.value || ""));
+}
+
+function selectedPinterestPhotoIndex() {
+  return Math.max(0, Number(pinterestImages?.querySelector("[data-pinterest-photo]:checked")?.value || 0));
+}
+
+function selectSuggestedPinterestBoard(product, force = false) {
+  if (!pinterestBoard || !product || (!force && pinterestBoard.value)) return;
+  const boardPattern = product.category === "world"
+    ? /\bworld\s*cup\b/i
+    : product.category === "retro"
+      ? /\bretro\b/i
+      : product.category === "club"
+        ? /\bclub\b/i
+        : null;
+  if (!boardPattern) return;
+  const match = pinterestBoards.find(board => boardPattern.test(board.name));
+  if (match) pinterestBoard.value = match.id;
+}
+
+function updatePinterestCounts() {
+  if (pinterestTitleCount) pinterestTitleCount.textContent = String(pinterestTitle?.value.length || 0);
+  if (pinterestDescriptionCount) pinterestDescriptionCount.textContent = String(pinterestDescription?.value.length || 0);
+}
+
+function renderPinterestPreview() {
+  if (!pinterestPreview) return;
+  const product = selectedPinterestProduct();
+  const photo = product?.photos?.[selectedPinterestPhotoIndex()] || product?.photos?.[0];
+  if (!product || !photo?.src) {
+    pinterestPreview.innerHTML = '<div class="pinterest-preview-placeholder">Choose a product to preview the Pin.</div>';
+    return;
+  }
+  pinterestPreview.innerHTML = `
+    <img src="${escapeHtml(photo.src)}" alt="${escapeHtml(photo.alt || product.name)}">
+    <div>
+      <span>Inventory product</span>
+      <h3>${escapeHtml(pinterestTitle?.value || product.name)}</h3>
+      <p>${escapeHtml(pinterestDescription?.value || pinterestDefaultDescription(product))}</p>
+      <small>${escapeHtml(pinterestProductLink(product))}</small>
+    </div>`;
+}
+
+function updatePinterestPublishState() {
+  if (!pinterestPublish) return;
+  pinterestPublish.disabled = Boolean(
+    pinterestPublishing
+    || !pinterestConnection?.connected
+    || !pinterestProduct?.value
+    || !pinterestBoard?.value
+    || !pinterestTitle?.value.trim()
+    || !pinterestDescription?.value.trim()
+  );
+}
+
+function renderPinterestProductOptions() {
+  if (!pinterestProduct) return;
+  const current = pinterestProduct.value;
+  const products = pinterestAvailableProducts();
+  pinterestProduct.innerHTML = '<option value="">Choose an available jersey</option>' + products.map(item =>
+    `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)} (${escapeHtml(item.size || "size available")})</option>`
+  ).join("");
+  if (products.some(item => String(item.id) === current)) pinterestProduct.value = current;
+  updatePinterestPublishState();
+}
+
+function renderPinterestProductEditor(resetText = false) {
+  const product = selectedPinterestProduct();
+  if (!product) {
+    if (pinterestImages) pinterestImages.innerHTML = "<p>Choose an inventory product to see its photos.</p>";
+    if (pinterestTitle) pinterestTitle.value = "";
+    if (pinterestDescription) pinterestDescription.value = "";
+    if (pinterestLink) pinterestLink.value = "";
+    updatePinterestCounts();
+    renderPinterestPreview();
+    updatePinterestPublishState();
+    return;
+  }
+
+  const photos = (product.photos || []).filter(photo => photo?.src);
+  if (pinterestImages) {
+    pinterestImages.innerHTML = photos.map((photo, index) => `
+      <label class="pinterest-image-option">
+        <input type="radio" name="pinterest_photo" value="${index}" data-pinterest-photo ${index === 0 ? "checked" : ""}>
+        <img src="${escapeHtml(photo.src)}" alt="${escapeHtml(photo.alt || `${product.name} photo ${index + 1}`)}">
+        <span>${index === 0 ? "Primary photo" : `Photo ${index + 1}`}</span>
+      </label>`).join("");
+  }
+  if (resetText || !pinterestTitle?.value) pinterestTitle.value = product.name.slice(0, 100);
+  if (resetText || !pinterestDescription?.value) pinterestDescription.value = pinterestDefaultDescription(product).slice(0, 800);
+  if (pinterestLink) pinterestLink.value = pinterestProductLink(product);
+  selectSuggestedPinterestBoard(product, resetText);
+  updatePinterestCounts();
+  renderPinterestPreview();
+  updatePinterestPublishState();
+}
+
+function renderPinterestConnection() {
+  const connected = Boolean(pinterestConnection?.connected);
+  if (pinterestBadge) {
+    pinterestBadge.textContent = connected ? "Connected" : "Not connected";
+    pinterestBadge.className = `pinterest-connection-badge ${connected ? "connected" : "disconnected"}`;
+  }
+  if (pinterestConnect) pinterestConnect.hidden = connected;
+  if (disconnectPinterestButton) disconnectPinterestButton.hidden = !connected;
+  if (pinterestPublisher) pinterestPublisher.hidden = !connected;
+  if (!connected && pinterestBoard) {
+    pinterestBoard.innerHTML = '<option value="">Connect Pinterest to load boards</option>';
+  }
+  renderPinterestProductOptions();
+  updatePinterestPublishState();
+}
+
+async function loadPinterestBoards() {
+  if (!pinterestBoard || !pinterestConnection?.connected) return;
+  pinterestBoard.disabled = true;
+  pinterestBoard.innerHTML = '<option value="">Loading boards...</option>';
+  try {
+    const data = await api("/api/admin/pinterest/boards");
+    pinterestBoards = (Array.isArray(data.boards) ? data.boards : [])
+      .filter(board => !/\bcustomer\b.*\bphoto|\bphoto\b.*\bcustomer\b/i.test(board.name));
+    pinterestBoard.innerHTML = '<option value="">Choose a board</option>' + pinterestBoards.map(board =>
+      `<option value="${escapeHtml(board.id)}">${escapeHtml(board.name)}${board.privacy && board.privacy !== "PUBLIC" ? ` (${escapeHtml(board.privacy.toLowerCase())})` : ""}</option>`
+    ).join("");
+    if (!pinterestBoards.length) {
+      pinterestBoard.innerHTML = '<option value="">No Pinterest boards found</option>';
+    }
+    selectSuggestedPinterestBoard(selectedPinterestProduct());
+  } catch (error) {
+    pinterestBoard.innerHTML = '<option value="">Boards could not be loaded</option>';
+    if (pinterestStatusLine) {
+      pinterestStatusLine.textContent = error.message;
+      pinterestStatusLine.className = "form-status error";
+    }
+  } finally {
+    pinterestBoard.disabled = false;
+    updatePinterestPublishState();
+  }
+}
+
+async function loadPinterestStatus() {
+  if (!pinterestBadge) return;
+  pinterestBadge.textContent = "Checking";
+  pinterestBadge.className = "pinterest-connection-badge";
+  if (pinterestStatusLine) {
+    pinterestStatusLine.textContent = "Checking Pinterest connection...";
+    pinterestStatusLine.className = "form-status";
+  }
+  try {
+    pinterestConnection = await api("/api/admin/pinterest/status");
+    pinterestLoaded = true;
+    renderPinterestConnection();
+    if (pinterestConnection.connected) {
+      await loadPinterestBoards();
+      if (pinterestStatusLine) {
+        const callbackMessage = pinterestCallback === "connected"
+          ? "Pinterest connected successfully. Choose a product and board to publish a test Pin."
+          : "Pinterest is connected.";
+        pinterestStatusLine.textContent = callbackMessage;
+        pinterestStatusLine.className = "form-status success";
+      }
+    } else if (pinterestStatusLine) {
+      pinterestStatusLine.textContent = "Connect your Pinterest business account to begin.";
+      pinterestStatusLine.className = "form-status";
+    }
+    if (pinterestCallback === "error" && pinterestStatusLine) {
+      const message = new URLSearchParams(location.search).get("message") || "Pinterest could not be connected.";
+      pinterestStatusLine.textContent = message;
+      pinterestStatusLine.className = "form-status error";
+    }
+  } catch (error) {
+    pinterestLoaded = false;
+    pinterestConnection = null;
+    renderPinterestConnection();
+    if (pinterestStatusLine) {
+      pinterestStatusLine.textContent = error.message;
+      pinterestStatusLine.className = "form-status error";
+    }
+  }
+}
+
+async function disconnectPinterest() {
+  if (!pinterestConnection?.connected || !confirm("Disconnect Pinterest from this admin? Existing Pins will not be deleted.")) return;
+  if (disconnectPinterestButton) disconnectPinterestButton.disabled = true;
+  if (pinterestStatusLine) pinterestStatusLine.textContent = "Disconnecting Pinterest...";
+  try {
+    await api("/api/admin/pinterest/disconnect", { method: "DELETE" });
+    pinterestConnection = { connected: false };
+    pinterestBoards = [];
+    renderPinterestConnection();
+    if (pinterestStatusLine) {
+      pinterestStatusLine.textContent = "Pinterest disconnected. Existing Pins were not changed.";
+      pinterestStatusLine.className = "form-status success";
+    }
+  } catch (error) {
+    if (pinterestStatusLine) {
+      pinterestStatusLine.textContent = error.message;
+      pinterestStatusLine.className = "form-status error";
+    }
+  } finally {
+    if (disconnectPinterestButton) disconnectPinterestButton.disabled = false;
+  }
+}
+
+async function publishPinterestPin(event) {
+  event.preventDefault();
+  if (pinterestPublishing) return;
+  const product = selectedPinterestProduct();
+  if (!product || !pinterestBoard?.value) {
+    if (pinterestStatusLine) pinterestStatusLine.textContent = "Choose an inventory product and Pinterest board.";
+    return;
+  }
+
+  pinterestPublishing = true;
+  if (pinterestPublish) pinterestPublish.textContent = "Publishing...";
+  updatePinterestPublishState();
+  if (pinterestStatusLine) {
+    pinterestStatusLine.textContent = "Publishing the test Pin...";
+    pinterestStatusLine.className = "form-status";
+  }
+  try {
+    const data = await api("/api/admin/pinterest/publish", {
+      method: "POST",
+      body: JSON.stringify({
+        product_id: product.id,
+        board_id: pinterestBoard.value,
+        photo_index: selectedPinterestPhotoIndex(),
+        title: pinterestTitle.value.trim(),
+        description: pinterestDescription.value.trim()
+      })
+    });
+    if (pinterestStatusLine) {
+      const link = data.pin?.pinterest_url || "";
+      pinterestStatusLine.innerHTML = link
+        ? `Test Pin published. <a href="${escapeHtml(link)}" target="_blank" rel="noopener">Open it on Pinterest</a>.`
+        : "Test Pin published successfully.";
+      pinterestStatusLine.className = "form-status success";
+    }
+  } catch (error) {
+    if (pinterestStatusLine) {
+      pinterestStatusLine.textContent = error.message;
+      pinterestStatusLine.className = "form-status error";
+    }
+  } finally {
+    pinterestPublishing = false;
+    if (pinterestPublish) pinterestPublish.textContent = "Publish Test Pin";
+    updatePinterestPublishState();
+  }
+}
+
 function formatMessageDate(value = "") {
   if (!value) return "";
   const date = new Date(value.endsWith("Z") ? value : value + "Z");
@@ -1917,6 +2217,7 @@ function applyAdminData(data) {
   if (Object.prototype.hasOwnProperty.call(data, "lastBulkRestock")) lastBulkRestock = data.lastBulkRestock;
   if (Object.prototype.hasOwnProperty.call(data, "bulkPreview")) renderBulkPreview(data.bulkPreview);
   renderPresetOptions();
+  renderPinterestProductOptions();
 }
 
 async function loadInventory() {
@@ -2208,6 +2509,24 @@ featuredPreview?.addEventListener("drop", async event => {
 refreshMessages?.addEventListener("click", loadMessages);
 refreshFeedback?.addEventListener("click", loadEbayFeedbackAdmin);
 feedbackFilter?.addEventListener("change", renderEbayFeedbackAdmin);
+refreshPinterest?.addEventListener("click", loadPinterestStatus);
+disconnectPinterestButton?.addEventListener("click", disconnectPinterest);
+pinterestProduct?.addEventListener("change", () => renderPinterestProductEditor(true));
+pinterestBoard?.addEventListener("change", updatePinterestPublishState);
+pinterestImages?.addEventListener("change", event => {
+  if (event.target.matches("[data-pinterest-photo]")) renderPinterestPreview();
+});
+pinterestTitle?.addEventListener("input", () => {
+  updatePinterestCounts();
+  renderPinterestPreview();
+  updatePinterestPublishState();
+});
+pinterestDescription?.addEventListener("input", () => {
+  updatePinterestCounts();
+  renderPinterestPreview();
+  updatePinterestPublishState();
+});
+pinterestForm?.addEventListener("submit", publishPinterestPin);
 addSampleFeedback?.addEventListener("click", addDevelopmentSampleFeedback);
 importFeedbackButton?.addEventListener("click", importPastedEbayFeedback);
 importDepopFeedbackButton?.addEventListener("click", importPastedDepopFeedback);

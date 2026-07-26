@@ -6,8 +6,8 @@
   <title>Inventory Admin | JerseysFrmJB</title>
   <meta name="robots" content="noindex,nofollow">
   <link rel="icon" href="assets/jerseysfrmjb-logo.jpg" type="image/jpeg">
-  <link rel="stylesheet" href="styles.css?v=marketplace-feedback-2">
-  <script src="admin.js?v=depop-import-3" defer></script>
+  <link rel="stylesheet" href="styles.css?v=pinterest-publisher-1">
+  <script src="admin.js?v=pinterest-publisher-1" defer></script>
 </head>
 <body class="admin-body">
   <main class="admin-shell">
@@ -38,6 +38,7 @@
         <button type="button" data-admin-tab="sales">Sales</button>
         <button type="button" data-admin-tab="messages">Messages</button>
         <button type="button" data-admin-tab="feedback">Marketplace Feedback</button>
+        <button type="button" data-admin-tab="pinterest">Pinterest</button>
         <button type="button" data-admin-tab="homepage">Homepage</button>
       </nav>
       <label class="admin-mobile-section-control">
@@ -49,6 +50,7 @@
           <option value="sales">Sales</option>
           <option value="messages">Messages</option>
           <option value="feedback">Marketplace Feedback</option>
+          <option value="pinterest">Pinterest</option>
           <option value="homepage">Homepage</option>
         </select>
       </label>
@@ -117,6 +119,77 @@
         </details>
         <p class="form-status" data-feedback-status></p>
         <div class="admin-feedback-list" data-admin-feedback><p class="empty-featured">Open this section to load feedback.</p></div>
+      </section>
+      <section class="admin-pinterest-panel" data-admin-section="pinterest" aria-label="Pinterest publisher" hidden>
+        <div class="admin-messages-head">
+          <div>
+            <span class="section-kicker">Content Publisher</span>
+            <h2>Pinterest <span class="pinterest-connection-badge" data-pinterest-badge>Checking</span></h2>
+            <p>Publish inventory products using their existing jersey photos. Customer photos are never included.</p>
+          </div>
+          <div class="pinterest-connection-actions">
+            <a class="shop-button secondary-admin" href="/api/admin/pinterest/connect" data-pinterest-connect>Connect Pinterest</a>
+            <button class="shop-button secondary-admin" type="button" data-refresh-pinterest>Refresh</button>
+            <button class="shop-button secondary-admin danger-admin" type="button" data-disconnect-pinterest hidden>Disconnect</button>
+          </div>
+        </div>
+        <p class="form-status" data-pinterest-status role="status"></p>
+
+        <div class="pinterest-publisher" data-pinterest-publisher hidden>
+          <aside class="pinterest-trial-note">
+            <strong>Trial mode</strong>
+            <span>Pins created during Trial access are test Pins visible only to you. Use a successful test Pin for the Standard-access demo.</span>
+          </aside>
+
+          <form class="pinterest-publish-form" data-pinterest-form>
+            <div class="pinterest-form-grid">
+              <label>
+                Inventory product
+                <select data-pinterest-product required>
+                  <option value="">Choose an available jersey</option>
+                </select>
+              </label>
+              <label>
+                Pinterest board
+                <select data-pinterest-board required>
+                  <option value="">Loading boards...</option>
+                </select>
+              </label>
+            </div>
+
+            <fieldset class="pinterest-image-fieldset">
+              <legend>Product image</legend>
+              <div class="pinterest-image-options" data-pinterest-images>
+                <p>Choose an inventory product to see its photos.</p>
+              </div>
+            </fieldset>
+
+            <label>
+              Pin title
+              <input type="text" maxlength="100" data-pinterest-title required>
+              <small><span data-pinterest-title-count>0</span>/100</small>
+            </label>
+            <label>
+              Pin description
+              <textarea rows="5" maxlength="800" data-pinterest-description required></textarea>
+              <small><span data-pinterest-description-count>0</span>/800</small>
+            </label>
+            <label>
+              Destination page
+              <input type="url" data-pinterest-link readonly>
+            </label>
+
+            <div class="pinterest-publish-layout">
+              <article class="pinterest-pin-preview" data-pinterest-preview>
+                <div class="pinterest-preview-placeholder">Choose a product to preview the Pin.</div>
+              </article>
+              <div class="pinterest-publish-actions">
+                <p>Only an in-stock inventory image and its matching category page can be published.</p>
+                <button class="shop-button" type="submit" data-pinterest-publish disabled>Publish Test Pin</button>
+              </div>
+            </div>
+          </form>
+        </div>
       </section>
       <section class="admin-featured-panel" data-admin-section="homepage" aria-label="Featured jersey controls" hidden>
         <div>
