@@ -276,7 +276,12 @@ async function fetchInventory(params = {}) {
     const data = await fallback.json();
     let items = data.items || [];
     if (params.category) items = items.filter(item => item.category === params.category);
-    if (params.featured === "true") items = items.filter(item => item.featured);
+    if (params.featured === "true") {
+      items = items
+        .filter(item => item.featured)
+        .sort((a, b) => Number(a.featured_order || 999) - Number(b.featured_order || 999));
+      return { items };
+    }
     return { items: sortInventory(items) };
   }
 }
@@ -507,7 +512,10 @@ async function renderFeaturedGrid() {
   const grid = document.querySelector("[data-featured-grid]");
   if (!grid) return;
   const data = await fetchInventory({ featured: "true" });
-  const items = (data.items || []).slice(0, 3);
+  const items = [...(data.items || [])]
+    .filter(item => item.featured)
+    .sort((a, b) => Number(a.featured_order || 999) - Number(b.featured_order || 999))
+    .slice(0, 3);
   grid.innerHTML = items.map(renderFeaturedCard).join("");
 }
 

@@ -15,6 +15,10 @@
       ],
       "size": "M",
       "price": 55,
+      "platform_prices": {
+        "Depop": 55,
+        "eBay": 55
+      },
       "category": "world",
       "name": "Lionel Messi #10 | Argentina 2026 World Cup Home",
       "quantity": 2,
@@ -22,7 +26,8 @@
         "depop": "https://www.depop.com/jerseysfrmjb/",
         "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
       },
-      "featured": false,
+      "featured": true,
+      "featured_order": 2,
       "sizes": {
         "M": 2
       },
@@ -44,6 +49,10 @@
       ],
       "size": "M",
       "price": 55,
+      "platform_prices": {
+        "Depop": 55,
+        "eBay": 55
+      },
       "category": "world",
       "name": "Cristiano Ronaldo #7 | Portugal 2026 World Cup Home",
       "quantity": 2,
@@ -73,6 +82,10 @@
       ],
       "size": "M",
       "price": 55,
+      "platform_prices": {
+        "Depop": 50,
+        "eBay": 55
+      },
       "category": "world",
       "name": "Jude Bellingham #10 | England 2026 World Cup Away",
       "quantity": 2,
@@ -102,6 +115,10 @@
       ],
       "size": "M",
       "price": 55,
+      "platform_prices": {
+        "Depop": 55,
+        "eBay": 55
+      },
       "category": "world",
       "name": "Lamine Yamal #19 | Spain 2026 World Cup Home",
       "quantity": 2,
@@ -109,7 +126,8 @@
         "depop": "https://www.depop.com/jerseysfrmjb/",
         "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
       },
-      "featured": false,
+      "featured": true,
+      "featured_order": 3,
       "sizes": {
         "M": 2
       },
@@ -155,6 +173,10 @@
       ],
       "size": "Small & Medium",
       "price": 55,
+      "platform_prices": {
+        "Depop": 50,
+        "eBay": 55
+      },
       "category": "world",
       "name": "Florian Wirtz #17 | Germany 2026 World Cup Home",
       "quantity": 2,
@@ -162,7 +184,7 @@
         "depop": "https://www.depop.com/jerseysfrmjb/",
         "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
       },
-      "featured": true
+      "featured": false
     },
     {
       "sort_order": 70,
@@ -179,6 +201,10 @@
       ],
       "size": "Medium",
       "price": 55,
+      "platform_prices": {
+        "Depop": 50,
+        "eBay": 55
+      },
       "category": "world",
       "name": "Neymar Jr #10 | Brazil 2026 World Cup Home",
       "quantity": 1,
@@ -203,6 +229,10 @@
       ],
       "size": "Medium",
       "price": 55,
+      "platform_prices": {
+        "Depop": 50,
+        "eBay": 55
+      },
       "category": "world",
       "name": "Michael Olise #11 | France 2026 World Cup Home",
       "quantity": 0,
@@ -256,6 +286,10 @@
       ],
       "size": "M, 4XL",
       "price": 55,
+      "platform_prices": {
+        "Depop": 50,
+        "eBay": 55
+      },
       "category": "world",
       "name": "Kylian Mbappe #10 | France 2026 World Cup Home",
       "quantity": 3,
@@ -263,7 +297,8 @@
         "depop": "https://www.depop.com/jerseysfrmjb/",
         "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
       },
-      "featured": false,
+      "featured": true,
+      "featured_order": 1,
       "sizes": {
         "M": 2,
         "4XL": 1
@@ -406,6 +441,10 @@
       ],
       "size": "L",
       "price": 55,
+      "platform_prices": {
+        "Depop": 50,
+        "eBay": 55
+      },
       "category": "world",
       "name": "Raul #9 | Mexico 2026 World Cup Third (Black)",
       "quantity": 2,
@@ -435,6 +474,10 @@
       ],
       "size": "2XL",
       "price": 55,
+      "platform_prices": {
+        "Depop": 50,
+        "eBay": 55
+      },
       "category": "world",
       "name": "Lamine Yamal #19 | Spain 2026 World Cup Away",
       "quantity": 1,
@@ -464,6 +507,10 @@
       ],
       "size": "Medium",
       "price": 55,
+      "platform_prices": {
+        "Depop": 50,
+        "eBay": 55
+      },
       "category": "world",
       "name": "Christian Pulisic #10 | USA 2026 World Cup Away",
       "quantity": 0,
@@ -522,6 +569,10 @@
         "L": 1
       },
       "price": 55,
+      "platform_prices": {
+        "Depop": 45,
+        "eBay": 50
+      },
       "category": "world",
       "name": "No Name/No Number | Mexico 2026 World Cup White",
       "quantity": 3,
@@ -573,6 +624,10 @@
       ],
       "size": "Medium",
       "price": 55,
+      "platform_prices": {
+        "Depop": 50,
+        "eBay": 55
+      },
       "category": "world",
       "name": "Luis Diaz #7 | Colombia 2026 World Cup Home",
       "quantity": 0,
@@ -597,6 +652,10 @@
       ],
       "size": "Medium",
       "price": 55,
+      "platform_prices": {
+        "Depop": 45,
+        "eBay": 50
+      },
       "category": "world",
       "name": "No Name/No Number | Japan 2026 World Cup Home",
       "quantity": 0,
@@ -621,6 +680,10 @@
       ],
       "size": "Medium",
       "price": 55,
+      "platform_prices": {
+        "Depop": 50,
+        "eBay": 55
+      },
       "category": "world",
       "name": "Achraf Hakimi #2 | Morocco 2026 World Cup Away",
       "quantity": 0,
@@ -648,6 +711,10 @@
         "M": 2
       },
       "price": 40,
+      "platform_prices": {
+        "Depop": 50,
+        "eBay": 55
+      },
       "category": "club",
       "name": "Raphinha #11 | Barcelona 25/26 Home Kit",
       "quantity": 2,
@@ -678,6 +745,10 @@
         "M": 2
       },
       "price": 40,
+      "platform_prices": {
+        "Depop": 50,
+        "eBay": 55
+      },
       "category": "club",
       "name": "Lamine Yamal #10 | Barcelona 25/26 Home Kit",
       "quantity": 2,
@@ -708,6 +779,10 @@
         "M": 2
       },
       "price": 40,
+      "platform_prices": {
+        "Depop": 50,
+        "eBay": 55
+      },
       "category": "club",
       "name": "Kylian Mbappe #10 | Real Madrid 25/26 Home Kit",
       "quantity": 2,
@@ -738,6 +813,10 @@
         "M": 2
       },
       "price": 40,
+      "platform_prices": {
+        "Depop": 50,
+        "eBay": 55
+      },
       "category": "club",
       "name": "Jude Bellingham #5 | Real Madrid 25/26 Home Kit",
       "quantity": 2,
@@ -796,7 +875,7 @@
         "depop": "https://www.depop.com/jerseysfrmjb/",
         "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
       },
-      "featured": true
+      "featured": false
     },
     {
       "sort_order": 260,
@@ -864,6 +943,10 @@
         "M": 1
       },
       "price": 40,
+      "platform_prices": {
+        "Depop": 40,
+        "eBay": 45
+      },
       "category": "club",
       "name": "No Name/No Number | Liverpool 25/26 Home Kit",
       "quantity": 1,
@@ -894,6 +977,10 @@
         "M": 1
       },
       "price": 40,
+      "platform_prices": {
+        "Depop": 40,
+        "eBay": 45
+      },
       "category": "club",
       "name": "No Name/No Number | Manchester United 25/26 Home Kit",
       "quantity": 1,
@@ -952,7 +1039,7 @@
         "depop": "https://www.depop.com/jerseysfrmjb/",
         "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
       },
-      "featured": true
+      "featured": false
     },
     {
       "sort_order": 320,
@@ -993,6 +1080,10 @@
       ],
       "size": "Medium",
       "price": 55,
+      "platform_prices": {
+        "Depop": 55,
+        "eBay": 55
+      },
       "category": "retro",
       "name": "Ronaldo #7 2007/08 Manchester United Away Short Sleeve",
       "quantity": 0,
