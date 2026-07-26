@@ -33,14 +33,14 @@ async function createBoard(env, board) {
   try {
     return await pinterestApi(env, "/boards", {
       method: "POST",
-      body: JSON.stringify(board)
+      body: JSON.stringify({ ...board, privacy: "PUBLIC" })
     });
   } catch (error) {
     if (!/different name|already (?:have|has) a board|board with this name/i.test(error?.message || "")) throw error;
     const suffix = `${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 90 + 10)}`;
     return pinterestApi(env, "/boards", {
       method: "POST",
-      body: JSON.stringify({ ...board, name: `${board.name} ${suffix}` })
+      body: JSON.stringify({ ...board, name: `${board.name} ${suffix}`, privacy: "PUBLIC" })
     });
   }
 }
