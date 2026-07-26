@@ -1494,18 +1494,18 @@ function parseDepopFeedbackPaste(value = "") {
       && candidateIndex < Math.min(entryEnd, index + 4)
       && isDepopStarLine(candidate)
     ));
-    if (ratingIndex < 0) return;
+    const commentStart = ratingIndex < 0 ? index + 1 : ratingIndex + 1;
 
     const dateIndex = lines.findIndex((candidate, candidateIndex) => (
-      candidateIndex > ratingIndex
+      candidateIndex >= commentStart
       && candidateIndex < entryEnd
       && isDepopFeedbackDate(candidate)
     ));
     if (dateIndex < 0) return;
 
-    const comment = lines.slice(ratingIndex + 1, dateIndex).join(" ").trim();
+    const comment = lines.slice(commentStart, dateIndex).join(" ").trim();
     if (!comment) return;
-    const starLine = lines[ratingIndex];
+    const starLine = ratingIndex < 0 ? "5 stars" : lines[ratingIndex];
     addRecord({
       username: usernameMatch[1],
       stars: starLine,
@@ -1515,12 +1515,12 @@ function parseDepopFeedbackPaste(value = "") {
   });
 
   const compactText = cleanEbayPasteLine(value);
-  const compactEntry = /@([a-z0-9._-]+)\s+((?:[\u2605\u2606]\s*){1,5}|[1-5]\s*(?:\/\s*5|(?:out of 5|stars?)))\s+(.+?)\s+((?:about\s+)?(?:a|an|\d+)\s+(?:minute|hour|day|week|month|year)s?\s+ago|today|yesterday)(?=\s+@[a-z0-9._-]+|$)/gi;
+  const compactEntry = /@([a-z0-9._-]+)\s+(?:((?:[\u2605\u2606]\s*){1,5}|[1-5]\s*(?:\/\s*5|(?:out of 5|stars?)))\s+)?(.+?)\s+((?:about\s+)?(?:a|an|\d+)\s+(?:minute|hour|day|week|month|year)s?\s+ago|today|yesterday)(?=\s+@[a-z0-9._-]+|$)/gi;
   let compactMatch;
   while ((compactMatch = compactEntry.exec(compactText)) !== null) {
     addRecord({
       username: compactMatch[1],
-      stars: compactMatch[2],
+      stars: compactMatch[2] || "5 stars",
       comment: compactMatch[3],
       date: compactMatch[4]
     });
