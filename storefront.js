@@ -56,10 +56,10 @@ function escapeHtml(value = "") {
 }
 
 const INVENTORY_IMAGE_REVISIONS = new Map([
-  ["assets/inventory/club-real-front.jpg", "20260726-1"],
-  ["assets/inventory/club-real-back.jpg", "20260726-1"],
-  ["assets/inventory/club-city-front.jpg", "20260726-1"],
-  ["assets/inventory/club-city-back.jpg", "20260726-1"]
+  ["assets/inventory/club-real-front.jpg", "20260726-2"],
+  ["assets/inventory/club-real-back.jpg", "20260726-2"],
+  ["assets/inventory/club-city-front.jpg", "20260726-2"],
+  ["assets/inventory/club-city-back.jpg", "20260726-2"]
 ]);
 
 function inventoryImageSrc(src = "") {
