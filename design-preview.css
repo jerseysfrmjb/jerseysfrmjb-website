@@ -293,7 +293,22 @@ body {
   border-radius: 16px !important;
   background:
     linear-gradient(120deg, #fffdf9, #f5eee9) !important;
+  color: #211819 !important;
   box-shadow: 0 18px 40px #35121d0d;
+}
+
+.restock-banner strong {
+  color: #4e0e24;
+  text-shadow: none;
+}
+
+.restock-banner p {
+  color: #51484a;
+  text-shadow: none;
+}
+
+.restock-banner a {
+  color: #6d203a !important;
 }
 
 /* Category graphics without jersey imagery */
@@ -1806,5 +1821,95 @@ body {
     line-height: 1.2;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 3;
+  }
+}
+
+/* Keep the three homepage featured picks together on mobile. */
+@media (max-width: 639px) {
+  .featured-section {
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+  }
+
+  .featured-grid {
+    width: 100% !important;
+    max-width: none !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+  }
+
+  .featured-card {
+    min-width: 0;
+    height: 100%;
+    display: flex !important;
+    flex-direction: column;
+  }
+
+  .featured-card > img {
+    width: 100% !important;
+    height: clamp(120px, 38vw, 220px) !important;
+    min-height: 0 !important;
+    object-fit: contain !important;
+  }
+
+  .featured-copy {
+    min-width: 0;
+    padding: 7px !important;
+  }
+
+  .featured-copy > span {
+    font-size: 6px;
+    letter-spacing: .35px;
+  }
+
+  .featured-copy h3 {
+    height: 3.45em;
+    margin: 5px 0 6px;
+    font-size: 9px !important;
+    line-height: 1.15;
+    -webkit-line-clamp: 3;
+  }
+
+  .featured-meta {
+    min-height: 18px;
+  }
+
+  .featured-meta p,
+  .featured-copy .featured-meta p {
+    font-size: 7px;
+    letter-spacing: .4px;
+  }
+
+  .featured-copy .platform-availability {
+    gap: 4px;
+    padding-top: 6px;
+  }
+
+  .featured-copy .platform-availability h4 {
+    font-size: 6px;
+    letter-spacing: .45px;
+  }
+
+  .featured-copy .platform-offers {
+    gap: 4px;
+  }
+
+  .featured-copy .platform-offer {
+    padding: 4px;
+    gap: 4px;
+  }
+
+  .featured-copy .platform-offer-label,
+  .featured-copy .platform-offer-label b {
+    font-size: 7px;
+  }
+
+  .featured-copy .platform-buy-button {
+    min-height: 25px;
+    padding: 5px 3px;
+    font-size: 6px;
+    letter-spacing: .15px;
   }
 }
