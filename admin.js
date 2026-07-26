@@ -27,6 +27,7 @@ const importDepopFeedbackButton = document.querySelector("[data-import-depop-fee
 const pinterestBadge = document.querySelector("[data-pinterest-badge]");
 const pinterestStatusLine = document.querySelector("[data-pinterest-status]");
 const pinterestConnect = document.querySelector("[data-pinterest-connect]");
+const createPinterestBoardsButton = document.querySelector("[data-create-pinterest-boards]");
 const refreshPinterest = document.querySelector("[data-refresh-pinterest]");
 const disconnectPinterestButton = document.querySelector("[data-disconnect-pinterest]");
 const pinterestPublisher = document.querySelector("[data-pinterest-publisher]");
@@ -1403,6 +1404,13 @@ async function loadPinterestBoards() {
     ).join("");
     if (!pinterestBoards.length) {
       pinterestBoard.innerHTML = '<option value="">No Pinterest boards found</option>';
+      if (createPinterestBoardsButton) createPinterestBoardsButton.hidden = pinterestConnection?.environment !== "sandbox";
+      if (pinterestStatusLine) {
+        pinterestStatusLine.textContent = "The API Sandbox has separate boards. Create the three Trial boards to publish your test Pin.";
+        pinterestStatusLine.className = "form-status";
+      }
+    } else if (createPinterestBoardsButton) {
+      createPinterestBoardsButton.hidden = true;
     }
     selectSuggestedPinterestBoard(selectedPinterestProduct());
   } catch (error) {
@@ -1414,6 +1422,39 @@ async function loadPinterestBoards() {
   } finally {
     pinterestBoard.disabled = false;
     updatePinterestPublishState();
+  }
+}
+
+async function createPinterestTrialBoards() {
+  if (!pinterestConnection?.connected || createPinterestBoardsButton?.disabled) return;
+  if (createPinterestBoardsButton) {
+    createPinterestBoardsButton.disabled = true;
+    createPinterestBoardsButton.textContent = "Creating...";
+  }
+  if (pinterestStatusLine) {
+    pinterestStatusLine.textContent = "Creating World Cup, Retro, and Club Trial boards...";
+    pinterestStatusLine.className = "form-status";
+  }
+  try {
+    const data = await api("/api/admin/pinterest/boards", { method: "POST", body: "{}" });
+    pinterestBoards = Array.isArray(data.boards) ? data.boards : [];
+    if (pinterestStatusLine) {
+      pinterestStatusLine.textContent = data.created
+        ? `${data.created} Trial boards created. Choose a product to continue.`
+        : "The Trial boards already exist.";
+      pinterestStatusLine.className = "form-status success";
+    }
+    await loadPinterestBoards();
+  } catch (error) {
+    if (pinterestStatusLine) {
+      pinterestStatusLine.textContent = error.message;
+      pinterestStatusLine.className = "form-status error";
+    }
+  } finally {
+    if (createPinterestBoardsButton) {
+      createPinterestBoardsButton.disabled = false;
+      createPinterestBoardsButton.textContent = "Create Trial Boards";
+    }
   }
 }
 
@@ -1431,7 +1472,7 @@ async function loadPinterestStatus() {
     renderPinterestConnection();
     if (pinterestConnection.connected) {
       await loadPinterestBoards();
-      if (pinterestStatusLine) {
+      if (pinterestStatusLine && pinterestBoards.length) {
         const callbackMessage = pinterestCallback === "connected"
           ? "Pinterest connected successfully. Choose a product and board to publish a test Pin."
           : "Pinterest is connected.";
@@ -2515,6 +2556,7 @@ refreshMessages?.addEventListener("click", loadMessages);
 refreshFeedback?.addEventListener("click", loadEbayFeedbackAdmin);
 feedbackFilter?.addEventListener("change", renderEbayFeedbackAdmin);
 refreshPinterest?.addEventListener("click", loadPinterestStatus);
+createPinterestBoardsButton?.addEventListener("click", createPinterestTrialBoards);
 disconnectPinterestButton?.addEventListener("click", disconnectPinterest);
 pinterestProduct?.addEventListener("change", () => renderPinterestProductEditor(true));
 pinterestBoard?.addEventListener("change", updatePinterestPublishState);
