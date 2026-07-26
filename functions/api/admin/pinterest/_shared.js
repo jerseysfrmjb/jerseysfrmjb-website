@@ -1,7 +1,9 @@
 import { adminConfigError, isAuthorized, json, unauthorized } from "../_auth.js";
 
-const PINTEREST_API = "https://api.pinterest.com/v5";
-const PINTEREST_TOKEN_URL = `${PINTEREST_API}/oauth/token`;
+const PINTEREST_APIS = {
+  sandbox: "https://api-sandbox.pinterest.com/v5",
+  production: "https://api.pinterest.com/v5"
+};
 const DEFAULT_REDIRECT_URI = "https://jerseysfrmjb.com/api/admin/pinterest/callback";
 const PINTEREST_SCOPES = ["boards:read", "boards:write", "pins:read", "pins:write"];
 const textEncoder = new TextEncoder();
@@ -21,6 +23,16 @@ export function siteOrigin(env) {
   } catch {
     return "https://jerseysfrmjb.com";
   }
+}
+
+export function pinterestEnvironment(env) {
+  return String(env.PINTEREST_API_ENVIRONMENT || "sandbox").trim().toLowerCase() === "production"
+    ? "production"
+    : "sandbox";
+}
+
+function pinterestApiBase(env) {
+  return PINTEREST_APIS[pinterestEnvironment(env)];
 }
 
 export function pinterestConfigError(env) {
@@ -53,9 +65,15 @@ export async function ensurePinterestConnectionTable(env) {
     scope TEXT NOT NULL DEFAULT '',
     access_expires_at INTEGER NOT NULL,
     refresh_expires_at INTEGER,
+    environment TEXT NOT NULL DEFAULT 'sandbox',
     connected_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`).run();
+  try {
+    await env.DB.prepare("ALTER TABLE pinterest_connections ADD COLUMN environment TEXT NOT NULL DEFAULT 'production'").run();
+  } catch (error) {
+    if (!/duplicate column|already exists/i.test(String(error?.message || error || ""))) throw error;
+  }
 }
 
 function bytesToBase64(bytes) {
@@ -136,7 +154,7 @@ async function readPinterestResponse(response) {
 }
 
 async function requestToken(env, parameters) {
-  const response = await fetch(PINTEREST_TOKEN_URL, {
+  const response = await fetch(`${pinterestApiBase(env)}/oauth/token`, {
     method: "POST",
     headers: {
       Authorization: basicAuthorization(env),
@@ -174,9 +192,10 @@ export async function savePinterestTokens(env, data, previous = null) {
       scope,
       access_expires_at,
       refresh_expires_at,
+      environment,
       connected_at,
       updated_at
-    ) VALUES (1, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     ON CONFLICT(id) DO UPDATE SET
       access_token_encrypted = excluded.access_token_encrypted,
       refresh_token_encrypted = excluded.refresh_token_encrypted,
@@ -184,6 +203,7 @@ export async function savePinterestTokens(env, data, previous = null) {
       scope = excluded.scope,
       access_expires_at = excluded.access_expires_at,
       refresh_expires_at = excluded.refresh_expires_at,
+      environment = excluded.environment,
       updated_at = CURRENT_TIMESTAMP`)
     .bind(
       await encryptToken(env, accessToken),
@@ -191,7 +211,8 @@ export async function savePinterestTokens(env, data, previous = null) {
       String(data.token_type || previous?.token_type || "bearer"),
       String(data.scope || previous?.scope || PINTEREST_SCOPES.join(" ")),
       accessExpiresAt,
-      refreshExpiresAt
+      refreshExpiresAt,
+      pinterestEnvironment(env)
     )
     .run();
 }
@@ -230,6 +251,9 @@ async function refreshPinterestTokens(env, connection) {
 async function pinterestAccessToken(env, forceRefresh = false) {
   let connection = await getPinterestConnection(env);
   if (!connection) throw new Error("Pinterest is not connected.");
+  if (String(connection.environment || "production") !== pinterestEnvironment(env)) {
+    throw new Error(`Pinterest must be reconnected for ${pinterestEnvironment(env) === "sandbox" ? "API Sandbox" : "production"} access.`);
+  }
   const now = Math.floor(Date.now() / 1000);
   if (forceRefresh || Number(connection.access_expires_at || 0) <= now + 300) {
     connection = await refreshPinterestTokens(env, connection);
@@ -239,7 +263,7 @@ async function pinterestAccessToken(env, forceRefresh = false) {
 
 export async function pinterestApi(env, path, options = {}) {
   const execute = async forceRefresh => {
-    const response = await fetch(`${PINTEREST_API}${path}`, {
+    const response = await fetch(`${pinterestApiBase(env)}${path}`, {
       ...options,
       headers: {
         Accept: "application/json",

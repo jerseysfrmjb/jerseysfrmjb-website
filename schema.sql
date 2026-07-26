@@ -138,6 +138,7 @@ CREATE TABLE IF NOT EXISTS pinterest_connections (
   scope TEXT NOT NULL DEFAULT '',
   access_expires_at INTEGER NOT NULL,
   refresh_expires_at INTEGER,
+  environment TEXT NOT NULL DEFAULT 'sandbox',
   connected_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

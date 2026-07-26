@@ -1373,12 +1373,15 @@ function renderPinterestProductEditor(resetText = false) {
 
 function renderPinterestConnection() {
   const connected = Boolean(pinterestConnection?.connected);
+  const reconnectRequired = Boolean(pinterestConnection?.reconnect_required);
+  const hasConnection = Boolean(pinterestConnection?.has_connection || connected);
   if (pinterestBadge) {
-    pinterestBadge.textContent = connected ? "Connected" : "Not connected";
+    pinterestBadge.textContent = connected ? "Connected" : reconnectRequired ? "Reconnect required" : "Not connected";
     pinterestBadge.className = `pinterest-connection-badge ${connected ? "connected" : "disconnected"}`;
   }
   if (pinterestConnect) pinterestConnect.hidden = connected;
-  if (disconnectPinterestButton) disconnectPinterestButton.hidden = !connected;
+  if (pinterestConnect) pinterestConnect.textContent = reconnectRequired ? "Reconnect Pinterest" : "Connect Pinterest";
+  if (disconnectPinterestButton) disconnectPinterestButton.hidden = !hasConnection;
   if (pinterestPublisher) pinterestPublisher.hidden = !connected;
   if (!connected && pinterestBoard) {
     pinterestBoard.innerHTML = '<option value="">Connect Pinterest to load boards</option>';
@@ -1436,7 +1439,9 @@ async function loadPinterestStatus() {
         pinterestStatusLine.className = "form-status success";
       }
     } else if (pinterestStatusLine) {
-      pinterestStatusLine.textContent = "Connect your Pinterest business account to begin.";
+      pinterestStatusLine.textContent = pinterestConnection.reconnect_required
+        ? "Reconnect Pinterest once to authorize the API Sandbox required for Trial access."
+        : "Connect your Pinterest business account to begin.";
       pinterestStatusLine.className = "form-status";
     }
     if (pinterestCallback === "error" && pinterestStatusLine) {
