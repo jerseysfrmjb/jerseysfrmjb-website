@@ -3,15 +3,15 @@ import { pinterestApi, requirePinterestAdmin } from "./_shared.js";
 
 const TRIAL_BOARDS = [
   {
-    name: "World Cup Jerseys",
+    name: "JerseysFrmJB Trial - World Cup Jerseys",
     description: "International football jerseys and World Cup-inspired finds from JerseysFrmJB."
   },
   {
-    name: "Retro Football Jerseys",
+    name: "JerseysFrmJB Trial - Retro Football Jerseys",
     description: "Classic football shirts, iconic players, and retro jersey finds from JerseysFrmJB."
   },
   {
-    name: "Club Football Jerseys",
+    name: "JerseysFrmJB Trial - Club Football Jerseys",
     description: "Current club football jerseys and player shirts from JerseysFrmJB."
   }
 ];
@@ -27,6 +27,22 @@ function normalizeBoard(board) {
 async function listBoards(env) {
   const data = await pinterestApi(env, "/boards?page_size=100");
   return (data.items || []).map(normalizeBoard).filter(board => board.id);
+}
+
+async function createBoard(env, board) {
+  try {
+    return await pinterestApi(env, "/boards", {
+      method: "POST",
+      body: JSON.stringify(board)
+    });
+  } catch (error) {
+    if (!/different name|already (?:have|has) a board|board with this name/i.test(error?.message || "")) throw error;
+    const suffix = `${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 90 + 10)}`;
+    return pinterestApi(env, "/boards", {
+      method: "POST",
+      body: JSON.stringify({ ...board, name: `${board.name} ${suffix}` })
+    });
+  }
 }
 
 export async function onRequestGet(context) {
@@ -51,10 +67,7 @@ export async function onRequestPost(context) {
     const created = [];
     for (const board of TRIAL_BOARDS) {
       if (existingNames.has(board.name.toLowerCase())) continue;
-      const result = await pinterestApi(context.env, "/boards", {
-        method: "POST",
-        body: JSON.stringify(board)
-      });
+      const result = await createBoard(context.env, board);
       const normalized = normalizeBoard(result);
       if (normalized.id) created.push(normalized);
     }

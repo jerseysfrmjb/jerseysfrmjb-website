@@ -1437,14 +1437,20 @@ async function createPinterestTrialBoards() {
   }
   try {
     const data = await api("/api/admin/pinterest/boards", { method: "POST", body: "{}" });
-    pinterestBoards = Array.isArray(data.boards) ? data.boards : [];
+    pinterestBoards = (Array.isArray(data.boards) ? data.boards : [])
+      .filter(board => !/\bcustomer\b.*\bphoto|\bphoto\b.*\bcustomer\b/i.test(board.name));
+    pinterestBoard.innerHTML = '<option value="">Choose a board</option>' + pinterestBoards.map(board =>
+      `<option value="${escapeHtml(board.id)}">${escapeHtml(board.name)}${board.privacy && board.privacy !== "PUBLIC" ? ` (${escapeHtml(board.privacy.toLowerCase())})` : ""}</option>`
+    ).join("");
+    selectSuggestedPinterestBoard(selectedPinterestProduct());
+    if (createPinterestBoardsButton) createPinterestBoardsButton.hidden = Boolean(pinterestBoards.length);
+    updatePinterestPublishState();
     if (pinterestStatusLine) {
       pinterestStatusLine.textContent = data.created
         ? `${data.created} Trial boards created. Choose a product to continue.`
         : "The Trial boards already exist.";
       pinterestStatusLine.className = "form-status success";
     }
-    await loadPinterestBoards();
   } catch (error) {
     if (pinterestStatusLine) {
       pinterestStatusLine.textContent = error.message;
