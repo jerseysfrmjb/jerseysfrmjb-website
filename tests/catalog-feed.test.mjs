@@ -4,8 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { buildCatalogProducts, CSV_COLUMNS } from "../functions/api/catalog/_products.js";
-import { onRequestGet as getCsv } from "../functions/api/catalog/products.csv.js";
-import { onRequestGet as getJson } from "../functions/api/catalog/products.json.js";
+import { onRequestGet as getCatalog } from "../functions/api/catalog/[format].js";
 
 const workspace = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const inventory = JSON.parse(await readFile(path.join(workspace, "data", "inventory.json"), "utf8"));
@@ -88,7 +87,7 @@ const rows = [
 
 const env = { DB: testDatabase(rows) };
 const request = new Request("https://jerseysfrmjb.com/api/catalog/products.json");
-const jsonResponse = await getJson({ env, request });
+const jsonResponse = await getCatalog({ env, request, params: { format: "products.json" } });
 
 assert.equal(jsonResponse.status, 200);
 assert.match(jsonResponse.headers.get("content-type"), /^application\/json/);
@@ -145,9 +144,10 @@ for (const product of payload.products) {
   }
 }
 
-const csvResponse = await getCsv({
+const csvResponse = await getCatalog({
   env,
-  request: new Request("https://jerseysfrmjb.com/api/catalog/products.csv")
+  request: new Request("https://jerseysfrmjb.com/api/catalog/products.csv"),
+  params: { format: "products.csv" }
 });
 assert.equal(csvResponse.status, 200);
 assert.match(csvResponse.headers.get("content-type"), /^text\/csv/);
@@ -163,12 +163,21 @@ assert.match(csv, /"in stock"/);
 assert.match(csv, /"out of stock"/);
 assert.doesNotMatch(csv, /Depop|eBay|Local|Other/);
 
-const missingDbResponse = await getJson({
+const missingDbResponse = await getCatalog({
   env: {},
-  request: new Request("https://jerseysfrmjb.com/api/catalog/products.json")
+  request: new Request("https://jerseysfrmjb.com/api/catalog/products.json"),
+  params: { format: "products.json" }
 });
 assert.equal(missingDbResponse.status, 503);
 assert.equal(missingDbResponse.headers.get("cache-control"), "no-store");
+
+const unknownFormatResponse = await getCatalog({
+  env,
+  request: new Request("https://jerseysfrmjb.com/api/catalog/unknown.xml"),
+  params: { format: "unknown.xml" }
+});
+assert.equal(unknownFormatResponse.status, 404);
+assert.equal(unknownFormatResponse.headers.get("cache-control"), "no-store");
 
 const storefrontSource = await readFile(path.join(workspace, "storefront.js"), "utf8");
 assert.match(storefrontSource, /id="product-\$\{escapeHtml\(item\.id\)\}"/);
