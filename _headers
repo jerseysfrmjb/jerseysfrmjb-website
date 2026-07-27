@@ -4,5 +4,7 @@
   Cache-Control: no-store, no-cache, must-revalidate
 /admin.js
   Cache-Control: no-store, no-cache, must-revalidate
+/storefront.js
+  Cache-Control: no-store, no-cache, must-revalidate
 /api/*
   Cache-Control: no-store, no-cache, must-revalidate

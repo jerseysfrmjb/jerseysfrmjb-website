@@ -2370,3 +2370,9 @@
     min-width: 0;
   }
 }
+.google-inventory article.catalog-product-target {
+  outline: 3px solid #7d1738;
+  outline-offset: 4px;
+  box-shadow: 0 18px 42px rgba(91, 19, 48, 0.22);
+  scroll-margin-top: 8rem;
+}

@@ -70,6 +70,33 @@ function inventoryImageSrc(src = "") {
   return `${value}${value.includes("?") ? "&" : "?"}v=${revision}`;
 }
 
+function requestedCatalogProductId() {
+  const queryId = new URLSearchParams(window.location.search).get("product")?.trim();
+  if (queryId) return queryId;
+  try {
+    const hash = decodeURIComponent(window.location.hash.slice(1));
+    return hash.startsWith("product-") ? hash.slice("product-".length) : "";
+  } catch {
+    return "";
+  }
+}
+
+function focusRequestedCatalogProduct(grid) {
+  const requestedId = requestedCatalogProductId();
+  if (!requestedId) return;
+  const card = [...grid.querySelectorAll("article[data-id]")]
+    .find(item => item.dataset.id === requestedId);
+  if (!card) return;
+
+  card.hidden = false;
+  card.classList.add("catalog-product-target");
+  card.setAttribute("tabindex", "-1");
+  window.requestAnimationFrame(() => {
+    card.scrollIntoView({ behavior: "smooth", block: "center" });
+    card.focus({ preventScroll: true });
+  });
+}
+
 function totalQuantity(item) {
   const sizes = item?.sizes || {};
   const sizeTotal = Object.values(sizes).reduce((sum, qty) => sum + Math.max(0, Math.floor(Number(qty || 0))), 0);
@@ -317,7 +344,7 @@ function renderProductCard(item) {
   const sizes = displaySize(item);
 
   return `
-    <article data-stock="${available ? "available" : "sold-out"}" data-category="${escapeHtml(item.category || "")}" data-search="${escapeHtml(searchText(item))}" data-size="${escapeHtml(filterSizeTokens(item).join("|"))}" data-size-display="${escapeHtml(sizes)}" data-id="${escapeHtml(item.id)}">
+    <article id="product-${escapeHtml(item.id)}" data-stock="${available ? "available" : "sold-out"}" data-category="${escapeHtml(item.category || "")}" data-search="${escapeHtml(searchText(item))}" data-size="${escapeHtml(filterSizeTokens(item).join("|"))}" data-size-display="${escapeHtml(sizes)}" data-id="${escapeHtml(item.id)}">
       <div class="product-photo product-slider" data-slider>
         <div class="slides product-slides">${renderSlides(item)}</div>
         <div class="product-controls"><button data-prev type="button" aria-label="Previous photo">&lsaquo;</button><div class="slider-dots"></div><button data-next type="button" aria-label="Next photo">&rsaquo;</button></div>
@@ -520,6 +547,7 @@ async function renderInventoryGrids() {
     if (updated) updated.textContent = formatInventoryUpdated(data.settings?.inventory_updated_at || data.updated_at || "");
     initSliders(grid);
     setupFilters(grid.closest(".inventory-page")?.querySelector(".inventory-filter, .shop-all-controls"), [...grid.querySelectorAll("article")]);
+    focusRequestedCatalogProduct(grid);
   }));
 }
 
