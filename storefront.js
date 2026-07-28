@@ -94,6 +94,7 @@ function focusRequestedCatalogProduct(grid) {
   window.requestAnimationFrame(() => {
     card.scrollIntoView({ behavior: "smooth", block: "center" });
     card.focus({ preventScroll: true });
+    window.JerseysMetaPixel?.trackProductView(card);
   });
 }
 
@@ -233,6 +234,26 @@ function renderPlatformAvailability(item = {}, available = true) {
     </section>`;
 }
 
+function metaProductPrice(item = {}) {
+  const facebookPrice = item.platform_prices?.Facebook;
+  const value = facebookPrice === null || facebookPrice === undefined || String(facebookPrice).trim() === ""
+    ? item.price
+    : facebookPrice;
+  const amount = Number(value);
+  return Number.isFinite(amount) && amount >= 0 ? amount.toFixed(2) : "";
+}
+
+function metaProductAttributes(item = {}, available = true) {
+  return [
+    'data-meta-product="true"',
+    `data-product-id="${escapeHtml(item.id || "")}"`,
+    `data-product-name="${escapeHtml(item.name || "")}"`,
+    `data-product-value="${escapeHtml(metaProductPrice(item))}"`,
+    `data-product-category="${escapeHtml(categoryLabel(item.category))}"`,
+    `data-product-availability="${available ? "in stock" : "out of stock"}"`
+  ].join(" ");
+}
+
 function formatInventoryUpdated(value = "") {
   if (!value) return "";
   const date = new Date(String(value).includes("T") ? value : value + "Z");
@@ -344,7 +365,7 @@ function renderProductCard(item) {
   const sizes = displaySize(item);
 
   return `
-    <article id="product-${escapeHtml(item.id)}" data-stock="${available ? "available" : "sold-out"}" data-category="${escapeHtml(item.category || "")}" data-search="${escapeHtml(searchText(item))}" data-size="${escapeHtml(filterSizeTokens(item).join("|"))}" data-size-display="${escapeHtml(sizes)}" data-id="${escapeHtml(item.id)}">
+    <article id="product-${escapeHtml(item.id)}" ${metaProductAttributes(item, available)} data-stock="${available ? "available" : "sold-out"}" data-category="${escapeHtml(item.category || "")}" data-search="${escapeHtml(searchText(item))}" data-size="${escapeHtml(filterSizeTokens(item).join("|"))}" data-size-display="${escapeHtml(sizes)}" data-id="${escapeHtml(item.id)}">
       <div class="product-photo product-slider" data-slider>
         <div class="slides product-slides">${renderSlides(item)}</div>
         <div class="product-controls"><button data-prev type="button" aria-label="Previous photo">&lsaquo;</button><div class="slider-dots"></div><button data-next type="button" aria-label="Next photo">&rsaquo;</button></div>
@@ -362,7 +383,7 @@ function renderFeaturedCard(item, index) {
   const image = item.photos?.[0] || {};
 
   return `
-    <article class="featured-card" data-stock="${available ? "available" : "sold-out"}">
+    <article class="featured-card" ${metaProductAttributes(item, available)} data-stock="${available ? "available" : "sold-out"}">
       <img src="${escapeHtml(inventoryImageSrc(image.src))}" alt="${escapeHtml(image.alt || item.name)}">
       <div class="featured-copy">
         <span>FEATURED JERSEY ${String(index + 1).padStart(2, "0")}</span>
@@ -543,6 +564,7 @@ async function renderInventoryGrids() {
     const data = await fetchInventory(params);
     const items = sortInventory(data.items || []);
     grid.innerHTML = items.map(renderProductCard).join("");
+    window.JerseysMetaPixel?.observeProducts(grid);
     const updated = grid.closest(".inventory-page")?.querySelector("[data-inventory-updated]");
     if (updated) updated.textContent = formatInventoryUpdated(data.settings?.inventory_updated_at || data.updated_at || "");
     initSliders(grid);
@@ -560,6 +582,7 @@ async function renderFeaturedGrid() {
     .sort((a, b) => Number(a.featured_order || 999) - Number(b.featured_order || 999))
     .slice(0, 3);
   grid.innerHTML = items.map(renderFeaturedCard).join("");
+  window.JerseysMetaPixel?.observeProducts(grid);
 }
 
 async function renderHomepageStats() {
