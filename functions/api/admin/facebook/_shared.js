@@ -1,6 +1,7 @@
 import { adminConfigError, isAuthorized, json, unauthorized } from "../_auth.js";
 
 const DEFAULT_APP_ID = "1028637966593790";
+const DEFAULT_PAGE_ID = "1196832170185323";
 const DEFAULT_GRAPH_VERSION = "v25.0";
 const DEFAULT_REDIRECT_URI = "https://jerseysfrmjb.com/api/admin/facebook/callback";
 const FACEBOOK_SCOPES = ["pages_show_list", "pages_read_engagement", "pages_manage_posts"];
@@ -190,20 +191,59 @@ async function exchangeAuthorizationCode(env, code) {
 }
 
 export async function listManagedPages(env, userAccessToken) {
-  const data = await graphRequest(
-    env,
-    "/me/accounts?fields=id,name,access_token,tasks&limit=100",
-    {},
-    userAccessToken
-  );
-  return (Array.isArray(data.data) ? data.data : [])
-    .filter(page => page?.id && page?.name && page?.access_token)
-    .map(page => ({
+  let accountsError = null;
+  let data = {};
+  try {
+    data = await graphRequest(
+      env,
+      "/me/accounts?fields=id,name,access_token,tasks&limit=100",
+      {},
+      userAccessToken
+    );
+  } catch (error) {
+    accountsError = error;
+  }
+
+  const normalizePage = page => {
+    if (!page?.id || !page?.name || !page?.access_token) return null;
+    return {
       id: String(page.id),
       name: String(page.name),
       access_token: String(page.access_token),
       tasks: Array.isArray(page.tasks) ? page.tasks.map(String) : []
-    }));
+    };
+  };
+  const pages = (Array.isArray(data.data) ? data.data : [])
+    .map(normalizePage)
+    .filter(Boolean);
+
+  // Business Login can grant a selected Page without including it in
+  // /me/accounts. Meta supports retrieving that Page's token directly.
+  const preferredPageId = String(env.FACEBOOK_PAGE_ID || DEFAULT_PAGE_ID).trim();
+  if (preferredPageId && !pages.some(page => page.id === preferredPageId)) {
+    try {
+      const preferredPage = normalizePage(await graphRequest(
+        env,
+        `/${encodeURIComponent(preferredPageId)}?fields=id,name,access_token,tasks`,
+        {},
+        userAccessToken
+      ));
+      if (preferredPage) pages.unshift(preferredPage);
+    } catch (error) {
+      if (!pages.length) {
+        const lookupError = new Error(
+          `Facebook could not return a publishing token for the selected Page. ${error.message}`
+        );
+        lookupError.status = error.status;
+        lookupError.code = error.code;
+        lookupError.subcode = error.subcode;
+        throw lookupError;
+      }
+    }
+  }
+
+  if (!pages.length && accountsError) throw accountsError;
+  return pages;
 }
 
 export async function saveFacebookAuthorization(env, authorization) {
@@ -214,7 +254,7 @@ export async function saveFacebookAuthorization(env, authorization) {
     throw new Error("No manageable Facebook Pages were returned. Confirm your personal account has Page content access.");
   }
 
-  const preferredPageId = String(env.FACEBOOK_PAGE_ID || "").trim();
+  const preferredPageId = String(env.FACEBOOK_PAGE_ID || DEFAULT_PAGE_ID).trim();
   const selectedPage = pages.find(page => page.id === preferredPageId)
     || (pages.length === 1 ? pages[0] : null);
   const expiresIn = Math.max(60, Number(authorization.expires_in || 0));
