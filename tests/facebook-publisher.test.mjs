@@ -27,6 +27,8 @@ assert.match(adminSource, /eBay:/);
 assert.match(adminSource, /Depop:/);
 assert.match(adminSource, /saveFacebookDraft/);
 assert.match(adminSource, /markFacebookPostAsPosted/);
+assert.match(adminSource, /facebookEditor\?\.scrollIntoView/);
+assert.match(adminSource, /facebook-editor-highlight/);
 assert.doesNotMatch(adminSource, /instagram_content_publish|graph\.instagram\.com/);
 
 for (const sql of [schema, migration]) {

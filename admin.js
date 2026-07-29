@@ -47,6 +47,7 @@ const facebookProducts = document.querySelector("[data-facebook-products]");
 const facebookProductSearch = document.querySelector("[data-facebook-product-search]");
 const facebookSelectionCount = document.querySelector("[data-facebook-selection-count]");
 const generateFacebookPostButton = document.querySelector("[data-generate-facebook-post]");
+const facebookEditor = document.querySelector("[data-facebook-editor]");
 const facebookCaption = document.querySelector("[data-facebook-caption]");
 const facebookCaptionCount = document.querySelector("[data-facebook-caption-count]");
 const facebookPhotos = document.querySelector("[data-facebook-photos]");
@@ -1808,7 +1809,7 @@ function renderFacebookHistory() {
           <p>${escapeHtml(post.caption).replace(/\n/g, "<br>")}</p>
         </div>
         <div class="facebook-history-actions">
-          <button type="button" data-facebook-history-load="${escapeHtml(post.id)}">Open</button>
+          <button type="button" data-facebook-history-load="${escapeHtml(post.id)}">${posted ? "View Post" : "Open Draft"}</button>
           <button type="button" data-facebook-history-copy="${escapeHtml(post.id)}">Copy Text</button>
           ${posted
             ? ""
@@ -1841,6 +1842,9 @@ function openFacebookHistoryPost(post) {
       : "Saved draft opened. Copy it into Meta Business Suite when ready.",
     "success"
   );
+  facebookEditor?.scrollIntoView({ behavior: "smooth", block: "start" });
+  facebookEditor?.classList.add("facebook-editor-highlight");
+  window.setTimeout(() => facebookEditor?.classList.remove("facebook-editor-highlight"), 1600);
 }
 
 async function loadFacebookHistory() {

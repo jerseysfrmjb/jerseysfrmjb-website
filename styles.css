@@ -3198,6 +3198,16 @@
   background: var(--facebook-soft);
 }
 
+.facebook-post-editor {
+  scroll-margin-top: 18px;
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+
+.facebook-post-editor.facebook-editor-highlight {
+  border-color: var(--maroon);
+  box-shadow: 0 0 0 4px rgba(109, 32, 58, .14);
+}
+
 .facebook-product-picker,
 .facebook-post-editor,
 .facebook-history-section {
