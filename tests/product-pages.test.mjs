@@ -149,6 +149,7 @@ assert.match(inStockHtml, />Medium<\/strong>/);
 assert.match(inStockHtml, /width="1280" height="1280" loading="eager"/);
 assert.match(inStockHtml, /Questions about this jersey/);
 assert.doesNotMatch(inStockHtml, /What is the condition of this jersey|>Condition<\/dt>|See marketplace listing/);
+assert.doesNotMatch(inStockHtml, /href="[^"]*\.html/);
 assert.match(inStockHtml, /5\.0 · 2 approved reviews/);
 assert.doesNotMatch(inStockHtml, /Total stock|Stock quantity|\d+\s+(?:available|remaining)|quantity/i);
 assert.match(inStockHtml, /does not process checkout on this page/);

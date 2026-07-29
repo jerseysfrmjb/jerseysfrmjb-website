@@ -213,14 +213,32 @@ assert.match(sitemap, /<loc>https:\/\/jerseysfrmjb\.com\/teams\/barcelona<\/loc>
 assert.match(sitemap, /<loc>https:\/\/jerseysfrmjb\.com\/players\/lionel-messi<\/loc>/);
 assert.match(sitemap, /<loc>https:\/\/jerseysfrmjb\.com\/competitions\/world-cup<\/loc>/);
 assert.match(sitemap, /<loc>https:\/\/jerseysfrmjb\.com\/products\/world-argentina-messi-home<\/loc>/);
+assert.match(sitemap, /<loc>https:\/\/jerseysfrmjb\.com\/shop-all<\/loc>/);
+assert.match(sitemap, /<loc>https:\/\/jerseysfrmjb\.com\/size-guide<\/loc>/);
 assert.match(sitemap, /<image:image>/);
 assert.match(sitemap, /<image:title>Lionel Messi Argentina 2026 Home soccer jersey front view<\/image:title>/);
-assert.doesNotMatch(sitemap, /<loc>https:\/\/jerseysfrmjb\.com\/index\.html<\/loc>/);
+assert.doesNotMatch(sitemap, /\.html<\/loc>/);
 const sitemapLocations = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => match[1]);
 assert.equal(new Set(sitemapLocations).size, sitemapLocations.length, "sitemap has no duplicate URLs");
 
 const robots = await readFile(path.join(workspace, "robots.txt"), "utf8");
 assert.match(robots, /Sitemap: https:\/\/jerseysfrmjb\.com\/sitemap\.xml/);
+
+for (const file of [
+  "index.html",
+  "shop-all.html",
+  "worldcup-jerseys.html",
+  "club-jerseys.html",
+  "retro-jerseys.html",
+  "size-guide.html",
+  "privacy.html"
+]) {
+  const html = await readFile(path.join(workspace, file), "utf8");
+  assert.doesNotMatch(html, /https:\/\/jerseysfrmjb\.com\/[^"]+\.html/);
+  assert.doesNotMatch(html, /href="[^"]*\.html/);
+}
+const clubPage = await readFile(path.join(workspace, "club-jerseys.html"), "utf8");
+assert.doesNotMatch(clubPage, /condition|Condition/);
 
 const storefront = await readFile(path.join(workspace, "storefront.js"), "utf8");
 assert.match(storefront, /SEARCH_ALIASES/);

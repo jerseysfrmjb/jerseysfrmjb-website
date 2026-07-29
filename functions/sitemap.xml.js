@@ -7,12 +7,12 @@ import {
 
 const STATIC_PAGES = [
   "/",
-  "/shop-all.html",
-  "/worldcup-jerseys.html",
-  "/club-jerseys.html",
-  "/retro-jerseys.html",
-  "/size-guide.html",
-  "/privacy.html"
+  "/shop-all",
+  "/worldcup-jerseys",
+  "/club-jerseys",
+  "/retro-jerseys",
+  "/size-guide",
+  "/privacy"
 ];
 
 function xmlEscape(value = "") {

@@ -1249,9 +1249,9 @@ function showPanel() {
 }
 
 const PINTEREST_CATEGORY_PAGES = {
-  world: "worldcup-jerseys.html",
-  club: "club-jerseys.html",
-  retro: "retro-jerseys.html"
+  world: "/worldcup-jerseys",
+  club: "/club-jerseys",
+  retro: "/retro-jerseys"
 };
 
 function pinterestAvailableProducts() {
@@ -1261,8 +1261,8 @@ function pinterestAvailableProducts() {
 }
 
 function pinterestProductLink(item) {
-  const path = PINTEREST_CATEGORY_PAGES[item?.category] || "shop-all.html";
-  return `https://jerseysfrmjb.com/${path}`;
+  const path = PINTEREST_CATEGORY_PAGES[item?.category] || "/shop-all";
+  return new URL(path, "https://jerseysfrmjb.com").toString();
 }
 
 function pinterestDefaultDescription(item) {

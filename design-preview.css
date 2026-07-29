@@ -376,21 +376,21 @@ body {
   box-shadow: inset 0 0 0 1px #ffffff16;
 }
 
-.category-list a[href="retro-jerseys.html"]::before {
+.category-list a[href="/retro-jerseys"]::before {
   content: "90";
   background:
     repeating-linear-gradient(-45deg, #ffffff08 0 7px, transparent 7px 14px),
     linear-gradient(145deg, #b16b30, #522411);
 }
 
-.category-list a[href="club-jerseys.html"]::before {
+.category-list a[href="/club-jerseys"]::before {
   content: "XI";
   background:
     radial-gradient(circle at center, transparent 0 32%, #ffffff16 32.5% 33.5%, transparent 34%),
     linear-gradient(145deg, #17483a, #0e241e);
 }
 
-.category-list a[href="size-guide.html"]::before {
+.category-list a[href="/size-guide"]::before {
   content: "FIT";
   background:
     repeating-linear-gradient(90deg, #ffffff18 0 1px, transparent 1px 17px),
@@ -1357,7 +1357,7 @@ body {
     font-size: 27px;
   }
 
-  .category-list a[href="size-guide.html"]::before {
+  .category-list a[href="/size-guide"]::before {
     font-size: 21px;
   }
 

@@ -135,9 +135,9 @@ function marketplaceUrl(value, hosts) {
 }
 
 function categoryDetails(category = "") {
-  if (category === "world") return { label: "International Team Jerseys", href: "/worldcup-jerseys.html" };
-  if (category === "retro") return { label: "Retro Jerseys", href: "/retro-jerseys.html" };
-  return { label: "Club Jerseys", href: "/club-jerseys.html" };
+  if (category === "world") return { label: "International Team Jerseys", href: "/worldcup-jerseys" };
+  if (category === "retro") return { label: "Retro Jerseys", href: "/retro-jerseys" };
+  return { label: "Club Jerseys", href: "/club-jerseys" };
 }
 
 export function buildSeoProduct(row = {}, options = {}) {
@@ -420,7 +420,7 @@ function collectionSchema(products, kind, name, canonicalUrl, description) {
             "@type": "ListItem",
             position: 2,
             name: "Shop All",
-            item: `${DEFAULT_SITE_ORIGIN}/shop-all.html`
+            item: `${DEFAULT_SITE_ORIGIN}/shop-all`
           },
           {
             "@type": "ListItem",
@@ -453,28 +453,28 @@ function headerMarkup() {
   return `
     <header class="site-header">
       <button class="menu-toggle" type="button" aria-label="Open menu" aria-expanded="false">&#9776;</button>
-      <a class="site-name" href="/index.html">Jerseysfrmjb</a>
+      <a class="site-name" href="/">Jerseysfrmjb</a>
       <nav class="desktop-nav">
-        <a href="/index.html">Home</a><a href="/shop-all.html">Shop All</a>
-        <a href="/worldcup-jerseys.html">World Cup Jerseys</a><a href="/retro-jerseys.html">Retro Jerseys</a>
-        <a href="/club-jerseys.html">Club Jerseys</a><a href="/size-guide.html">Size Guide</a>
+        <a href="/">Home</a><a href="/shop-all">Shop All</a>
+        <a href="/worldcup-jerseys">World Cup Jerseys</a><a href="/retro-jerseys">Retro Jerseys</a>
+        <a href="/club-jerseys">Club Jerseys</a><a href="/size-guide">Size Guide</a>
       </nav>
     </header>
     <aside class="drawer" aria-hidden="true">
       <button class="drawer-close" type="button" aria-label="Close menu">&times;</button>
-      <a href="/index.html">Home</a><a href="/shop-all.html">Shop All</a>
-      <a href="/worldcup-jerseys.html">World Cup Jerseys</a><a href="/retro-jerseys.html">Retro Jerseys</a>
-      <a href="/club-jerseys.html">Club Jerseys</a><a href="/size-guide.html">Size Guide</a>
+      <a href="/">Home</a><a href="/shop-all">Shop All</a>
+      <a href="/worldcup-jerseys">World Cup Jerseys</a><a href="/retro-jerseys">Retro Jerseys</a>
+      <a href="/club-jerseys">Club Jerseys</a><a href="/size-guide">Size Guide</a>
     </aside><div class="drawer-backdrop"></div>`;
 }
 
 function footerMarkup() {
   return `
     <footer class="site-footer"><div class="footer-shell">
-      <div class="footer-brand"><img src="/assets/jerseysfrmjb-logo.jpg" alt="JerseysFrmJB logo" width="120" height="120" loading="lazy"><a class="footer-main" href="/index.html">JerseysFrmJB</a><p>200+ Jerseys Sold</p><p>Based in Maryland</p></div>
+      <div class="footer-brand"><img src="/assets/jerseysfrmjb-logo.jpg" alt="JerseysFrmJB logo" width="120" height="120" loading="lazy"><a class="footer-main" href="/">JerseysFrmJB</a><p>200+ Jerseys Sold</p><p>Based in Maryland</p></div>
       <nav class="footer-links" aria-label="Footer navigation">
-        <section><h3>Shop</h3><a href="/shop-all.html">Shop All</a><a href="/worldcup-jerseys.html">World Cup Jerseys</a><a href="/club-jerseys.html">Club Jerseys</a><a href="/retro-jerseys.html">Retro Jerseys</a></section>
-        <section><h3>Help</h3><a href="/size-guide.html">Size Guide</a><a href="/privacy.html">Privacy</a><a href="/index.html#contact-form">Contact</a></section>
+        <section><h3>Shop</h3><a href="/shop-all">Shop All</a><a href="/worldcup-jerseys">World Cup Jerseys</a><a href="/club-jerseys">Club Jerseys</a><a href="/retro-jerseys">Retro Jerseys</a></section>
+        <section><h3>Help</h3><a href="/size-guide">Size Guide</a><a href="/privacy">Privacy</a><a href="/#contact-form">Contact</a></section>
         <section><h3>Marketplaces</h3><a href="https://www.ebay.com/usr/jerseysfrmjb" target="_blank" rel="noopener">eBay</a><a href="https://www.depop.com/jerseysfrmjb/" target="_blank" rel="noopener">Depop</a></section>
       </nav>
     </div></footer>`;
@@ -512,7 +512,7 @@ export function renderSeoCollectionPage(products, kind, options = {}) {
 <body class="seo-collection-body">
   ${headerMarkup()}
   <main class="seo-collection-main">
-    <nav class="product-breadcrumbs" aria-label="Breadcrumb"><a href="/index.html">Home</a><span aria-hidden="true">/</span><span>${escapeHtml(kindLabel(kind))}</span><span aria-hidden="true">/</span><span aria-current="page">${escapeHtml(name)}</span></nav>
+    <nav class="product-breadcrumbs" aria-label="Breadcrumb"><a href="/">Home</a><span aria-hidden="true">/</span><span>${escapeHtml(kindLabel(kind))}</span><span aria-hidden="true">/</span><span aria-current="page">${escapeHtml(name)}</span></nav>
     <header class="seo-collection-hero"><span>${escapeHtml(kindLabel(kind))} collection</span><h1>${escapeHtml(name)} Jerseys</h1><p>${escapeHtml(description)}</p></header>
     <section class="seo-context-panel" aria-label="Explore related jersey collections">${entityLinks(products, kind)}</section>
     <section class="seo-product-grid" aria-label="${escapeHtml(name)} jerseys">${products.map(productCard).join("")}</section>
@@ -525,7 +525,7 @@ export function renderSeoCollectionPage(products, kind, options = {}) {
 
 export function renderSeoNotFound(siteOrigin = DEFAULT_SITE_ORIGIN) {
   const origin = normalizeSiteOrigin(siteOrigin);
-  return `<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Jersey Collection Not Found | JerseysFrmJB</title><meta name="robots" content="noindex,follow"><link rel="canonical" href="${escapeHtml(`${origin}/shop-all.html`)}"><link rel="stylesheet" href="/styles.css?v=seo-pages-1"><script src="/storefront.js?v=seo-pages-1" defer></script></head><body class="product-page-body">${headerMarkup()}<main class="product-page-main"><section class="product-not-found"><span>Collection update</span><h1>That jersey collection is not available.</h1><p>Browse the current inventory to find another team, player, or competition.</p><a href="/shop-all.html">Browse Current Jerseys</a></section></main>${footerMarkup()}</body></html>`;
+  return `<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Jersey Collection Not Found | JerseysFrmJB</title><meta name="robots" content="noindex,follow"><link rel="canonical" href="${escapeHtml(`${origin}/shop-all`)}"><link rel="stylesheet" href="/styles.css?v=seo-pages-1"><script src="/storefront.js?v=seo-pages-1" defer></script></head><body class="product-page-body">${headerMarkup()}<main class="product-page-main"><section class="product-not-found"><span>Collection update</span><h1>That jersey collection is not available.</h1><p>Browse the current inventory to find another team, player, or competition.</p><a href="/shop-all">Browse Current Jerseys</a></section></main>${footerMarkup()}</body></html>`;
 }
 
 export function entityLink(kind, name) {

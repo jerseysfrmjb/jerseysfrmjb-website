@@ -122,18 +122,18 @@ function categoryDetails(category = "") {
   if (category === "world") {
     return {
       label: "International Team Jersey",
-      href: "/worldcup-jerseys.html"
+      href: "/worldcup-jerseys"
     };
   }
   if (category === "retro") {
     return {
       label: "Retro Jersey",
-      href: "/retro-jerseys.html"
+      href: "/retro-jerseys"
     };
   }
   return {
     label: "Club Jersey",
-    href: "/club-jerseys.html"
+    href: "/club-jerseys"
   };
 }
 
@@ -505,26 +505,26 @@ function headerMarkup() {
   return `
   <header class="site-header">
     <button class="menu-toggle" type="button" aria-label="Open menu" aria-expanded="false">&#9776;</button>
-    <a class="site-name" href="/index.html">Jerseysfrmjb</a>
+    <a class="site-name" href="/">Jerseysfrmjb</a>
     <nav class="desktop-nav">
-      <a href="/index.html">Home</a>
-      <a class="active" href="/shop-all.html">Shop All</a>
-      <a href="/worldcup-jerseys.html">World Cup Jerseys</a>
-      <a href="/retro-jerseys.html">Retro Jerseys</a>
-      <a href="/club-jerseys.html">Club Jerseys</a>
-      <a href="/size-guide.html">Size Guide</a>
-      <a href="/index.html#contact-form">Contact</a>
+      <a href="/">Home</a>
+      <a class="active" href="/shop-all">Shop All</a>
+      <a href="/worldcup-jerseys">World Cup Jerseys</a>
+      <a href="/retro-jerseys">Retro Jerseys</a>
+      <a href="/club-jerseys">Club Jerseys</a>
+      <a href="/size-guide">Size Guide</a>
+      <a href="/#contact-form">Contact</a>
     </nav>
   </header>
   <aside class="drawer" aria-hidden="true">
     <button class="drawer-close" type="button" aria-label="Close menu">&times;</button>
-    <a href="/index.html">Home</a>
-    <a class="active" href="/shop-all.html">Shop All</a>
-    <a href="/worldcup-jerseys.html">World Cup Jerseys</a>
-    <a href="/retro-jerseys.html">Retro Jerseys</a>
-    <a href="/club-jerseys.html">Club Jerseys</a>
-    <a href="/size-guide.html">Size Guide</a>
-    <a href="/index.html#contact-form">Contact</a>
+    <a href="/">Home</a>
+    <a class="active" href="/shop-all">Shop All</a>
+    <a href="/worldcup-jerseys">World Cup Jerseys</a>
+    <a href="/retro-jerseys">Retro Jerseys</a>
+    <a href="/club-jerseys">Club Jerseys</a>
+    <a href="/size-guide">Size Guide</a>
+    <a href="/#contact-form">Contact</a>
   </aside>
   <div class="drawer-backdrop"></div>`;
 }
@@ -535,22 +535,22 @@ function footerMarkup() {
     <div class="footer-shell">
       <div class="footer-brand">
         <img src="/assets/jerseysfrmjb-logo.jpg" alt="JerseysFrmJB logo">
-        <a class="footer-main" href="/index.html">JerseysFrmJB</a>
+        <a class="footer-main" href="/">JerseysFrmJB</a>
         <p>200+ Jerseys Sold</p>
         <p>Based in Maryland</p>
       </div>
       <nav class="footer-links" aria-label="Footer navigation">
         <section>
           <h3>Shop</h3>
-          <a href="/shop-all.html">Shop All</a>
-          <a href="/worldcup-jerseys.html">World Cup Jerseys</a>
-          <a href="/club-jerseys.html">Club Jerseys</a>
-          <a href="/retro-jerseys.html">Retro Jerseys</a>
+          <a href="/shop-all">Shop All</a>
+          <a href="/worldcup-jerseys">World Cup Jerseys</a>
+          <a href="/club-jerseys">Club Jerseys</a>
+          <a href="/retro-jerseys">Retro Jerseys</a>
         </section>
         <section>
           <h3>Help</h3>
-          <a href="/size-guide.html">Size Guide</a>
-          <a href="/privacy.html">Privacy</a>
+          <a href="/size-guide">Size Guide</a>
+          <a href="/privacy">Privacy</a>
           <button class="footer-help-link" type="button" data-open-help>Contact</button>
           <button class="footer-help-link" type="button" data-open-help>Jersey Requests</button>
         </section>
@@ -614,7 +614,7 @@ export function renderProductPage(model) {
   ${headerMarkup()}
   <main class="product-page-main">
     <nav class="product-breadcrumbs" aria-label="Breadcrumb">
-      <a href="/index.html">Home</a>
+      <a href="/">Home</a>
       <span aria-hidden="true">/</span>
       <a href="${escapeHtml(model.category.href)}">${escapeHtml(model.category.label)}</a>
       <span aria-hidden="true">/</span>
@@ -662,7 +662,7 @@ export function renderProductPage(model) {
         <span>Need measurements?</span>
         <h2>Check the size guide before buying.</h2>
       </div>
-      <a href="/size-guide.html">Open Size Guide</a>
+      <a href="/size-guide">Open Size Guide</a>
     </section>
     ${relatedProductsMarkup(model.relatedProducts)}
     <section class="seo-faq product-faq" aria-labelledby="product-faq-heading">
@@ -686,7 +686,7 @@ export function renderProductNotFound(siteOrigin = DEFAULT_SITE_ORIGIN) {
   <title>Jersey Not Found | JerseysFrmJB</title>
   <meta name="description" content="This jersey could not be found in the current JerseysFrmJB inventory.">
   <meta name="robots" content="noindex,follow">
-  <link rel="canonical" href="${escapeHtml(`${origin}/shop-all.html`)}">
+  <link rel="canonical" href="${escapeHtml(`${origin}/shop-all`)}">
   <link rel="stylesheet" href="/styles.css?v=product-pages-1">
   <link rel="stylesheet" href="/design-preview.css?v=mobile-grid-2">
   <script src="/meta-pixel.js?v=1" defer></script>
@@ -699,7 +699,7 @@ export function renderProductNotFound(siteOrigin = DEFAULT_SITE_ORIGIN) {
       <span>Inventory update</span>
       <h1>That jersey is not available here.</h1>
       <p>It may have been removed or its link may have changed.</p>
-      <a href="/shop-all.html">Browse Current Jerseys</a>
+      <a href="/shop-all">Browse Current Jerseys</a>
     </section>
   </main>
   ${footerMarkup()}
