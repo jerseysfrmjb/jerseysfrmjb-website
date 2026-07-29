@@ -6,8 +6,8 @@
   <title>Inventory Admin | JerseysFrmJB</title>
   <meta name="robots" content="noindex,nofollow">
   <link rel="icon" href="assets/jerseysfrmjb-logo.jpg" type="image/jpeg">
-  <link rel="stylesheet" href="styles.css?v=pinterest-publisher-1">
-  <script src="admin.js?v=pinterest-publisher-4" defer></script>
+  <link rel="stylesheet" href="styles.css?v=admin-analytics-1">
+  <script src="admin.js?v=admin-analytics-1" defer></script>
 </head>
 <body class="admin-body">
   <main class="admin-shell">
@@ -33,6 +33,7 @@
       </div>
       <nav class="admin-section-tabs" aria-label="Admin sections">
         <button class="active" type="button" data-admin-tab="dashboard">Dashboard</button>
+        <button type="button" data-admin-tab="analytics">Analytics</button>
         <button type="button" data-admin-tab="inventory">Inventory</button>
         <button type="button" data-admin-tab="bulk">Bulk Restock</button>
         <button type="button" data-admin-tab="sales">Sales</button>
@@ -45,6 +46,7 @@
         <span>Admin Section</span>
         <select data-admin-mobile-tab aria-label="Admin section">
           <option value="dashboard">Dashboard</option>
+          <option value="analytics">Analytics</option>
           <option value="inventory">Inventory</option>
           <option value="bulk">Bulk Restock</option>
           <option value="sales">Sales</option>
@@ -60,6 +62,31 @@
           <h2>Dashboard Summary</h2>
         </div>
         <div class="admin-summary-grid" data-admin-summary></div>
+      </section>
+
+      <section class="admin-analytics-panel" data-admin-section="analytics" aria-label="Website analytics dashboard" hidden>
+        <header class="analytics-dashboard-head">
+          <div>
+            <span class="section-kicker">Audience &amp; Product Intelligence</span>
+            <h2>Website Analytics</h2>
+            <p>Anonymous traffic, product interest, searches, and marketplace clicks. Exact inventory remains admin-only.</p>
+          </div>
+          <div class="analytics-dashboard-actions">
+            <label>
+              <span>Reporting period</span>
+              <select data-analytics-range>
+                <option value="today">Today</option>
+                <option value="7d">Last 7 days</option>
+                <option value="30d" selected>Last 30 days</option>
+                <option value="all">All time</option>
+              </select>
+            </label>
+            <button class="shop-button secondary-admin" type="button" data-refresh-analytics>Refresh</button>
+            <button class="shop-button secondary-admin" type="button" data-export-analytics disabled>Export CSV</button>
+          </div>
+        </header>
+        <p class="form-status" data-analytics-status role="status">Open Analytics to load the dashboard.</p>
+        <div class="analytics-dashboard" data-analytics-dashboard></div>
       </section>
 
       <section class="admin-messages-panel" data-admin-section="messages" aria-label="Customer messages" hidden>

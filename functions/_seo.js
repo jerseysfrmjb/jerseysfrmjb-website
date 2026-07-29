@@ -344,7 +344,15 @@ function productCard(product) {
     .join(" · ");
   const sizes = product.sizes.map(size => size.label).join(", ");
   return `
-    <article class="seo-product-card">
+    <article
+      class="seo-product-card"
+      data-meta-product="true"
+      data-product-id="${escapeHtml(product.id)}"
+      data-product-name="${escapeHtml(product.title)}"
+      data-product-value="${product.primaryPrice === null ? "" : escapeHtml(product.primaryPrice.toFixed(2))}"
+      data-product-category="${escapeHtml(product.category.label)}"
+      data-product-availability="${product.available ? "in stock" : "out of stock"}"
+    >
       <a class="seo-product-image" href="${escapeHtml(product.canonicalUrl)}">
         <img src="${escapeHtml(product.images.front.src)}" alt="${escapeHtml(product.images.front.alt)}" title="${escapeHtml(product.images.front.alt)}" width="1280" height="1280" loading="lazy" decoding="async">
       </a>
@@ -507,7 +515,7 @@ export function renderSeoCollectionPage(products, kind, options = {}) {
   <script type="application/ld+json">${jsonForHtml(schema)}</script>
   <script type="application/ld+json">${jsonForHtml(faqSchema(faqs))}</script>
   <link rel="stylesheet" href="/styles.css?v=seo-pages-1"><link rel="stylesheet" href="/design-preview.css?v=mobile-grid-2">
-  <script src="/meta-pixel.js?v=1" defer></script><script src="/storefront.js?v=seo-pages-1" defer></script>
+  <script src="/meta-pixel.js?v=1" defer></script><script src="/analytics.js?v=1" defer></script><script src="/storefront.js?v=seo-pages-1" defer></script>
 </head>
 <body class="seo-collection-body">
   ${headerMarkup()}
@@ -525,7 +533,7 @@ export function renderSeoCollectionPage(products, kind, options = {}) {
 
 export function renderSeoNotFound(siteOrigin = DEFAULT_SITE_ORIGIN) {
   const origin = normalizeSiteOrigin(siteOrigin);
-  return `<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Jersey Collection Not Found | JerseysFrmJB</title><meta name="robots" content="noindex,follow"><link rel="canonical" href="${escapeHtml(`${origin}/shop-all`)}"><link rel="stylesheet" href="/styles.css?v=seo-pages-1"><script src="/storefront.js?v=seo-pages-1" defer></script></head><body class="product-page-body">${headerMarkup()}<main class="product-page-main"><section class="product-not-found"><span>Collection update</span><h1>That jersey collection is not available.</h1><p>Browse the current inventory to find another team, player, or competition.</p><a href="/shop-all">Browse Current Jerseys</a></section></main>${footerMarkup()}</body></html>`;
+  return `<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Jersey Collection Not Found | JerseysFrmJB</title><meta name="robots" content="noindex,follow"><link rel="canonical" href="${escapeHtml(`${origin}/shop-all`)}"><link rel="stylesheet" href="/styles.css?v=seo-pages-1"><script src="/meta-pixel.js?v=1" defer></script><script src="/analytics.js?v=1" defer></script><script src="/storefront.js?v=seo-pages-1" defer></script></head><body class="product-page-body">${headerMarkup()}<main class="product-page-main"><section class="product-not-found"><span>Collection update</span><h1>That jersey collection is not available.</h1><p>Browse the current inventory to find another team, player, or competition.</p><a href="/shop-all">Browse Current Jerseys</a></section></main>${footerMarkup()}</body></html>`;
 }
 
 export function entityLink(kind, name) {

@@ -608,6 +608,7 @@ export function renderProductPage(model) {
   <link rel="stylesheet" href="/styles.css?v=seo-pages-1">
   <link rel="stylesheet" href="/design-preview.css?v=mobile-grid-2">
   <script src="/meta-pixel.js?v=1" defer></script>
+  <script src="/analytics.js?v=1" defer></script>
   <script src="/storefront.js?v=seo-pages-1" defer></script>
 </head>
 <body class="product-page-body">
@@ -690,6 +691,7 @@ export function renderProductNotFound(siteOrigin = DEFAULT_SITE_ORIGIN) {
   <link rel="stylesheet" href="/styles.css?v=product-pages-1">
   <link rel="stylesheet" href="/design-preview.css?v=mobile-grid-2">
   <script src="/meta-pixel.js?v=1" defer></script>
+  <script src="/analytics.js?v=1" defer></script>
   <script src="/storefront.js?v=product-pages-1" defer></script>
 </head>
 <body class="product-page-body">

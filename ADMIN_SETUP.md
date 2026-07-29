@@ -2,6 +2,13 @@
 
 This site now supports a Cloudflare D1-backed inventory admin page at `/admin.html`.
 
+## Google Analytics 4
+
+The public site uses the JerseysFrmJB web stream `G-P42JD6TLP3`. The optional
+Cloudflare Pages Text variable `GA4_MEASUREMENT_ID` can override that ID in
+Production or Preview later. The private D1 analytics dashboard works
+independently of GA4.
+
 ## Storage
 
 Inventory is stored in Cloudflare D1 using the `inventory` table from `schema.sql`.

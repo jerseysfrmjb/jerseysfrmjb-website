@@ -77,6 +77,11 @@ const quickSalePrice = document.querySelector("[data-quick-sale-price]");
 const quickSaleNotes = document.querySelector("[data-quick-sale-notes]");
 const quickSaleSubmit = document.querySelector("[data-quick-sale-submit]");
 const quickSaleStatus = document.querySelector("[data-quick-sale-status]");
+const analyticsDashboard = document.querySelector("[data-analytics-dashboard]");
+const analyticsStatus = document.querySelector("[data-analytics-status]");
+const analyticsRange = document.querySelector("[data-analytics-range]");
+const refreshAnalytics = document.querySelector("[data-refresh-analytics]");
+const exportAnalytics = document.querySelector("[data-export-analytics]");
 let inventory = [];
 let settings = {};
 let featuredLimit = 3;
@@ -96,6 +101,9 @@ let lastBulkRestock = null;
 let currentBulkPreview = null;
 let sales = [];
 let salesLoaded = false;
+let analyticsLoaded = false;
+let analyticsLoading = false;
+let analyticsData = null;
 let salesAnalyticsPanel = document.querySelector("[data-sales-analytics]");
 let quickSaleMatches = [];
 let quickSalePriceManuallyEdited = false;
@@ -138,8 +146,300 @@ function setAdminTab(tab = "dashboard") {
     section.hidden = section.dataset.adminSection !== tab;
   });
   if (tab === "sales" && !salesLoaded) loadSales();
+  if (tab === "analytics" && !analyticsLoaded) loadAnalytics();
   if (tab === "feedback" && !feedbackLoaded) loadEbayFeedbackAdmin();
   if (tab === "pinterest" && !pinterestLoaded) loadPinterestStatus();
+}
+
+const ANALYTICS_COLORS = ["#7b1638", "#bc5b75", "#d28b42", "#2e6f76", "#5b4b8a", "#708238", "#9b6b43"];
+
+function analyticsNumber(value, maximumFractionDigits = 0) {
+  return Number(value || 0).toLocaleString(undefined, { maximumFractionDigits });
+}
+
+function analyticsDuration(value) {
+  const seconds = Math.max(0, Math.round(Number(value || 0)));
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainder = seconds % 60;
+  return `${minutes}m ${remainder}s`;
+}
+
+function analyticsDate(value = "") {
+  if (!value) return "Never";
+  const date = new Date(String(value).endsWith("Z") ? value : `${value}Z`);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+function analyticsEmpty(message = "No data collected for this period yet.") {
+  return `<p class="analytics-empty">${escapeHtml(message)}</p>`;
+}
+
+function analyticsLineChart(rows = [], series = []) {
+  if (!rows.length || !series.length) return analyticsEmpty();
+  const width = 720;
+  const height = 230;
+  const padding = { top: 18, right: 18, bottom: 34, left: 42 };
+  const maximum = Math.max(1, ...rows.flatMap(row => series.map(item => Number(row[item.key] || 0))));
+  const x = index => padding.left + (rows.length === 1 ? 0 : (index / (rows.length - 1)) * (width - padding.left - padding.right));
+  const y = value => height - padding.bottom - (Number(value || 0) / maximum) * (height - padding.top - padding.bottom);
+  const grid = [0, 0.25, 0.5, 0.75, 1].map(fraction => {
+    const lineY = y(maximum * fraction);
+    return `<line x1="${padding.left}" y1="${lineY}" x2="${width - padding.right}" y2="${lineY}"></line><text x="${padding.left - 8}" y="${lineY + 4}" text-anchor="end">${analyticsNumber(maximum * fraction)}</text>`;
+  }).join("");
+  const paths = series.map((item, seriesIndex) => {
+    const points = rows.map((row, index) => `${x(index)},${y(row[item.key])}`).join(" ");
+    return `<polyline points="${points}" style="--chart-color:${ANALYTICS_COLORS[seriesIndex % ANALYTICS_COLORS.length]}"></polyline>`;
+  }).join("");
+  const firstDay = rows[0]?.day || "";
+  const lastDay = rows.at(-1)?.day || "";
+  return `
+    <div class="analytics-chart-wrap">
+      <svg class="analytics-line-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(series.map(item => item.label).join(" and "))} over time">
+        <g class="analytics-chart-grid">${grid}</g>
+        ${paths}
+        <text class="analytics-axis-label" x="${padding.left}" y="${height - 8}">${escapeHtml(firstDay)}</text>
+        <text class="analytics-axis-label" x="${width - padding.right}" y="${height - 8}" text-anchor="end">${escapeHtml(lastDay)}</text>
+      </svg>
+      <div class="analytics-chart-legend">${series.map((item, index) => `<span><i style="--legend-color:${ANALYTICS_COLORS[index % ANALYTICS_COLORS.length]}"></i>${escapeHtml(item.label)}</span>`).join("")}</div>
+    </div>`;
+}
+
+function analyticsBarChart(items = []) {
+  if (!items.length) return analyticsEmpty("Product views will appear here after shoppers browse jerseys.");
+  const maximum = Math.max(1, ...items.map(item => Number(item.views || 0)));
+  return `<div class="analytics-bars">${items.slice(0, 10).map((item, index) => `
+    <div class="analytics-bar-row">
+      <span>${index + 1}. ${escapeHtml(item.name)}</span>
+      <div><i style="width:${Math.max(2, (Number(item.views || 0) / maximum) * 100)}%"></i></div>
+      <strong>${analyticsNumber(item.views)}</strong>
+    </div>`).join("")}</div>`;
+}
+
+function analyticsSourceChart(sources = []) {
+  if (!sources.length) return analyticsEmpty();
+  let cursor = 0;
+  const stops = sources.map((source, index) => {
+    const start = cursor;
+    cursor += Number(source.percentage || 0);
+    return `${ANALYTICS_COLORS[index % ANALYTICS_COLORS.length]} ${start}% ${cursor}%`;
+  }).join(",");
+  return `
+    <div class="analytics-source-chart">
+      <div class="analytics-donut" style="--source-gradient:conic-gradient(${stops})"><span>${analyticsNumber(sources.reduce((sum, item) => sum + Number(item.visitors || 0), 0))}<small>visitors</small></span></div>
+      <div class="analytics-source-legend">${sources.map((source, index) => `
+        <div><i style="--legend-color:${ANALYTICS_COLORS[index % ANALYTICS_COLORS.length]}"></i><span>${escapeHtml(source.source)}</span><strong>${analyticsNumber(source.percentage, 1)}%</strong><small>${analyticsNumber(source.visitors)} visitors</small></div>`).join("")}</div>
+    </div>`;
+}
+
+function analyticsProductTable(items = [], emptyMessage = "No matching products yet.") {
+  if (!items.length) return analyticsEmpty(emptyMessage);
+  return `
+    <div class="analytics-table-wrap">
+      <table class="analytics-table">
+        <thead><tr><th>Product</th><th>Views</th><th>Clicks</th><th>eBay</th><th>Depop</th><th>CTR</th><th>Inventory</th><th>Last viewed</th></tr></thead>
+        <tbody>${items.map(item => `
+          <tr>
+            <td>${escapeHtml(item.name)}</td>
+            <td>${analyticsNumber(item.views)}</td>
+            <td>${analyticsNumber(item.clicks)}</td>
+            <td>${analyticsNumber(item.ebay_clicks)}</td>
+            <td>${analyticsNumber(item.depop_clicks)}</td>
+            <td>${analyticsNumber(item.ctr, 1)}%</td>
+            <td>${item.quantity > 0 ? `${analyticsNumber(item.quantity)} in stock` : "Sold out"}</td>
+            <td>${escapeHtml(analyticsDate(item.last_viewed_at))}</td>
+          </tr>`).join("")}</tbody>
+      </table>
+    </div>`;
+}
+
+function analyticsRankedList(items = [], valueKey = "views", emptyMessage = "No data yet.") {
+  if (!items.length) return analyticsEmpty(emptyMessage);
+  return `<ol class="analytics-ranked-list">${items.slice(0, 10).map(item => `
+    <li><span>${escapeHtml(item.name || item.query || item.source || "Unknown")}</span><strong>${analyticsNumber(item[valueKey])}</strong></li>`).join("")}</ol>`;
+}
+
+function analyticsSimpleList(items = [], labelKey = "name", valueKey = "visitors") {
+  if (!items.length) return analyticsEmpty();
+  return `<ul class="analytics-simple-list">${items.slice(0, 12).map(item => `
+    <li><span>${escapeHtml(item[labelKey] || "Unknown")}</span><strong>${analyticsNumber(item[valueKey])}</strong></li>`).join("")}</ul>`;
+}
+
+function analyticsDailyMatrix(rows = [], groupKey, valueKey) {
+  if (!rows.length) return analyticsEmpty();
+  const days = [...new Set(rows.map(item => item.day).filter(Boolean))].slice(-14);
+  const groups = [...new Set(rows.map(item => item[groupKey] || "Other"))].slice(0, 8);
+  const lookup = new Map(rows.map(item => [`${item.day}|${item[groupKey] || "Other"}`, Number(item[valueKey] || 0)]));
+  return `
+    <div class="analytics-table-wrap">
+      <table class="analytics-table analytics-daily-table">
+        <thead><tr><th>Date</th>${groups.map(group => `<th>${escapeHtml(group)}</th>`).join("")}<th>Total</th></tr></thead>
+        <tbody>${days.map(day => {
+          const values = groups.map(group => lookup.get(`${day}|${group}`) || 0);
+          return `<tr><td>${escapeHtml(day)}</td>${values.map(value => `<td>${analyticsNumber(value)}</td>`).join("")}<td><strong>${analyticsNumber(values.reduce((sum, value) => sum + value, 0))}</strong></td></tr>`;
+        }).join("")}</tbody>
+      </table>
+    </div>`;
+}
+
+function renderAnalytics() {
+  if (!analyticsDashboard || !analyticsData) return;
+  const data = analyticsData;
+  const current = data.current || {};
+  const windows = data.windows || {};
+  const market = data.marketplace || {};
+  const searchEntities = data.searches?.entities || {};
+  const geography = data.geography || [];
+  const countries = new Map();
+  const states = [];
+  geography.forEach(item => {
+    countries.set(item.country || "Unknown", (countries.get(item.country || "Unknown") || 0) + Number(item.visitors || 0));
+    if (item.country === "US" && item.region) states.push({ name: item.region, visitors: item.visitors });
+  });
+  const countryNames = typeof Intl.DisplayNames === "function"
+    ? new Intl.DisplayNames(["en"], { type: "region" })
+    : null;
+  const countryRows = [...countries].map(([code, visitors]) => ({
+    name: countryNames && /^[A-Z]{2}$/.test(code) ? countryNames.of(code) : code,
+    visitors
+  })).sort((a, b) => b.visitors - a.visitors);
+  const ebayClicks = Number(market.totals?.eBay || 0);
+  const depopClicks = Number(market.totals?.Depop || 0);
+
+  analyticsDashboard.innerHTML = `
+    <section class="analytics-window-grid" aria-label="Visitor totals by period">
+      ${[
+        ["Today", windows.today?.visitors],
+        ["7 days", windows["7d"]?.visitors],
+        ["30 days", windows["30d"]?.visitors],
+        ["All time", windows.all?.visitors]
+      ].map(([label, value]) => `<article><span>${escapeHtml(label)}</span><strong>${analyticsNumber(value)}</strong><small>visitors</small></article>`).join("")}
+    </section>
+
+    <section class="analytics-kpi-grid" aria-label="Traffic overview">
+      ${[
+        ["Page views", analyticsNumber(current.page_views), "Pages loaded"],
+        ["Unique visitors", analyticsNumber(current.unique_visitors), "Anonymous browsers"],
+        ["Pages / visit", analyticsNumber(current.pages_per_visit, 2), "Average session"],
+        ["Avg. duration", analyticsDuration(current.average_session_duration), "Engaged time"],
+        ["Bounce rate", `${analyticsNumber(current.bounce_rate, 1)}%`, "Approximate"],
+        ["Product views", analyticsNumber(current.product_views), "Jerseys viewed"],
+        ["Marketplace clicks", analyticsNumber(current.marketplace_clicks), "Outbound actions"],
+        ["Marketplace CTR", `${analyticsNumber(current.marketplace_ctr, 1)}%`, "Clicks / product views"]
+      ].map(([label, value, note]) => `<article><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong><small>${escapeHtml(note)}</small></article>`).join("")}
+    </section>
+
+    <section class="analytics-chart-grid">
+      <article class="analytics-card analytics-card-wide"><header><span>Traffic</span><h3>Daily visitors and page views</h3></header>${analyticsLineChart(data.daily, [{ key: "visitors", label: "Visitors" }, { key: "page_views", label: "Page views" }])}</article>
+      <article class="analytics-card"><header><span>Acquisition</span><h3>Traffic sources</h3></header>${analyticsSourceChart(data.sources)}</article>
+      <article class="analytics-card"><header><span>Marketplace</span><h3>Clicks over time</h3></header>${analyticsLineChart(data.daily, [{ key: "marketplace_clicks", label: "Marketplace clicks" }])}</article>
+      <article class="analytics-card"><header><span>Search behavior</span><h3>Search trends</h3></header>${analyticsLineChart(data.daily, [{ key: "searches", label: "Searches" }])}</article>
+      <article class="analytics-card analytics-card-wide"><header><span>Products</span><h3>Top 10 viewed jerseys</h3></header>${analyticsBarChart(data.product_lists?.most_viewed)}</article>
+      <article class="analytics-card analytics-card-wide"><header><span>Acquisition</span><h3>Daily traffic by source</h3></header>${analyticsDailyMatrix(data.source_daily, "source", "visitors")}</article>
+      <article class="analytics-card analytics-card-wide"><header><span>Marketplace</span><h3>Daily clicks by marketplace</h3></header>${analyticsDailyMatrix(market.daily, "marketplace", "clicks")}</article>
+    </section>
+
+    <section class="analytics-card">
+      <header class="analytics-section-heading"><div><span>Marketplace Analytics</span><h3>eBay and Depop performance</h3></div><div class="analytics-inline-stats"><b>${analyticsNumber(ebayClicks)}<small>eBay clicks</small></b><b>${analyticsNumber(depopClicks)}<small>Depop clicks</small></b><b>${analyticsNumber(market.ctr, 1)}%<small>overall CTR</small></b></div></header>
+      ${analyticsProductTable((data.products || []).filter(item => item.clicks > 0).sort((a, b) => b.clicks - a.clicks).slice(0, 20), "Marketplace clicks by product will appear here.")}
+    </section>
+
+    <section class="analytics-detail-grid">
+      <article class="analytics-card"><header><span>Searches</span><h3>Top search terms</h3></header>${analyticsRankedList(data.searches?.terms, "searches")}</article>
+      <article class="analytics-card"><header><span>Search quality</span><h3>Zero-result searches</h3></header>${analyticsRankedList(data.searches?.zero_results, "zero_result_searches", "No zero-result searches in this period.")}</article>
+      <article class="analytics-card"><header><span>Possible typos</span><h3>Common misspellings</h3></header>${analyticsRankedList(data.searches?.possible_misspellings, "searches", "No likely misspellings detected.")}</article>
+      <article class="analytics-card"><header><span>Players searched</span><h3>Most searched players</h3></header>${analyticsRankedList(searchEntities.players, "searches")}</article>
+      <article class="analytics-card"><header><span>Clubs searched</span><h3>Most searched clubs</h3></header>${analyticsRankedList(searchEntities.clubs, "searches")}</article>
+      <article class="analytics-card"><header><span>Countries searched</span><h3>Most searched countries</h3></header>${analyticsRankedList(searchEntities.countries, "searches")}</article>
+      <article class="analytics-card"><header><span>Competitions searched</span><h3>Most searched competitions</h3></header>${analyticsRankedList(searchEntities.competitions, "searches")}</article>
+      <article class="analytics-card"><header><span>Popular inventory</span><h3>Most popular teams</h3></header>${analyticsRankedList(data.entities?.teams, "views")}</article>
+      <article class="analytics-card"><header><span>Popular inventory</span><h3>Most popular players</h3></header>${analyticsRankedList(data.entities?.players, "views")}</article>
+      <article class="analytics-card"><header><span>Popular inventory</span><h3>Most popular competitions</h3></header>${analyticsRankedList(data.entities?.competitions, "views")}</article>
+      <article class="analytics-card"><header><span>Geography</span><h3>Visitors by country</h3></header>${analyticsSimpleList(countryRows)}</article>
+      <article class="analytics-card"><header><span>United States</span><h3>Visitors by state</h3></header>${analyticsSimpleList(states)}</article>
+      <article class="analytics-card"><header><span>Technology</span><h3>Device type</h3></header>${analyticsSimpleList(data.devices)}</article>
+      <article class="analytics-card"><header><span>Technology</span><h3>Browser breakdown</h3></header>${analyticsSimpleList(data.browsers)}</article>
+    </section>
+
+    <section class="analytics-intelligence">
+      <article class="analytics-card"><header><span>Opportunity</span><h3>Highest views with no clicks</h3></header>${analyticsProductTable(data.product_lists?.high_views_no_clicks)}</article>
+      <article class="analytics-card"><header><span>Restock signals</span><h3>High clicks and low inventory</h3></header>${analyticsProductTable(data.product_lists?.high_clicks_low_inventory)}</article>
+      <article class="analytics-card"><header><span>Inventory</span><h3>Completely sold out</h3></header>${analyticsProductTable(data.product_lists?.sold_out)}</article>
+      <article class="analytics-card"><header><span>Visibility</span><h3>Not viewed in 30 days</h3></header>${analyticsProductTable(data.product_lists?.not_viewed_30d)}</article>
+      <article class="analytics-card"><header><span>Product discovery</span><h3>Products with zero views</h3></header>${analyticsProductTable(data.product_lists?.zero_views)}</article>
+      <article class="analytics-card"><header><span>Product discovery</span><h3>Least viewed jerseys</h3></header>${analyticsProductTable(data.product_lists?.least_viewed)}</article>
+      <article class="analytics-card"><header><span>Recently viewed</span><h3>Latest product interest</h3></header>${analyticsProductTable(data.product_lists?.recently_viewed)}</article>
+      <article class="analytics-card"><header><span>Conversion</span><h3>Highest marketplace CTR</h3></header>${analyticsProductTable(data.product_lists?.highest_ctr)}</article>
+      <article class="analytics-card"><header><span>Conversion</span><h3>Lowest marketplace CTR</h3></header>${analyticsProductTable(data.product_lists?.lowest_ctr)}</article>
+    </section>
+
+    <section class="analytics-card analytics-recommendations">
+      <header><span>Automatic insights</span><h3>Recommendations</h3></header>
+      <ul>${(data.recommendations || []).map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+      <p>Privacy: anonymous browser IDs only; no IP addresses are stored. Location is limited to country and U.S. state when available.</p>
+    </section>`;
+}
+
+async function loadAnalytics() {
+  if (!analyticsDashboard || analyticsLoading) return;
+  analyticsLoading = true;
+  if (analyticsStatus) {
+    analyticsStatus.textContent = "Loading analytics...";
+    analyticsStatus.classList.remove("error", "success");
+  }
+  if (refreshAnalytics) refreshAnalytics.disabled = true;
+  try {
+    analyticsData = await api(`/api/admin/analytics?range=${encodeURIComponent(analyticsRange?.value || "30d")}`);
+    analyticsLoaded = true;
+    renderAnalytics();
+    if (analyticsStatus) {
+      const gaStatus = analyticsData.integrations?.ga4_configured
+        ? "GA4 connected."
+        : "First-party analytics active; add GA4_MEASUREMENT_ID to connect GA4.";
+      analyticsStatus.textContent = `Updated ${new Date(analyticsData.generated_at).toLocaleString()}. ${gaStatus}`;
+      analyticsStatus.classList.add("success");
+    }
+    if (exportAnalytics) exportAnalytics.disabled = false;
+  } catch (error) {
+    analyticsDashboard.innerHTML = analyticsEmpty("Analytics could not be loaded.");
+    if (analyticsStatus) {
+      analyticsStatus.textContent = error.message;
+      analyticsStatus.classList.add("error");
+    }
+  } finally {
+    analyticsLoading = false;
+    if (refreshAnalytics) refreshAnalytics.disabled = false;
+  }
+}
+
+function exportAnalyticsCsv() {
+  if (!analyticsData?.products?.length) return;
+  const rows = [
+    ["Product ID", "Product", "Category", "Views", "Marketplace Clicks", "eBay Clicks", "Depop Clicks", "CTR", "Inventory", "Views Last 30 Days", "Last Viewed"],
+    ...analyticsData.products.map(item => [
+      item.id,
+      item.name,
+      item.category,
+      item.views,
+      item.clicks,
+      item.ebay_clicks,
+      item.depop_clicks,
+      `${item.ctr}%`,
+      item.quantity,
+      item.views_30d,
+      item.last_viewed_at
+    ])
+  ];
+  const blob = new Blob([rows.map(row => row.map(csvValue).join(",")).join("\n")], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `jerseysfrmjb-analytics-${analyticsData.range || "30d"}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }
 
 function saleDateValue(sale) {
@@ -2769,6 +3069,12 @@ adminTabs.forEach(button => {
 });
 adminMobileTab?.addEventListener("change", () => setAdminTab(adminMobileTab.value || currentAdminTab));
 refreshSales?.addEventListener("click", loadSales);
+refreshAnalytics?.addEventListener("click", loadAnalytics);
+analyticsRange?.addEventListener("change", () => {
+  analyticsLoaded = false;
+  loadAnalytics();
+});
+exportAnalytics?.addEventListener("click", exportAnalyticsCsv);
 salesSearch?.addEventListener("input", renderSales);
 salesPlatform?.addEventListener("change", renderSales);
 salesDate?.addEventListener("change", renderSales);

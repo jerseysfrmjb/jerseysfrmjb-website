@@ -711,6 +711,8 @@ async function renderInventoryGrids() {
     const items = sortInventory(data.items || []);
     grid.innerHTML = items.map(renderProductCard).join("");
     window.JerseysMetaPixel?.observeProducts(grid);
+    window.JerseysAnalytics?.observeProducts(grid);
+    window.JerseysAnalytics?.setupSearchTracking(grid.closest(".inventory-page") || document);
     const updated = grid.closest(".inventory-page")?.querySelector("[data-inventory-updated]");
     if (updated) updated.textContent = formatInventoryUpdated(data.settings?.inventory_updated_at || data.updated_at || "");
     initSliders(grid);
@@ -729,6 +731,7 @@ async function renderFeaturedGrid() {
     .slice(0, 3);
   grid.innerHTML = items.map(renderFeaturedCard).join("");
   window.JerseysMetaPixel?.observeProducts(grid);
+  window.JerseysAnalytics?.observeProducts(grid);
 }
 
 async function renderHomepageStats() {
