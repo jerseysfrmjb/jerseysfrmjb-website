@@ -156,6 +156,7 @@ assert.match(barcelonaHtml, /\/players\/raphinha/);
 assert.match(barcelonaHtml, /\/players\/lamine-yamal/);
 assert.match(barcelonaHtml, /\/products\/club-barcelona-raphinha-home-2526/);
 assert.match(barcelonaHtml, /width="1280" height="1280" loading="lazy"/);
+assert.doesNotMatch(barcelonaHtml, /Are these Barcelona jerseys new|list the condition/);
 const barcelonaSchemas = jsonLd(barcelonaHtml);
 assert.equal(barcelonaSchemas[0]["@graph"][0]["@type"], "CollectionPage");
 assert.equal(barcelonaSchemas[0]["@graph"][1]["@type"], "BreadcrumbList");

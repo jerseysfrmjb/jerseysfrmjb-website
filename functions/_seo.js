@@ -331,10 +331,6 @@ function collectionFaqs(kind, name) {
       answer: "Open a jersey page to see the sizes that are currently available, then compare them with the JerseysFrmJB size guide before purchasing."
     },
     {
-      question: `Are these ${subject} new?`,
-      answer: "Product pages list the condition for each jersey. Current inventory is listed as new unless a product page explicitly says otherwise."
-    },
-    {
       question: "Where is payment completed?",
       answer: "JerseysFrmJB product pages link to the active marketplace listing. Payment and checkout are completed on Depop or eBay, not directly on this website."
     }

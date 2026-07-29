@@ -263,7 +263,6 @@ export function buildProductPageModel(row = {}, options = {}) {
     canonicalUrl,
     description,
     category,
-    condition: String(row.condition || "").trim() || "See marketplace listing",
     identity: {
       player: identity.player || "Not specified",
       teamCountry: identity.team_country || "Not specified"
@@ -414,10 +413,6 @@ function productFaqs(model) {
     {
       question: "Where is checkout completed?",
       answer: "Checkout is completed on the linked Depop or eBay listing. JerseysFrmJB does not process payment on this product page."
-    },
-    {
-      question: "What is the condition of this jersey?",
-      answer: "Check the linked marketplace listing for its current condition details before purchasing."
     }
   ];
 }
@@ -650,7 +645,6 @@ export function renderProductPage(model) {
           ${linkedFact("Team / country", model.identity.teamCountry, model.entityLinks.team)}
           ${model.competition ? linkedFact("Competition", model.competition, model.entityLinks.competition) : ""}
           ${linkedFact("Category", model.category.label, model.category.href)}
-          <div><dt>Condition</dt><dd>${escapeHtml(model.condition)}</dd></div>
         </dl>
         <section class="product-stock" aria-labelledby="stock-heading">
           <div class="product-section-heading">
