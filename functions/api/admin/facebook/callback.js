@@ -1,4 +1,4 @@
-import { isAuthorized, readCookie } from "../_auth.js";
+import { readCookie } from "../_auth.js";
 import {
   exchangeFacebookCode,
   facebookConfigError,
@@ -24,9 +24,6 @@ export async function onRequestGet(context) {
   try {
     const configError = facebookConfigError(context.env);
     if (configError) return adminRedirect(context.env, "error", "Facebook configuration is incomplete.");
-    if (!(await isAuthorized(context.request, context.env))) {
-      return adminRedirect(context.env, "error", "Your admin session expired. Sign in and connect Facebook again.");
-    }
 
     const url = new URL(context.request.url);
     const providerError = url.searchParams.get("error_message")

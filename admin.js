@@ -2021,12 +2021,14 @@ async function loadFacebookHistory() {
     facebookPosts = Array.isArray(data.posts) ? data.posts : [];
     facebookLoaded = true;
     renderFacebookHistory();
-    setFacebookStatus(
-      facebookPosts.length
-        ? `${facebookPosts.length} saved Facebook post${facebookPosts.length === 1 ? "" : "s"} loaded.`
-        : "Choose up to five jerseys to prepare a Facebook post.",
-      "success"
-    );
+    if (!facebookCallback) {
+      setFacebookStatus(
+        facebookPosts.length
+          ? `${facebookPosts.length} saved Facebook post${facebookPosts.length === 1 ? "" : "s"} loaded.`
+          : "Choose up to five jerseys to prepare a Facebook post.",
+        "success"
+      );
+    }
   } catch (error) {
     facebookLoaded = false;
     setFacebookStatus(error.message, "error");
