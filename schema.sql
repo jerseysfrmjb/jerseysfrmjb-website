@@ -168,3 +168,20 @@ CREATE INDEX IF NOT EXISTS idx_analytics_events_type_time ON analytics_events(ev
 CREATE INDEX IF NOT EXISTS idx_analytics_events_product_time ON analytics_events(product_id, occurred_at DESC);
 CREATE INDEX IF NOT EXISTS idx_analytics_events_session ON analytics_events(session_id, occurred_at);
 CREATE INDEX IF NOT EXISTS idx_analytics_events_source_time ON analytics_events(traffic_source, occurred_at DESC);
+
+CREATE TABLE IF NOT EXISTS facebook_post_history (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  product_ids TEXT NOT NULL,
+  product_names TEXT NOT NULL,
+  caption TEXT NOT NULL,
+  photo_urls TEXT NOT NULL DEFAULT '[]',
+  content_hash TEXT NOT NULL UNIQUE,
+  status TEXT NOT NULL DEFAULT 'draft'
+    CHECK (status IN ('draft', 'posted')),
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  posted_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_facebook_post_history_status_created
+  ON facebook_post_history(status, created_at DESC);

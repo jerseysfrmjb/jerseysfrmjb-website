@@ -6,8 +6,8 @@
   <title>Inventory Admin | JerseysFrmJB</title>
   <meta name="robots" content="noindex,nofollow">
   <link rel="icon" href="assets/jerseysfrmjb-logo.jpg" type="image/jpeg">
-  <link rel="stylesheet" href="styles.css?v=admin-analytics-1">
-  <script src="admin.js?v=admin-analytics-1" defer></script>
+  <link rel="stylesheet" href="styles.css?v=facebook-publisher-1">
+  <script src="admin.js?v=facebook-publisher-1" defer></script>
 </head>
 <body class="admin-body">
   <main class="admin-shell">
@@ -39,6 +39,7 @@
         <button type="button" data-admin-tab="sales">Sales</button>
         <button type="button" data-admin-tab="messages">Messages</button>
         <button type="button" data-admin-tab="feedback">Marketplace Feedback</button>
+        <button type="button" data-admin-tab="facebook">Facebook</button>
         <button type="button" data-admin-tab="pinterest">Pinterest</button>
         <button type="button" data-admin-tab="homepage">Homepage</button>
       </nav>
@@ -52,6 +53,7 @@
           <option value="sales">Sales</option>
           <option value="messages">Messages</option>
           <option value="feedback">Marketplace Feedback</option>
+          <option value="facebook">Facebook</option>
           <option value="pinterest">Pinterest</option>
           <option value="homepage">Homepage</option>
         </select>
@@ -146,6 +148,74 @@
         </details>
         <p class="form-status" data-feedback-status></p>
         <div class="admin-feedback-list" data-admin-feedback><p class="empty-featured">Open this section to load feedback.</p></div>
+      </section>
+      <section class="admin-facebook-panel" data-admin-section="facebook" aria-label="Facebook Page post generator" hidden>
+        <div class="admin-messages-head">
+          <div>
+            <span class="section-kicker">Page Content Publisher</span>
+            <h2>Facebook Posts</h2>
+            <p>Create posts from live inventory, then publish them manually through your Facebook Page. This never posts to Marketplace.</p>
+          </div>
+          <a class="shop-button secondary-admin" href="https://business.facebook.com/latest/home" target="_blank" rel="noopener">Open Meta Business Suite</a>
+        </div>
+        <p class="form-status" data-facebook-status role="status">Choose up to five jerseys to prepare a Facebook post.</p>
+
+        <div class="facebook-publisher-grid">
+          <section class="facebook-product-picker" aria-labelledby="facebook-product-picker-title">
+            <div class="facebook-section-head">
+              <div>
+                <span>Inventory</span>
+                <h3 id="facebook-product-picker-title">Choose jerseys</h3>
+              </div>
+              <strong data-facebook-selection-count>0 / 5</strong>
+            </div>
+            <label class="facebook-product-search">
+              <span>Search inventory</span>
+              <input type="search" data-facebook-product-search placeholder="Search jersey, player, or team">
+            </label>
+            <div class="facebook-product-list" data-facebook-products>
+              <p class="empty-featured">Open this section to load inventory products.</p>
+            </div>
+            <button class="shop-button" type="button" data-generate-facebook-post disabled>Generate Facebook Post</button>
+          </section>
+
+          <section class="facebook-post-editor" data-facebook-editor aria-labelledby="facebook-post-editor-title">
+            <div class="facebook-section-head">
+              <div>
+                <span>Post Preview</span>
+                <h3 id="facebook-post-editor-title">Caption and photos</h3>
+              </div>
+              <strong><span data-facebook-caption-count>0</span> characters</strong>
+            </div>
+            <label class="facebook-caption-field">
+              Facebook caption
+              <textarea rows="14" maxlength="6000" data-facebook-caption placeholder="Choose jerseys and generate a post."></textarea>
+            </label>
+            <div class="facebook-photo-preview" data-facebook-photos>
+              <p>Selected product photos will appear here.</p>
+            </div>
+            <div class="facebook-post-actions">
+              <button class="shop-button" type="button" data-save-facebook-draft disabled>Save Draft</button>
+              <button class="shop-button secondary-admin" type="button" data-copy-facebook-post disabled>Copy Post Text</button>
+              <a class="shop-button secondary-admin" href="https://business.facebook.com/latest/home" target="_blank" rel="noopener">Open Facebook</a>
+              <button class="shop-button secondary-admin" type="button" data-mark-facebook-posted disabled>Mark as Posted</button>
+            </div>
+            <p class="facebook-post-note">Download the photos below, copy the post text, publish it in Meta Business Suite, then mark it as posted here.</p>
+          </section>
+        </div>
+
+        <section class="facebook-history-section" aria-labelledby="facebook-history-title">
+          <div class="facebook-section-head">
+            <div>
+              <span>Duplicate Protection</span>
+              <h3 id="facebook-history-title">Post History</h3>
+            </div>
+            <button class="shop-button secondary-admin" type="button" data-refresh-facebook-history>Refresh History</button>
+          </div>
+          <div class="facebook-history-list" data-facebook-history>
+            <p class="empty-featured">Open this section to load saved Facebook posts.</p>
+          </div>
+        </section>
       </section>
       <section class="admin-pinterest-panel" data-admin-section="pinterest" aria-label="Pinterest publisher" hidden>
         <div class="admin-messages-head">

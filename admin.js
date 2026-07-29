@@ -42,6 +42,19 @@ const pinterestTitleCount = document.querySelector("[data-pinterest-title-count]
 const pinterestDescriptionCount = document.querySelector("[data-pinterest-description-count]");
 const pinterestPreview = document.querySelector("[data-pinterest-preview]");
 const pinterestPublish = document.querySelector("[data-pinterest-publish]");
+const facebookStatusLine = document.querySelector("[data-facebook-status]");
+const facebookProducts = document.querySelector("[data-facebook-products]");
+const facebookProductSearch = document.querySelector("[data-facebook-product-search]");
+const facebookSelectionCount = document.querySelector("[data-facebook-selection-count]");
+const generateFacebookPostButton = document.querySelector("[data-generate-facebook-post]");
+const facebookCaption = document.querySelector("[data-facebook-caption]");
+const facebookCaptionCount = document.querySelector("[data-facebook-caption-count]");
+const facebookPhotos = document.querySelector("[data-facebook-photos]");
+const saveFacebookDraftButton = document.querySelector("[data-save-facebook-draft]");
+const copyFacebookPostButton = document.querySelector("[data-copy-facebook-post]");
+const markFacebookPostedButton = document.querySelector("[data-mark-facebook-posted]");
+const refreshFacebookHistoryButton = document.querySelector("[data-refresh-facebook-history]");
+const facebookHistoryList = document.querySelector("[data-facebook-history]");
 const adminSummary = document.querySelector("[data-admin-summary]");
 const adminQuick = document.querySelector("[data-admin-quick]");
 const adminFilterButtons = [...document.querySelectorAll("[data-admin-filter]")];
@@ -95,6 +108,13 @@ let pinterestConnection = null;
 let pinterestBoards = [];
 let pinterestLoaded = false;
 let pinterestPublishing = false;
+let facebookLoaded = false;
+let facebookLoading = false;
+let facebookSaving = false;
+let facebookPosts = [];
+let selectedFacebookProductIds = new Set();
+let currentFacebookPost = null;
+let facebookCaptionGenerated = false;
 let adminFilter = "all";
 let restockPresets = [];
 let lastBulkRestock = null;
@@ -109,7 +129,11 @@ let quickSaleMatches = [];
 let quickSalePriceManuallyEdited = false;
 let quickSalePriceRequest = 0;
 const pinterestCallback = new URLSearchParams(location.search).get("pinterest") || "";
-let currentAdminTab = location.hash === "#pinterest" || pinterestCallback ? "pinterest" : "dashboard";
+let currentAdminTab = location.hash === "#facebook"
+  ? "facebook"
+  : location.hash === "#pinterest" || pinterestCallback
+    ? "pinterest"
+    : "dashboard";
 let editingSaleId = null;
 let savingSaleEditId = null;
 let deletingSaleId = null;
@@ -148,6 +172,7 @@ function setAdminTab(tab = "dashboard") {
   if (tab === "sales" && !salesLoaded) loadSales();
   if (tab === "analytics" && !analyticsLoaded) loadAnalytics();
   if (tab === "feedback" && !feedbackLoaded) loadEbayFeedbackAdmin();
+  if (tab === "facebook" && !facebookLoaded) loadFacebookHistory();
   if (tab === "pinterest" && !pinterestLoaded) loadPinterestStatus();
 }
 
@@ -1548,6 +1573,395 @@ function showPanel() {
   setAdminTab(currentAdminTab || "dashboard");
 }
 
+const FACEBOOK_MAX_PRODUCTS = 5;
+const FACEBOOK_SITE_ORIGIN = "https://jerseysfrmjb.com";
+
+function facebookAvailableProducts() {
+  return inventory
+    .filter(item => isAvailable(item) && Array.isArray(item.photos) && item.photos.some(photo => photo?.src))
+    .sort((left, right) =>
+      Number(Boolean(right.new_arrival)) - Number(Boolean(left.new_arrival))
+      || String(right.date_added || "").localeCompare(String(left.date_added || ""))
+      || left.name.localeCompare(right.name)
+    );
+}
+
+function selectedFacebookProducts() {
+  const byId = new Map(inventory.map(item => [String(item.id), item]));
+  return [...selectedFacebookProductIds]
+    .map(id => byId.get(String(id)))
+    .filter(Boolean);
+}
+
+function facebookSizeLabel(size = "") {
+  return {
+    S: "Small",
+    M: "Medium",
+    L: "Large",
+    XL: "Extra Large",
+    "2XL": "2XL",
+    "3XL": "3XL",
+    "4XL": "4XL"
+  }[size] || size;
+}
+
+function facebookAvailableSizes(product) {
+  return Object.entries(product?.sizes || {})
+    .filter(([, quantity]) => Number(quantity) > 0)
+    .map(([size]) => facebookSizeLabel(size));
+}
+
+function facebookProductLink(product) {
+  const url = new URL(`/products/${encodeURIComponent(String(product.id))}`, FACEBOOK_SITE_ORIGIN);
+  url.searchParams.set("utm_source", "facebook");
+  url.searchParams.set("utm_medium", "organic_social");
+  url.searchParams.set("utm_campaign", "new_inventory");
+  url.searchParams.set("utm_content", String(product.id));
+  return url.toString();
+}
+
+function safeMarketplaceLink(value = "") {
+  try {
+    const url = new URL(String(value || "").trim());
+    return url.protocol === "https:" ? url.toString() : "";
+  } catch {
+    return "";
+  }
+}
+
+function facebookHashtag(value = "") {
+  const token = String(value || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/gi, "");
+  return token ? `#${token}` : "";
+}
+
+function facebookPostHashtags(products) {
+  const tags = ["#JerseysFrmJB", "#FootballJerseys", "#SoccerJerseys", "#NewArrival"];
+  for (const product of products) {
+    const [playerPart = "", teamPart = ""] = String(product.name || "").split("|");
+    const player = playerPart.replace(/#\d+.*/g, "").trim();
+    const team = teamPart
+      .replace(/\b(?:(?:19|20)?\d{2})(?:\/\d{2,4})?\b.*$/i, "")
+      .replace(/\b(?:World Cup|Home|Away|Third|Jersey|Kit)\b/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    const playerTag = facebookHashtag(player);
+    const teamTag = facebookHashtag(team ? `${team} Jersey` : "");
+    if (playerTag) tags.push(playerTag);
+    if (teamTag) tags.push(teamTag);
+  }
+  return [...new Set(tags)].slice(0, 9).join(" ");
+}
+
+function facebookDefaultCaption(products) {
+  if (!products.length) return "";
+  const heading = products.length === 1
+    ? "New arrival at JerseysFrmJB \u26bd\ufe0f"
+    : "New jerseys are available at JerseysFrmJB \u26bd\ufe0f";
+  const sections = products.map(product => {
+    const sizes = facebookAvailableSizes(product);
+    const links = itemLinks(product);
+    const details = [
+      product.name,
+      sizes.length ? `Available sizes: ${sizes.join(", ")}` : "Sold out",
+      `View jersey: ${facebookProductLink(product)}`
+    ];
+    const ebay = safeMarketplaceLink(links.ebay);
+    const depop = safeMarketplaceLink(links.depop);
+    if (ebay) details.push(`eBay: ${ebay}`);
+    if (depop) details.push(`Depop: ${depop}`);
+    return details.join("\n");
+  });
+  return [
+    heading,
+    "",
+    ...sections.flatMap((section, index) => index ? ["", section] : [section]),
+    "",
+    "Message @jerseysfrmjb with questions or jersey requests.",
+    "",
+    facebookPostHashtags(products)
+  ].join("\n");
+}
+
+function facebookSelectedPhotos() {
+  return selectedFacebookProducts().flatMap(product =>
+    (product.photos || [])
+      .filter(photo => photo?.src)
+      .slice(0, 2)
+      .map(photo => ({
+        product_id: product.id,
+        product_name: product.name,
+        src: photo.src,
+        alt: photo.alt || product.name
+      }))
+  );
+}
+
+function setFacebookStatus(message, tone = "") {
+  if (!facebookStatusLine) return;
+  facebookStatusLine.textContent = message;
+  facebookStatusLine.className = `form-status${tone ? ` ${tone}` : ""}`;
+}
+
+function updateFacebookActions() {
+  const selectionCount = selectedFacebookProductIds.size;
+  if (facebookSelectionCount) facebookSelectionCount.textContent = `${selectionCount} / ${FACEBOOK_MAX_PRODUCTS}`;
+  if (generateFacebookPostButton) {
+    generateFacebookPostButton.disabled = selectionCount < 1 || selectionCount > FACEBOOK_MAX_PRODUCTS;
+  }
+  const hasCaption = Boolean(facebookCaption?.value.trim());
+  if (saveFacebookDraftButton) {
+    saveFacebookDraftButton.disabled = facebookSaving
+      || selectionCount < 1
+      || !facebookCaptionGenerated
+      || !hasCaption
+      || Boolean(currentFacebookPost);
+  }
+  if (copyFacebookPostButton) copyFacebookPostButton.disabled = !hasCaption;
+  if (markFacebookPostedButton) {
+    markFacebookPostedButton.disabled = facebookSaving
+      || !currentFacebookPost
+      || currentFacebookPost.status === "posted";
+  }
+  if (facebookCaptionCount) facebookCaptionCount.textContent = String(facebookCaption?.value.length || 0);
+}
+
+function renderFacebookProducts() {
+  if (!facebookProducts) return;
+  const availableIds = new Set(facebookAvailableProducts().map(item => String(item.id)));
+  selectedFacebookProductIds = new Set(
+    [...selectedFacebookProductIds].filter(id => availableIds.has(String(id)))
+  );
+  const query = String(facebookProductSearch?.value || "").trim().toLowerCase();
+  const products = facebookAvailableProducts().filter(product => !query || itemSearchText(product).includes(query));
+
+  facebookProducts.innerHTML = products.length ? products.map(product => {
+    const id = String(product.id);
+    const checked = selectedFacebookProductIds.has(id);
+    const disabled = !checked && selectedFacebookProductIds.size >= FACEBOOK_MAX_PRODUCTS;
+    const links = itemLinks(product);
+    const sizes = facebookAvailableSizes(product);
+    return `
+      <label class="facebook-product-option${checked ? " selected" : ""}">
+        <input type="checkbox" value="${escapeHtml(id)}" data-facebook-product ${checked ? "checked" : ""} ${disabled ? "disabled" : ""}>
+        <img src="${escapeHtml(product.photos?.[0]?.src || "assets/jerseysfrmjb-logo.jpg")}" alt="${escapeHtml(product.photos?.[0]?.alt || product.name)}">
+        <span class="facebook-product-copy">
+          <b>${escapeHtml(product.name)}</b>
+          <small>${escapeHtml(sizes.join(", "))}</small>
+          <i>${product.new_arrival ? "New arrival" : escapeHtml(categoryLabel(product.category))}${links.ebay ? " \u00b7 eBay" : ""}${links.depop ? " \u00b7 Depop" : ""}</i>
+        </span>
+      </label>`;
+  }).join("") : '<p class="empty-featured">No matching in-stock jerseys with product photos.</p>';
+  updateFacebookActions();
+}
+
+function renderFacebookPhotos(photos = facebookSelectedPhotos()) {
+  if (!facebookPhotos) return;
+  facebookPhotos.innerHTML = photos.length ? photos.map((photo, index) => {
+    const src = typeof photo === "string" ? photo : photo.src;
+    const alt = typeof photo === "string" ? `Facebook product photo ${index + 1}` : photo.alt;
+    const productName = typeof photo === "string" ? "Product photo" : photo.product_name;
+    return `
+      <article>
+        <img src="${escapeHtml(src)}" alt="${escapeHtml(alt || productName)}">
+        <div>
+          <span>${escapeHtml(productName || "Product photo")}</span>
+          <a href="${escapeHtml(src)}" download>Download Photo</a>
+        </div>
+      </article>`;
+  }).join("") : "<p>Selected product photos will appear here.</p>";
+}
+
+function generateFacebookPost() {
+  const products = selectedFacebookProducts();
+  if (!products.length) {
+    setFacebookStatus("Choose at least one jersey.", "error");
+    return;
+  }
+  currentFacebookPost = null;
+  facebookCaptionGenerated = true;
+  if (facebookCaption) facebookCaption.value = facebookDefaultCaption(products);
+  renderFacebookPhotos();
+  updateFacebookActions();
+  setFacebookStatus("Post generated. Review the caption and photos, then save the draft.", "success");
+}
+
+function facebookHistoryDate(value = "") {
+  return value ? formatMessageDate(value) : "";
+}
+
+function renderFacebookHistory() {
+  if (!facebookHistoryList) return;
+  facebookHistoryList.innerHTML = facebookPosts.length ? facebookPosts.map(post => {
+    const posted = post.status === "posted";
+    const productNames = Array.isArray(post.product_names) ? post.product_names : [];
+    return `
+      <article class="facebook-history-card ${posted ? "posted" : "draft"}" data-facebook-post-id="${escapeHtml(post.id)}">
+        <div class="facebook-history-main">
+          <div class="facebook-history-meta">
+            <span>${posted ? "Posted" : "Draft"}</span>
+            <time>${escapeHtml(facebookHistoryDate(post.posted_at || post.created_at))}</time>
+          </div>
+          <h4>${escapeHtml(productNames.join(" + ") || "Facebook inventory post")}</h4>
+          <p>${escapeHtml(post.caption).replace(/\n/g, "<br>")}</p>
+        </div>
+        <div class="facebook-history-actions">
+          <button type="button" data-facebook-history-load="${escapeHtml(post.id)}">Open</button>
+          <button type="button" data-facebook-history-copy="${escapeHtml(post.id)}">Copy Text</button>
+          ${posted
+            ? ""
+            : `<button type="button" data-facebook-history-posted="${escapeHtml(post.id)}">Mark Posted</button>
+               <button type="button" class="danger" data-facebook-history-delete="${escapeHtml(post.id)}">Delete Draft</button>`}
+        </div>
+      </article>`;
+  }).join("") : '<p class="empty-featured">No Facebook posts have been saved yet.</p>';
+}
+
+function updateFacebookPostInHistory(post) {
+  const index = facebookPosts.findIndex(item => Number(item.id) === Number(post.id));
+  if (index >= 0) facebookPosts[index] = post;
+  else facebookPosts.unshift(post);
+  renderFacebookHistory();
+}
+
+function openFacebookHistoryPost(post) {
+  if (!post) return;
+  selectedFacebookProductIds = new Set((post.product_ids || []).map(String));
+  currentFacebookPost = post;
+  facebookCaptionGenerated = true;
+  if (facebookCaption) facebookCaption.value = post.caption || "";
+  renderFacebookProducts();
+  renderFacebookPhotos(post.photo_urls || []);
+  updateFacebookActions();
+  setFacebookStatus(
+    post.status === "posted"
+      ? "Posted history opened. You can copy its text, but it cannot be marked twice."
+      : "Saved draft opened. Copy it into Meta Business Suite when ready.",
+    "success"
+  );
+}
+
+async function loadFacebookHistory() {
+  if (!facebookHistoryList || facebookLoading) return;
+  facebookLoading = true;
+  if (refreshFacebookHistoryButton) refreshFacebookHistoryButton.disabled = true;
+  setFacebookStatus("Loading Facebook post history...");
+  renderFacebookProducts();
+  try {
+    const data = await api("/api/admin/facebook-posts");
+    facebookPosts = Array.isArray(data.posts) ? data.posts : [];
+    facebookLoaded = true;
+    renderFacebookHistory();
+    setFacebookStatus(
+      facebookPosts.length
+        ? `${facebookPosts.length} saved Facebook post${facebookPosts.length === 1 ? "" : "s"} loaded.`
+        : "Choose up to five jerseys to prepare a Facebook post.",
+      "success"
+    );
+  } catch (error) {
+    facebookLoaded = false;
+    setFacebookStatus(error.message, "error");
+    if (facebookHistoryList) facebookHistoryList.innerHTML = '<p class="empty-featured">Facebook history could not be loaded.</p>';
+  } finally {
+    facebookLoading = false;
+    if (refreshFacebookHistoryButton) refreshFacebookHistoryButton.disabled = false;
+  }
+}
+
+async function saveFacebookDraft() {
+  if (facebookSaving || !facebookCaption?.value.trim()) return;
+  facebookSaving = true;
+  updateFacebookActions();
+  if (saveFacebookDraftButton) saveFacebookDraftButton.textContent = "Saving...";
+  setFacebookStatus("Saving Facebook draft...");
+  try {
+    const data = await api("/api/admin/facebook-posts", {
+      method: "POST",
+      body: JSON.stringify({
+        product_ids: [...selectedFacebookProductIds],
+        caption: facebookCaption.value.trim()
+      })
+    });
+    currentFacebookPost = data.post;
+    updateFacebookPostInHistory(data.post);
+    renderFacebookPhotos(data.post.photo_urls || []);
+    setFacebookStatus("Draft saved. Copy the text and photos into Meta Business Suite.", "success");
+  } catch (error) {
+    if (error.duplicate) {
+      currentFacebookPost = error.duplicate;
+      updateFacebookPostInHistory(error.duplicate);
+      openFacebookHistoryPost(error.duplicate);
+    } else {
+      setFacebookStatus(error.message, "error");
+    }
+  } finally {
+    facebookSaving = false;
+    if (saveFacebookDraftButton) saveFacebookDraftButton.textContent = "Save Draft";
+    updateFacebookActions();
+  }
+}
+
+async function copyFacebookCaption(value = facebookCaption?.value || "") {
+  const text = String(value || "").trim();
+  if (!text) return;
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.opacity = "0";
+    document.body.appendChild(textArea);
+    textArea.select();
+    document.execCommand("copy");
+    textArea.remove();
+  }
+  setFacebookStatus("Facebook post text copied.", "success");
+}
+
+async function markFacebookPostAsPosted(post = currentFacebookPost) {
+  if (facebookSaving || !post || post.status === "posted") return;
+  if (!confirm("Mark this Facebook Page post as posted? This keeps it in history to prevent duplicates.")) return;
+  facebookSaving = true;
+  updateFacebookActions();
+  setFacebookStatus("Updating Facebook post history...");
+  try {
+    const data = await api("/api/admin/facebook-posts", {
+      method: "PATCH",
+      body: JSON.stringify({ id: post.id, status: "posted" })
+    });
+    currentFacebookPost = data.post;
+    updateFacebookPostInHistory(data.post);
+    setFacebookStatus("Post marked as posted. Duplicate protection is active.", "success");
+  } catch (error) {
+    setFacebookStatus(error.message, "error");
+  } finally {
+    facebookSaving = false;
+    updateFacebookActions();
+  }
+}
+
+async function deleteFacebookDraft(post) {
+  if (!post || post.status !== "draft") return;
+  if (!confirm("Delete this saved Facebook draft? This cannot be undone.")) return;
+  setFacebookStatus("Deleting Facebook draft...");
+  try {
+    await api(`/api/admin/facebook-posts?id=${encodeURIComponent(post.id)}`, { method: "DELETE" });
+    facebookPosts = facebookPosts.filter(item => Number(item.id) !== Number(post.id));
+    if (Number(currentFacebookPost?.id) === Number(post.id)) {
+      currentFacebookPost = null;
+      facebookCaptionGenerated = Boolean(facebookCaption?.value.trim());
+    }
+    renderFacebookHistory();
+    updateFacebookActions();
+    setFacebookStatus("Draft deleted. Posted history was not affected.", "success");
+  } catch (error) {
+    setFacebookStatus(error.message, "error");
+  }
+}
+
 const PINTEREST_CATEGORY_PAGES = {
   world: "/worldcup-jerseys",
   club: "/club-jerseys",
@@ -2569,6 +2983,7 @@ function applyAdminData(data) {
   if (Object.prototype.hasOwnProperty.call(data, "lastBulkRestock")) lastBulkRestock = data.lastBulkRestock;
   if (Object.prototype.hasOwnProperty.call(data, "bulkPreview")) renderBulkPreview(data.bulkPreview);
   renderPresetOptions();
+  renderFacebookProducts();
   renderPinterestProductOptions();
 }
 
@@ -2861,6 +3276,57 @@ featuredPreview?.addEventListener("drop", async event => {
 refreshMessages?.addEventListener("click", loadMessages);
 refreshFeedback?.addEventListener("click", loadEbayFeedbackAdmin);
 feedbackFilter?.addEventListener("change", renderEbayFeedbackAdmin);
+refreshFacebookHistoryButton?.addEventListener("click", loadFacebookHistory);
+facebookProductSearch?.addEventListener("input", renderFacebookProducts);
+facebookProducts?.addEventListener("change", event => {
+  const checkbox = event.target.closest("[data-facebook-product]");
+  if (!checkbox) return;
+  const id = String(checkbox.value);
+  if (checkbox.checked) {
+    if (selectedFacebookProductIds.size >= FACEBOOK_MAX_PRODUCTS) {
+      checkbox.checked = false;
+      setFacebookStatus(`Choose no more than ${FACEBOOK_MAX_PRODUCTS} jerseys.`, "error");
+      return;
+    }
+    selectedFacebookProductIds.add(id);
+  } else {
+    selectedFacebookProductIds.delete(id);
+  }
+  currentFacebookPost = null;
+  facebookCaptionGenerated = false;
+  renderFacebookProducts();
+  renderFacebookPhotos();
+  updateFacebookActions();
+  setFacebookStatus("Selection changed. Generate the Facebook post when ready.");
+});
+generateFacebookPostButton?.addEventListener("click", generateFacebookPost);
+facebookCaption?.addEventListener("input", () => {
+  if (currentFacebookPost && facebookCaption.value.trim() !== currentFacebookPost.caption) {
+    currentFacebookPost = null;
+  }
+  facebookCaptionGenerated = Boolean(facebookCaption.value.trim());
+  updateFacebookActions();
+});
+saveFacebookDraftButton?.addEventListener("click", saveFacebookDraft);
+copyFacebookPostButton?.addEventListener("click", () => copyFacebookCaption());
+markFacebookPostedButton?.addEventListener("click", () => markFacebookPostAsPosted());
+facebookHistoryList?.addEventListener("click", event => {
+  const loadButton = event.target.closest("[data-facebook-history-load]");
+  const copyButton = event.target.closest("[data-facebook-history-copy]");
+  const postedButton = event.target.closest("[data-facebook-history-posted]");
+  const deleteButton = event.target.closest("[data-facebook-history-delete]");
+  const id = loadButton?.dataset.facebookHistoryLoad
+    || copyButton?.dataset.facebookHistoryCopy
+    || postedButton?.dataset.facebookHistoryPosted
+    || deleteButton?.dataset.facebookHistoryDelete;
+  if (!id) return;
+  const post = facebookPosts.find(item => String(item.id) === String(id));
+  if (!post) return;
+  if (loadButton) openFacebookHistoryPost(post);
+  if (copyButton) copyFacebookCaption(post.caption);
+  if (postedButton) markFacebookPostAsPosted(post);
+  if (deleteButton) deleteFacebookDraft(post);
+});
 refreshPinterest?.addEventListener("click", loadPinterestStatus);
 createPinterestBoardsButton?.addEventListener("click", createPinterestTrialBoards);
 disconnectPinterestButton?.addEventListener("click", disconnectPinterest);
