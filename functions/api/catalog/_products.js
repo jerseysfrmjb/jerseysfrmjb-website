@@ -185,8 +185,7 @@ export function productLandingUrl(productId, siteOrigin = DEFAULT_SITE_ORIGIN) {
   const origin = normalizeSiteOrigin(siteOrigin);
   const id = String(productId || "").trim();
   if (!id) return "";
-  const encodedId = encodeURIComponent(id);
-  return `${origin}/shop-all.html?product=${encodedId}#product-${encodedId}`;
+  return `${origin}/products/${encodeURIComponent(id)}`;
 }
 
 function productDescription(row, identity, availableSizes) {

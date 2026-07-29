@@ -1,0 +1,565 @@
+import {
+  inferProductIdentity,
+  productLandingUrl
+} from "../api/catalog/_products.js";
+
+const DEFAULT_SITE_ORIGIN = "https://jerseysfrmjb.com";
+const SIZE_ORDER = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"];
+const SIZE_WORDS = [
+  ["4XL", /4\s*x\s*l/i],
+  ["3XL", /3\s*x\s*l/i],
+  ["2XL", /2\s*x\s*l|xxl/i],
+  ["XL", /\bxl\b|extra\s+large/i],
+  ["L", /\bl\b|\blarge\b/i],
+  ["M", /\bm\b|\bmedium\b/i],
+  ["S", /\bs\b|\bsmall\b/i]
+];
+const MARKETPLACES = [
+  {
+    name: "Depop",
+    key: "depop",
+    priceKey: "depop_price",
+    icon: "\u{1F6CD}",
+    hosts: ["depop.com"]
+  },
+  {
+    name: "eBay",
+    key: "ebay",
+    priceKey: "ebay_price",
+    icon: "\u{1F6D2}",
+    hosts: ["ebay.com"]
+  }
+];
+
+function parseJson(value, fallback) {
+  try {
+    return JSON.parse(value || "");
+  } catch {
+    return fallback;
+  }
+}
+
+function escapeHtml(value = "") {
+  return String(value).replace(
+    /[&<>"']/g,
+    character => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;"
+    })[character]
+  );
+}
+
+function jsonForHtml(value) {
+  return JSON.stringify(value)
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/&/g, "\\u0026");
+}
+
+function normalizeSiteOrigin(value = "") {
+  try {
+    const url = new URL(value || DEFAULT_SITE_ORIGIN);
+    return url.protocol === "https:" ? url.origin : DEFAULT_SITE_ORIGIN;
+  } catch {
+    return DEFAULT_SITE_ORIGIN;
+  }
+}
+
+function numericPrice(value) {
+  if (value === null || value === undefined || String(value).trim() === "") return null;
+  const amount = Number(value);
+  return Number.isFinite(amount) && amount >= 0 ? amount : null;
+}
+
+function formatPrice(value) {
+  return numericPrice(value)?.toFixed(2) || "";
+}
+
+function normalizeSizes(raw = {}, fallbackSize = "", fallbackQuantity = 0) {
+  const sizes = {};
+  for (const size of SIZE_ORDER) {
+    const quantity = Math.max(0, Math.floor(Number(raw?.[size] || 0)));
+    if (quantity > 0) sizes[size] = quantity;
+  }
+
+  if (!Object.keys(sizes).length && Number(fallbackQuantity) > 0) {
+    const matches = SIZE_WORDS
+      .filter(([, pattern]) => pattern.test(String(fallbackSize)))
+      .map(([size]) => size);
+    if (matches.length) {
+      const quantity = Math.max(1, Math.floor(Number(fallbackQuantity) / matches.length));
+      for (const size of matches) sizes[size] = quantity;
+    }
+  }
+
+  return sizes;
+}
+
+function totalQuantity(sizes = {}, fallbackQuantity = 0) {
+  const sizeTotal = SIZE_ORDER.reduce(
+    (total, size) => total + Math.max(0, Math.floor(Number(sizes[size] || 0))),
+    0
+  );
+  return sizeTotal || Math.max(0, Math.floor(Number(fallbackQuantity || 0)));
+}
+
+function categoryDetails(category = "") {
+  if (category === "world") {
+    return {
+      label: "International Team Jersey",
+      href: "/worldcup-jerseys.html"
+    };
+  }
+  if (category === "retro") {
+    return {
+      label: "Retro Jersey",
+      href: "/retro-jerseys.html"
+    };
+  }
+  return {
+    label: "Club Jersey",
+    href: "/club-jerseys.html"
+  };
+}
+
+function imageRevision(value = "") {
+  return String(value || "").replace(/\D/g, "") || "product1";
+}
+
+function absoluteImageUrl(value, siteOrigin, revision) {
+  if (!value || typeof value !== "string") return "";
+  try {
+    const url = new URL(value.trim(), `${siteOrigin}/`);
+    if (url.protocol !== "https:") return "";
+    if (url.origin === siteOrigin) url.searchParams.set("v", revision);
+    return url.toString();
+  } catch {
+    return "";
+  }
+}
+
+function productImages(row, siteOrigin) {
+  const revision = imageRevision(row.updated_at);
+  const photos = (Array.isArray(row.photos) ? row.photos : parseJson(row.photos, []))
+    .map(photo => ({
+      src: absoluteImageUrl(photo?.src, siteOrigin, revision),
+      alt: String(photo?.alt || row.name || "Jersey").trim(),
+      label: `${photo?.src || ""} ${photo?.alt || ""}`.toLowerCase()
+    }))
+    .filter(photo => photo.src);
+
+  const front = photos.find(photo => /\bfront\b/.test(photo.label)) || photos[0] || null;
+  const back = photos.find(photo => photo.src !== front?.src && /\bback\b/.test(photo.label))
+    || photos.find(photo => photo.src !== front?.src)
+    || null;
+
+  return { front, back };
+}
+
+function marketplaceUrl(value, allowedHosts) {
+  if (!value || typeof value !== "string") return "";
+  try {
+    const url = new URL(value.trim());
+    const hostname = url.hostname.toLowerCase().replace(/^www\./, "");
+    const allowed = allowedHosts.some(host => hostname === host || hostname.endsWith(`.${host}`));
+    return url.protocol === "https:" && allowed ? url.toString() : "";
+  } catch {
+    return "";
+  }
+}
+
+function selectedMetaPrice(row) {
+  return [
+    row.facebook_price,
+    row.website_price,
+    row.base_price
+  ].map(numericPrice).find(value => value !== null) ?? null;
+}
+
+function productDescription(row, identity, category, availableSizes, quantity) {
+  const details = [
+    row.name,
+    category.label,
+    identity.team_country,
+    identity.player ? `Player: ${identity.player}` : "",
+    quantity > 0
+      ? `Available sizes: ${availableSizes.map(size => size.name).join(", ")}`
+      : "Currently sold out"
+  ].filter(Boolean);
+  return `${details.join(". ")}. Browse current marketplace availability from JerseysFrmJB.`;
+}
+
+export function buildProductPageModel(row = {}, options = {}) {
+  const id = String(row.id || "").trim();
+  const title = String(row.name || "").trim();
+  const siteOrigin = normalizeSiteOrigin(options.siteOrigin);
+  if (!id || !title) return null;
+
+  const rawSizes = Array.isArray(row.sizes)
+    ? row.sizes
+    : parseJson(row.sizes_json, row.sizes || {});
+  const sizes = normalizeSizes(rawSizes, row.size, row.quantity);
+  const quantity = totalQuantity(sizes, row.quantity);
+  const availableSizes = SIZE_ORDER
+    .filter(size => Number(sizes[size]) > 0)
+    .map(size => ({ name: size, quantity: Number(sizes[size]) }));
+  const identity = inferProductIdentity(title);
+  const category = categoryDetails(row.category);
+  const images = productImages(row, siteOrigin);
+  const links = parseJson(row.links, row.links || {});
+  const marketplaces = MARKETPLACES.flatMap(marketplace => {
+    const price = numericPrice(row[marketplace.priceKey]);
+    const link = marketplaceUrl(links?.[marketplace.key], marketplace.hosts);
+    if (price === null && !link) return [];
+    return [{
+      name: marketplace.name,
+      icon: marketplace.icon,
+      price,
+      priceDisplay: price === null ? "" : price.toFixed(2),
+      link
+    }];
+  });
+  const canonicalUrl = productLandingUrl(id, siteOrigin);
+  const description = productDescription(row, identity, category, availableSizes, quantity);
+  const metaPrice = selectedMetaPrice(row);
+
+  return {
+    id,
+    title,
+    siteOrigin,
+    canonicalUrl,
+    description,
+    category,
+    condition: "New",
+    identity: {
+      player: identity.player || "Not specified",
+      teamCountry: identity.team_country || "Not specified"
+    },
+    quantity,
+    available: quantity > 0,
+    availabilityLabel: quantity > 0 ? "In stock" : "Sold out",
+    availabilityUrl: quantity > 0
+      ? "https://schema.org/InStock"
+      : "https://schema.org/OutOfStock",
+    sizes: availableSizes,
+    images,
+    marketplaces,
+    metaPrice,
+    metaPriceDisplay: metaPrice === null ? "" : metaPrice.toFixed(2)
+  };
+}
+
+function structuredProduct(model) {
+  const offers = model.marketplaces.flatMap(marketplace => {
+    if (marketplace.price === null || !marketplace.link) return [];
+    return [{
+      "@type": "Offer",
+      name: `Buy on ${marketplace.name}`,
+      url: marketplace.link,
+      price: marketplace.priceDisplay,
+      priceCurrency: "USD",
+      availability: model.availabilityUrl,
+      itemCondition: "https://schema.org/NewCondition",
+      seller: {
+        "@type": "Organization",
+        name: "JerseysFrmJB",
+        url: model.siteOrigin
+      }
+    }];
+  });
+
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "@id": `${model.canonicalUrl}#product`,
+    url: model.canonicalUrl,
+    sku: model.id,
+    name: model.title,
+    description: model.description,
+    image: [model.images.front?.src, model.images.back?.src].filter(Boolean),
+    category: model.category.label,
+    itemCondition: "https://schema.org/NewCondition",
+    brand: {
+      "@type": "Brand",
+      name: "JerseysFrmJB"
+    },
+    additionalProperty: [
+      {
+        "@type": "PropertyValue",
+        name: "Player",
+        value: model.identity.player
+      },
+      {
+        "@type": "PropertyValue",
+        name: "Team or country",
+        value: model.identity.teamCountry
+      },
+      {
+        "@type": "PropertyValue",
+        name: "Available sizes",
+        value: model.sizes.length
+          ? model.sizes.map(size => size.name).join(", ")
+          : "Sold out"
+      },
+      {
+        "@type": "PropertyValue",
+        name: "Stock quantity",
+        value: String(model.quantity)
+      }
+    ]
+  };
+  if (offers.length) schema.offers = offers;
+  return schema;
+}
+
+function imageMarkup(image, label) {
+  if (!image) return "";
+  return `
+    <figure class="product-detail-photo">
+      <img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.alt)}" decoding="async">
+      <figcaption>${escapeHtml(label)}</figcaption>
+    </figure>`;
+}
+
+function marketplaceMarkup(model) {
+  if (!model.marketplaces.length) {
+    return `
+      <section class="product-marketplaces" aria-labelledby="marketplace-heading">
+        <div class="product-section-heading">
+          <span>Marketplace checkout</span>
+          <h2 id="marketplace-heading">Listings coming soon</h2>
+        </div>
+        <p class="product-marketplace-empty">No active Depop or eBay listing is linked yet.</p>
+      </section>`;
+  }
+
+  return `
+    <section class="product-marketplaces" aria-labelledby="marketplace-heading">
+      <div class="product-section-heading">
+        <span>Marketplace checkout</span>
+        <h2 id="marketplace-heading">Available on</h2>
+      </div>
+      <div class="product-marketplace-list">
+        ${model.marketplaces.map(marketplace => {
+          let action = "";
+          if (!model.available) {
+            action = '<span class="platform-buy-button disabled" aria-disabled="true">Sold Out</span>';
+          } else if (marketplace.link) {
+            action = `<a class="platform-buy-button product-marketplace-button" href="${escapeHtml(marketplace.link)}" target="_blank" rel="noopener">Buy on ${escapeHtml(marketplace.name)}</a>`;
+          }
+          return `
+            <article class="product-marketplace-option">
+              <div>
+                <span class="product-marketplace-name"><b aria-hidden="true">${escapeHtml(marketplace.icon)}</b>${escapeHtml(marketplace.name)}</span>
+                ${marketplace.priceDisplay
+                  ? `<strong>$${escapeHtml(marketplace.priceDisplay)}</strong>`
+                  : '<small>See marketplace for price</small>'}
+              </div>
+              ${action || '<span class="product-listing-unavailable">Listing link unavailable</span>'}
+            </article>`;
+        }).join("")}
+      </div>
+    </section>`;
+}
+
+function headerMarkup() {
+  return `
+  <header class="site-header">
+    <button class="menu-toggle" type="button" aria-label="Open menu" aria-expanded="false">&#9776;</button>
+    <a class="site-name" href="/index.html">Jerseysfrmjb</a>
+    <nav class="desktop-nav">
+      <a href="/index.html">Home</a>
+      <a class="active" href="/shop-all.html">Shop All</a>
+      <a href="/worldcup-jerseys.html">World Cup Jerseys</a>
+      <a href="/retro-jerseys.html">Retro Jerseys</a>
+      <a href="/club-jerseys.html">Club Jerseys</a>
+      <a href="/size-guide.html">Size Guide</a>
+      <a href="/index.html#contact-form">Contact</a>
+    </nav>
+  </header>
+  <aside class="drawer" aria-hidden="true">
+    <button class="drawer-close" type="button" aria-label="Close menu">&times;</button>
+    <a href="/index.html">Home</a>
+    <a class="active" href="/shop-all.html">Shop All</a>
+    <a href="/worldcup-jerseys.html">World Cup Jerseys</a>
+    <a href="/retro-jerseys.html">Retro Jerseys</a>
+    <a href="/club-jerseys.html">Club Jerseys</a>
+    <a href="/size-guide.html">Size Guide</a>
+    <a href="/index.html#contact-form">Contact</a>
+  </aside>
+  <div class="drawer-backdrop"></div>`;
+}
+
+function footerMarkup() {
+  return `
+  <footer class="site-footer">
+    <div class="footer-shell">
+      <div class="footer-brand">
+        <img src="/assets/jerseysfrmjb-logo.jpg" alt="JerseysFrmJB logo">
+        <a class="footer-main" href="/index.html">JerseysFrmJB</a>
+        <p>200+ Jerseys Sold</p>
+        <p>Based in Maryland</p>
+      </div>
+      <nav class="footer-links" aria-label="Footer navigation">
+        <section>
+          <h3>Shop</h3>
+          <a href="/shop-all.html">Shop All</a>
+          <a href="/worldcup-jerseys.html">World Cup Jerseys</a>
+          <a href="/club-jerseys.html">Club Jerseys</a>
+          <a href="/retro-jerseys.html">Retro Jerseys</a>
+        </section>
+        <section>
+          <h3>Help</h3>
+          <a href="/size-guide.html">Size Guide</a>
+          <a href="/privacy.html">Privacy</a>
+          <button class="footer-help-link" type="button" data-open-help>Contact</button>
+          <button class="footer-help-link" type="button" data-open-help>Jersey Requests</button>
+        </section>
+        <section>
+          <h3>Marketplaces</h3>
+          <a href="https://www.ebay.com/usr/jerseysfrmjb" target="_blank" rel="noopener"><i class="brand-icon ebay-icon">e</i>eBay</a>
+          <a href="https://www.depop.com/jerseysfrmjb/" target="_blank" rel="noopener"><i class="brand-icon depop-icon">d</i>Depop</a>
+          <a href="https://www.instagram.com/jerseysfrmjb/" target="_blank" rel="noopener"><i class="brand-icon instagram-icon">&#9678;</i>Instagram</a>
+        </section>
+      </nav>
+    </div>
+  </footer>`;
+}
+
+export function renderProductPage(model) {
+  if (!model) return "";
+  const schema = structuredProduct(model);
+  const ogPrice = model.marketplaces.find(marketplace => marketplace.price !== null)?.priceDisplay || "";
+  const stockMarkup = model.sizes.length
+    ? model.sizes.map(size => `
+        <li>
+          <strong>${escapeHtml(size.name)}</strong>
+          <span>${size.quantity} ${size.quantity === 1 ? "available" : "available"}</span>
+        </li>`).join("")
+    : '<li class="sold-out-size"><strong>Sold out</strong><span>No sizes currently available</span></li>';
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${escapeHtml(model.title)} | JerseysFrmJB</title>
+  <meta name="description" content="${escapeHtml(model.description)}">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <link rel="canonical" href="${escapeHtml(model.canonicalUrl)}">
+  <link rel="icon" href="/assets/jerseysfrmjb-logo.jpg" type="image/jpeg">
+  <link rel="apple-touch-icon" href="/assets/jerseysfrmjb-logo.jpg">
+  <meta property="og:type" content="product">
+  <meta property="og:site_name" content="JerseysFrmJB">
+  <meta property="og:title" content="${escapeHtml(model.title)}">
+  <meta property="og:description" content="${escapeHtml(model.description)}">
+  <meta property="og:url" content="${escapeHtml(model.canonicalUrl)}">
+  <meta property="og:image" content="${escapeHtml(model.images.front?.src || `${model.siteOrigin}/assets/jerseysfrmjb-logo.jpg`)}">
+  <meta property="og:image:alt" content="${escapeHtml(model.images.front?.alt || model.title)}">
+  ${model.images.back ? `<meta property="og:image" content="${escapeHtml(model.images.back.src)}">` : ""}
+  <meta property="product:availability" content="${model.available ? "in stock" : "out of stock"}">
+  ${ogPrice ? `<meta property="product:price:amount" content="${escapeHtml(ogPrice)}"><meta property="product:price:currency" content="USD">` : ""}
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="${escapeHtml(model.title)}">
+  <meta name="twitter:description" content="${escapeHtml(model.description)}">
+  <meta name="twitter:image" content="${escapeHtml(model.images.front?.src || `${model.siteOrigin}/assets/jerseysfrmjb-logo.jpg`)}">
+  <meta name="twitter:image:alt" content="${escapeHtml(model.images.front?.alt || model.title)}">
+  <script type="application/ld+json">${jsonForHtml(schema)}</script>
+  <link rel="stylesheet" href="/styles.css?v=product-pages-1">
+  <link rel="stylesheet" href="/design-preview.css?v=mobile-grid-2">
+  <script src="/meta-pixel.js?v=1" defer></script>
+  <script src="/storefront.js?v=product-pages-1" defer></script>
+</head>
+<body class="product-page-body">
+  ${headerMarkup()}
+  <main class="product-page-main">
+    <nav class="product-breadcrumbs" aria-label="Breadcrumb">
+      <a href="/index.html">Home</a>
+      <span aria-hidden="true">/</span>
+      <a href="${escapeHtml(model.category.href)}">${escapeHtml(model.category.label)}</a>
+      <span aria-hidden="true">/</span>
+      <span aria-current="page">${escapeHtml(model.title)}</span>
+    </nav>
+    <article class="product-landing-card">
+      <section class="product-detail-gallery" aria-label="${escapeHtml(model.title)} photos">
+        ${imageMarkup(model.images.front, "Front")}
+        ${imageMarkup(model.images.back, "Back")}
+      </section>
+      <section
+        class="product-detail-copy"
+        data-meta-product="true"
+        data-product-id="${escapeHtml(model.id)}"
+        data-product-name="${escapeHtml(model.title)}"
+        data-product-value="${escapeHtml(model.metaPriceDisplay)}"
+        data-product-category="${escapeHtml(model.category.label)}"
+        data-product-availability="${model.available ? "in stock" : "out of stock"}"
+      >
+        <div class="product-detail-labels">
+          <span>${escapeHtml(model.category.label)}</span>
+          <span class="${model.available ? "in-stock" : "sold-out"}">${escapeHtml(model.availabilityLabel)}</span>
+        </div>
+        <h1>${escapeHtml(model.title)}</h1>
+        <p class="product-detail-description">${escapeHtml(model.description)}</p>
+        <dl class="product-facts">
+          <div><dt>Player</dt><dd>${escapeHtml(model.identity.player)}</dd></div>
+          <div><dt>Team / country</dt><dd>${escapeHtml(model.identity.teamCountry)}</dd></div>
+          <div><dt>Condition</dt><dd>${escapeHtml(model.condition)}</dd></div>
+          <div><dt>Total stock</dt><dd>${model.quantity}</dd></div>
+        </dl>
+        <section class="product-stock" aria-labelledby="stock-heading">
+          <div class="product-section-heading">
+            <span>Live inventory</span>
+            <h2 id="stock-heading">Sizes and stock</h2>
+          </div>
+          <ul>${stockMarkup}</ul>
+        </section>
+        ${marketplaceMarkup(model)}
+        <p class="product-checkout-note">Purchases are completed securely on the selected marketplace. JerseysFrmJB does not process checkout on this page.</p>
+      </section>
+    </article>
+    <section class="product-page-support">
+      <div>
+        <span>Need measurements?</span>
+        <h2>Check the size guide before buying.</h2>
+      </div>
+      <a href="/size-guide.html">Open Size Guide</a>
+    </section>
+  </main>
+  ${footerMarkup()}
+</body>
+</html>`;
+}
+
+export function renderProductNotFound(siteOrigin = DEFAULT_SITE_ORIGIN) {
+  const origin = normalizeSiteOrigin(siteOrigin);
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Jersey Not Found | JerseysFrmJB</title>
+  <meta name="description" content="This jersey could not be found in the current JerseysFrmJB inventory.">
+  <meta name="robots" content="noindex,follow">
+  <link rel="canonical" href="${escapeHtml(`${origin}/shop-all.html`)}">
+  <link rel="stylesheet" href="/styles.css?v=product-pages-1">
+  <link rel="stylesheet" href="/design-preview.css?v=mobile-grid-2">
+  <script src="/meta-pixel.js?v=1" defer></script>
+  <script src="/storefront.js?v=product-pages-1" defer></script>
+</head>
+<body class="product-page-body">
+  ${headerMarkup()}
+  <main class="product-page-main">
+    <section class="product-not-found">
+      <span>Inventory update</span>
+      <h1>That jersey is not available here.</h1>
+      <p>It may have been removed or its link may have changed.</p>
+      <a href="/shop-all.html">Browse Current Jerseys</a>
+    </section>
+  </main>
+  ${footerMarkup()}
+</body>
+</html>`;
+}

@@ -1,15 +1,10 @@
 import { json } from "../_auth.js";
+import { productLandingUrl } from "../../catalog/_products.js";
 import {
   pinterestApi,
   requirePinterestAdmin,
   siteOrigin
 } from "./_shared.js";
-
-const CATEGORY_PATHS = {
-  world: "/worldcup-jerseys.html",
-  club: "/club-jerseys.html",
-  retro: "/retro-jerseys.html"
-};
 
 function parseJson(value, fallback) {
   try {
@@ -23,8 +18,8 @@ function cleanText(value, maxLength) {
   return String(value || "").replace(/\s+/g, " ").trim().slice(0, maxLength);
 }
 
-function productLink(env, category) {
-  return new URL(CATEGORY_PATHS[category] || "/shop-all.html", siteOrigin(env)).toString();
+function productLink(env, productId) {
+  return productLandingUrl(productId, siteOrigin(env));
 }
 
 function productImage(env, photo) {
@@ -77,7 +72,7 @@ export async function onRequestPost(context) {
         board_id: boardId,
         title,
         description,
-        link: productLink(context.env, product.category),
+        link: productLink(context.env, product.id),
         alt_text: cleanText(photo?.alt || `${product.name} jersey`, 500),
         media_source: {
           source_type: "image_url",
@@ -93,7 +88,7 @@ export async function onRequestPost(context) {
         id: pinId,
         title,
         image_url: imageUrl,
-        link: productLink(context.env, product.category),
+        link: productLink(context.env, product.id),
         pinterest_url: pinId ? `https://www.pinterest.com/pin/${encodeURIComponent(pinId)}/` : ""
       }
     });

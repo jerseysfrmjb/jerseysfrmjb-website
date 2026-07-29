@@ -132,9 +132,9 @@ for (const product of payload.products) {
   }
 
   const landingUrl = new URL(product.link);
-  assert.equal(landingUrl.pathname, "/shop-all.html");
-  assert.equal(landingUrl.searchParams.get("product"), product.id);
-  assert.equal(landingUrl.hash, `#product-${product.id}`);
+  assert.equal(landingUrl.pathname, `/products/${product.id}`);
+  assert.equal(landingUrl.search, "");
+  assert.equal(landingUrl.hash, "");
 
   for (const imageField of ["image_link", "additional_image_link"]) {
     if (!product[imageField]) continue;
@@ -182,6 +182,13 @@ assert.equal(unknownFormatResponse.headers.get("cache-control"), "no-store");
 const storefrontSource = await readFile(path.join(workspace, "storefront.js"), "utf8");
 assert.match(storefrontSource, /id="product-\$\{escapeHtml\(item\.id\)\}"/);
 assert.match(storefrontSource, /focusRequestedCatalogProduct\(grid\)/);
+assert.match(storefrontSource, /productDetailsUrl\(item\.id\)/);
+
+const pinterestPublisherSource = await readFile(
+  path.join(workspace, "functions", "api", "admin", "pinterest", "publish.js"),
+  "utf8"
+);
+assert.match(pinterestPublisherSource, /productLandingUrl\(productId, siteOrigin\(env\)\)/);
 
 const fullCatalog = buildCatalogProducts(inventory.items.map(item => inventoryRow(item)), {
   siteOrigin: "https://jerseysfrmjb.com"
@@ -190,7 +197,7 @@ assert.equal(fullCatalog.length, inventory.items.length, "every inventory produc
 for (const product of fullCatalog) {
   assert.equal(new URL(product.link).protocol, "https:");
   assert.equal(new URL(product.image_link).protocol, "https:");
-  assert.equal(new URL(product.link).searchParams.get("product"), product.id);
+  assert.equal(new URL(product.link).pathname, `/products/${product.id}`);
   assert.ok(product.team_country, `team/country is populated for ${product.id}`);
   for (const imageField of ["image_link", "additional_image_link"]) {
     if (!product[imageField]) continue;

@@ -9,7 +9,7 @@ function enhanceMobileDrawer() {
   drawer.dataset.enhanced = "true";
   drawer.insertAdjacentHTML("afterbegin", `
     <div class="drawer-brand">
-      <img src="assets/jerseysfrmjb-logo.jpg" alt="JerseysFrmJB logo">
+      <img src="/assets/jerseysfrmjb-logo.jpg" alt="JerseysFrmJB logo">
       <div>
         <strong>JerseysFrmJB</strong>
         <span>Football Jerseys</span>
@@ -254,6 +254,10 @@ function metaProductAttributes(item = {}, available = true) {
   ].join(" ");
 }
 
+function productDetailsUrl(id = "") {
+  return `/products/${encodeURIComponent(String(id).trim())}`;
+}
+
 function formatInventoryUpdated(value = "") {
   if (!value) return "";
   const date = new Date(String(value).includes("T") ? value : value + "Z");
@@ -372,7 +376,7 @@ function renderProductCard(item) {
       </div>
       <p class="notice category-notice">${escapeHtml(categoryLabel(item.category))}</p>
       ${available ? "" : '<p class="notice sold">Out of Stock</p>'}
-      <h2>${escapeHtml(item.name)}</h2>
+      <h2><a class="product-title-link" href="${escapeHtml(productDetailsUrl(item.id))}">${escapeHtml(item.name)}</a></h2>
       <p data-card-size>${escapeHtml(sizes)}</p>
       ${renderPlatformAvailability(item, available)}
     </article>`;
@@ -387,7 +391,7 @@ function renderFeaturedCard(item, index) {
       <img src="${escapeHtml(inventoryImageSrc(image.src))}" alt="${escapeHtml(image.alt || item.name)}">
       <div class="featured-copy">
         <span>FEATURED JERSEY ${String(index + 1).padStart(2, "0")}</span>
-        <h3>${escapeHtml(item.name)}</h3>
+        <h3><a class="product-title-link" href="${escapeHtml(productDetailsUrl(item.id))}">${escapeHtml(item.name)}</a></h3>
         <div class="featured-meta"><p>${escapeHtml(displaySize(item))}</p></div>
         ${renderPlatformAvailability(item, available)}
       </div>
