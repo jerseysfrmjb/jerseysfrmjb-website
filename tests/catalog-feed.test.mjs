@@ -103,8 +103,11 @@ const facebookProduct = payload.products.find(product => product.id === facebook
 const fallbackProduct = payload.products.find(product => product.id === fallbackItem.id);
 const soldOutProduct = payload.products.find(product => product.id === soldOutItem.id);
 
+assert.equal(CSV_COLUMNS.includes("quantity"), false);
+assert.equal(CSV_COLUMNS.includes("inventory"), false);
 assert.equal(facebookProduct.availability, "in stock");
-assert.ok(facebookProduct.quantity > 0);
+assert.equal("quantity" in facebookProduct, false);
+assert.equal("inventory" in facebookProduct, false);
 assert.equal(facebookProduct.price, "61.25 USD");
 assert.equal(facebookProduct.facebook_price, "61.25");
 assert.equal(facebookProduct.price_source, "facebook");
@@ -118,7 +121,8 @@ assert.equal(fallbackProduct.facebook_price, "43.50");
 assert.equal(fallbackProduct.price_source, "website");
 
 assert.equal(soldOutProduct.availability, "out of stock");
-assert.equal(soldOutProduct.quantity, 0);
+assert.equal("quantity" in soldOutProduct, false);
+assert.equal("inventory" in soldOutProduct, false);
 assert.equal(soldOutProduct.price_source, "base");
 assert.equal(soldOutProduct.available_sizes, "");
 

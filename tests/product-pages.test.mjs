@@ -99,14 +99,17 @@ const oneLinkModel = buildProductPageModel(oneLinkRow, {
 });
 
 assert.ok(inStockModel.available);
-assert.ok(inStockModel.quantity > 0);
+assert.equal("quantity" in inStockModel, false);
+assert.ok(inStockModel.sizes.length > 0);
+assert.ok(inStockModel.sizes.every(size => !("quantity" in size)));
 assert.equal(inStockModel.canonicalUrl, `https://jerseysfrmjb.com/products/${inStockRow.id}`);
 assert.equal(inStockModel.images.front.src.startsWith("https://jerseysfrmjb.com/"), true);
 assert.equal(inStockModel.images.back.src.startsWith("https://jerseysfrmjb.com/"), true);
 assert.equal(inStockModel.marketplaces.filter(marketplace => marketplace.link).length, 2);
 
 assert.equal(soldOutModel.available, false);
-assert.equal(soldOutModel.quantity, 0);
+assert.equal("quantity" in soldOutModel, false);
+assert.deepEqual(soldOutModel.sizes, []);
 assert.equal(soldOutModel.availabilityUrl, "https://schema.org/OutOfStock");
 
 assert.equal(oneLinkModel.marketplaces.filter(marketplace => marketplace.link).length, 1);
@@ -132,7 +135,9 @@ assert.match(inStockHtml, />Back<\/figcaption>/);
 assert.match(inStockHtml, />Player<\/dt>/);
 assert.match(inStockHtml, />Team \/ country<\/dt>/);
 assert.match(inStockHtml, />Condition<\/dt>/);
-assert.match(inStockHtml, />Total stock<\/dt>/);
+assert.match(inStockHtml, />Available sizes:<\/h2>/);
+assert.match(inStockHtml, />Medium<\/strong>/);
+assert.doesNotMatch(inStockHtml, /Total stock|Stock quantity|\d+\s+(?:available|remaining)|quantity/i);
 assert.match(inStockHtml, /does not process checkout on this page/);
 assert.doesNotMatch(inStockHtml, /Add to Cart|Checkout Now|Buy from JerseysFrmJB/);
 
@@ -143,6 +148,10 @@ assert.equal(inStockSchema.sku, inStockModel.id);
 assert.equal(inStockSchema.url, inStockModel.canonicalUrl);
 assert.equal(inStockSchema.image.length, 2);
 assert.equal(inStockSchema.offers.length, 2);
+assert.equal(
+  inStockSchema.additionalProperty.some(property => /quantity/i.test(property.name)),
+  false
+);
 assert.deepEqual(
   inStockSchema.offers.map(offer => offer.name).sort(),
   ["Buy on Depop", "Buy on eBay"].sort()
@@ -155,7 +164,8 @@ for (const offer of inStockSchema.offers) {
 
 const soldOutSchema = structuredData(soldOutHtml);
 assert.match(soldOutHtml, /Sold out/);
-assert.match(soldOutHtml, /No sizes currently available/);
+assert.doesNotMatch(soldOutHtml, />Available sizes:<\/h2>/);
+assert.doesNotMatch(soldOutHtml, /Total stock|Stock quantity|\d+\s+(?:available|remaining)|quantity/i);
 assert.doesNotMatch(soldOutHtml, /class="platform-buy-button product-marketplace-button"/);
 assert.ok(soldOutSchema.offers.every(offer => offer.availability === "https://schema.org/OutOfStock"));
 

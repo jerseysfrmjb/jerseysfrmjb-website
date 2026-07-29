@@ -5,6 +5,15 @@ import {
 
 const DEFAULT_SITE_ORIGIN = "https://jerseysfrmjb.com";
 const SIZE_ORDER = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"];
+const SIZE_LABELS = {
+  S: "Small",
+  M: "Medium",
+  L: "Large",
+  XL: "Extra Large",
+  "2XL": "2XL",
+  "3XL": "3XL",
+  "4XL": "4XL"
+};
 const SIZE_WORDS = [
   ["4XL", /4\s*x\s*l/i],
   ["3XL", /3\s*x\s*l/i],
@@ -179,14 +188,14 @@ function selectedMetaPrice(row) {
   ].map(numericPrice).find(value => value !== null) ?? null;
 }
 
-function productDescription(row, identity, category, availableSizes, quantity) {
+function productDescription(row, identity, category, availableSizes, available) {
   const details = [
     row.name,
     category.label,
     identity.team_country,
     identity.player ? `Player: ${identity.player}` : "",
-    quantity > 0
-      ? `Available sizes: ${availableSizes.map(size => size.name).join(", ")}`
+    available
+      ? `Available sizes: ${availableSizes.map(size => size.label).join(", ")}`
       : "Currently sold out"
   ].filter(Boolean);
   return `${details.join(". ")}. Browse current marketplace availability from JerseysFrmJB.`;
@@ -205,7 +214,8 @@ export function buildProductPageModel(row = {}, options = {}) {
   const quantity = totalQuantity(sizes, row.quantity);
   const availableSizes = SIZE_ORDER
     .filter(size => Number(sizes[size]) > 0)
-    .map(size => ({ name: size, quantity: Number(sizes[size]) }));
+    .map(size => ({ name: size, label: SIZE_LABELS[size] || size }));
+  const available = quantity > 0;
   const identity = inferProductIdentity(title);
   const category = categoryDetails(row.category);
   const images = productImages(row, siteOrigin);
@@ -223,7 +233,7 @@ export function buildProductPageModel(row = {}, options = {}) {
     }];
   });
   const canonicalUrl = productLandingUrl(id, siteOrigin);
-  const description = productDescription(row, identity, category, availableSizes, quantity);
+  const description = productDescription(row, identity, category, availableSizes, available);
   const metaPrice = selectedMetaPrice(row);
 
   return {
@@ -238,10 +248,8 @@ export function buildProductPageModel(row = {}, options = {}) {
       player: identity.player || "Not specified",
       teamCountry: identity.team_country || "Not specified"
     },
-    quantity,
-    available: quantity > 0,
-    availabilityLabel: quantity > 0 ? "In stock" : "Sold out",
-    availabilityUrl: quantity > 0
+    available,
+    availabilityUrl: available
       ? "https://schema.org/InStock"
       : "https://schema.org/OutOfStock",
     sizes: availableSizes,
@@ -301,13 +309,8 @@ function structuredProduct(model) {
         "@type": "PropertyValue",
         name: "Available sizes",
         value: model.sizes.length
-          ? model.sizes.map(size => size.name).join(", ")
+          ? model.sizes.map(size => size.label).join(", ")
           : "Sold out"
-      },
-      {
-        "@type": "PropertyValue",
-        name: "Stock quantity",
-        value: String(model.quantity)
       }
     ]
   };
@@ -433,13 +436,10 @@ export function renderProductPage(model) {
   if (!model) return "";
   const schema = structuredProduct(model);
   const ogPrice = model.marketplaces.find(marketplace => marketplace.price !== null)?.priceDisplay || "";
-  const stockMarkup = model.sizes.length
-    ? model.sizes.map(size => `
-        <li>
-          <strong>${escapeHtml(size.name)}</strong>
-          <span>${size.quantity} ${size.quantity === 1 ? "available" : "available"}</span>
-        </li>`).join("")
-    : '<li class="sold-out-size"><strong>Sold out</strong><span>No sizes currently available</span></li>';
+  const stockMarkup = model.sizes.map(size => `
+      <li>
+        <strong>${escapeHtml(size.label)}</strong>
+      </li>`).join("");
 
   return `<!doctype html>
 <html lang="en">
@@ -499,7 +499,6 @@ export function renderProductPage(model) {
       >
         <div class="product-detail-labels">
           <span>${escapeHtml(model.category.label)}</span>
-          <span class="${model.available ? "in-stock" : "sold-out"}">${escapeHtml(model.availabilityLabel)}</span>
         </div>
         <h1>${escapeHtml(model.title)}</h1>
         <p class="product-detail-description">${escapeHtml(model.description)}</p>
@@ -507,14 +506,13 @@ export function renderProductPage(model) {
           <div><dt>Player</dt><dd>${escapeHtml(model.identity.player)}</dd></div>
           <div><dt>Team / country</dt><dd>${escapeHtml(model.identity.teamCountry)}</dd></div>
           <div><dt>Condition</dt><dd>${escapeHtml(model.condition)}</dd></div>
-          <div><dt>Total stock</dt><dd>${model.quantity}</dd></div>
         </dl>
         <section class="product-stock" aria-labelledby="stock-heading">
           <div class="product-section-heading">
-            <span>Live inventory</span>
-            <h2 id="stock-heading">Sizes and stock</h2>
+            <span>Availability</span>
+            <h2 id="stock-heading">${model.available ? "Available sizes:" : "Sold out"}</h2>
           </div>
-          <ul>${stockMarkup}</ul>
+          ${model.available ? `<ul>${stockMarkup}</ul>` : ""}
         </section>
         ${marketplaceMarkup(model)}
         <p class="product-checkout-note">Purchases are completed securely on the selected marketplace. JerseysFrmJB does not process checkout on this page.</p>
