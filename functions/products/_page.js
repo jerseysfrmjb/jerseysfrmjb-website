@@ -1,6 +1,9 @@
 import {
+  extractSeason,
+  inferCompetition,
   inferProductIdentity,
-  productLandingUrl
+  productLandingUrl,
+  slugifySeo
 } from "../api/catalog/_products.js";
 
 const DEFAULT_SITE_ORIGIN = "https://jerseysfrmjb.com";
@@ -150,7 +153,19 @@ function absoluteImageUrl(value, siteOrigin, revision) {
   }
 }
 
-function productImages(row, siteOrigin) {
+function descriptiveImageAlt(row, identity, season, side) {
+  const details = [
+    identity.player,
+    identity.team_country,
+    season,
+    String(row.name || "").match(/\b(home|away|third|3rd|goalkeeper|training)\b/i)?.[1],
+    "soccer jersey",
+    `${side} view`
+  ].filter(Boolean);
+  return [...new Set(details.map(detail => String(detail).trim()))].join(" ");
+}
+
+function productImages(row, siteOrigin, identity, season) {
   const revision = imageRevision(row.updated_at);
   const photos = (Array.isArray(row.photos) ? row.photos : parseJson(row.photos, []))
     .map(photo => ({
@@ -165,7 +180,10 @@ function productImages(row, siteOrigin) {
     || photos.find(photo => photo.src !== front?.src)
     || null;
 
-  return { front, back };
+  return {
+    front: front ? { ...front, alt: descriptiveImageAlt(row, identity, season, "front") } : null,
+    back: back ? { ...back, alt: descriptiveImageAlt(row, identity, season, "back") } : null
+  };
 }
 
 function marketplaceUrl(value, allowedHosts) {
@@ -217,8 +235,10 @@ export function buildProductPageModel(row = {}, options = {}) {
     .map(size => ({ name: size, label: SIZE_LABELS[size] || size }));
   const available = quantity > 0;
   const identity = inferProductIdentity(title);
+  const season = extractSeason(title);
+  const competition = inferCompetition(title, row.category);
   const category = categoryDetails(row.category);
-  const images = productImages(row, siteOrigin);
+  const images = productImages(row, siteOrigin, identity, season);
   const links = parseJson(row.links, row.links || {});
   const marketplaces = MARKETPLACES.flatMap(marketplace => {
     const price = numericPrice(row[marketplace.priceKey]);
@@ -243,11 +263,18 @@ export function buildProductPageModel(row = {}, options = {}) {
     canonicalUrl,
     description,
     category,
-    condition: "New",
+    condition: String(row.condition || "").trim() || "See marketplace listing",
     identity: {
       player: identity.player || "Not specified",
       teamCountry: identity.team_country || "Not specified"
     },
+    entityLinks: {
+      player: identity.player ? `/players/${slugifySeo(identity.player)}` : "",
+      team: identity.team_country ? `/teams/${slugifySeo(identity.team_country)}` : "",
+      competition: competition ? `/competitions/${slugifySeo(competition)}` : ""
+    },
+    season,
+    competition,
     available,
     availabilityUrl: available
       ? "https://schema.org/InStock"
@@ -256,7 +283,9 @@ export function buildProductPageModel(row = {}, options = {}) {
     images,
     marketplaces,
     metaPrice,
-    metaPriceDisplay: metaPrice === null ? "" : metaPrice.toFixed(2)
+    metaPriceDisplay: metaPrice === null ? "" : metaPrice.toFixed(2),
+    relatedProducts: Array.isArray(options.relatedProducts) ? options.relatedProducts : [],
+    reviewSummary: options.reviewSummary || null
   };
 }
 
@@ -270,7 +299,6 @@ function structuredProduct(model) {
       price: marketplace.priceDisplay,
       priceCurrency: "USD",
       availability: model.availabilityUrl,
-      itemCondition: "https://schema.org/NewCondition",
       seller: {
         "@type": "Organization",
         name: "JerseysFrmJB",
@@ -287,13 +315,23 @@ function structuredProduct(model) {
     sku: model.id,
     name: model.title,
     description: model.description,
-    image: [model.images.front?.src, model.images.back?.src].filter(Boolean),
+    image: [
+      model.images.front && {
+        "@type": "ImageObject",
+        contentUrl: model.images.front.src,
+        name: model.images.front.alt,
+        caption: model.images.front.alt,
+        representativeOfPage: true
+      },
+      model.images.back && {
+        "@type": "ImageObject",
+        contentUrl: model.images.back.src,
+        name: model.images.back.alt,
+        caption: model.images.back.alt
+      }
+    ].filter(Boolean),
     category: model.category.label,
-    itemCondition: "https://schema.org/NewCondition",
-    brand: {
-      "@type": "Brand",
-      name: "JerseysFrmJB"
-    },
+    size: model.sizes.map(size => size.name),
     additionalProperty: [
       {
         "@type": "PropertyValue",
@@ -315,16 +353,116 @@ function structuredProduct(model) {
     ]
   };
   if (offers.length) schema.offers = offers;
+  if (model.reviewSummary?.count > 0 && Number(model.reviewSummary.rating) > 0) {
+    schema.aggregateRating = {
+      "@type": "AggregateRating",
+      ratingValue: Number(model.reviewSummary.rating).toFixed(1),
+      reviewCount: Number(model.reviewSummary.count)
+    };
+  }
   return schema;
 }
 
-function imageMarkup(image, label) {
+function imageMarkup(image, label, loading = "lazy") {
   if (!image) return "";
   return `
     <figure class="product-detail-photo">
-      <img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.alt)}" decoding="async">
+      <img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.alt)}" title="${escapeHtml(image.alt)}" width="1280" height="1280" loading="${escapeHtml(loading)}" decoding="async"${loading === "eager" ? ' fetchpriority="high"' : ""}>
       <figcaption>${escapeHtml(label)}</figcaption>
     </figure>`;
+}
+
+function breadcrumbSchema(model) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: model.siteOrigin
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: model.category.label,
+        item: `${model.siteOrigin}${model.category.href}`
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: model.title,
+        item: model.canonicalUrl
+      }
+    ]
+  };
+}
+
+function productFaqs(model) {
+  return [
+    {
+      question: `What sizes are available for the ${model.title}?`,
+      answer: model.available
+        ? `The currently available sizes are ${model.sizes.map(size => size.label).join(", ")}.`
+        : "This jersey is currently sold out."
+    },
+    {
+      question: "How should I choose a jersey size?",
+      answer: "Use the JerseysFrmJB size guide and compare its measurements before opening the marketplace listing."
+    },
+    {
+      question: "Where is checkout completed?",
+      answer: "Checkout is completed on the linked Depop or eBay listing. JerseysFrmJB does not process payment on this product page."
+    },
+    {
+      question: "What is the condition of this jersey?",
+      answer: "Check the linked marketplace listing for its current condition details before purchasing."
+    }
+  ];
+}
+
+function faqSchema(faqs) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqs.map(faq => ({
+      "@type": "Question",
+      name: faq.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: faq.answer
+      }
+    }))
+  };
+}
+
+function linkedFact(label, value, href) {
+  const content = href
+    ? `<a href="${escapeHtml(href)}">${escapeHtml(value)}</a>`
+    : escapeHtml(value);
+  return `<div><dt>${escapeHtml(label)}</dt><dd>${content}</dd></div>`;
+}
+
+function relatedProductsMarkup(products = []) {
+  if (!products.length) return "";
+  return `
+    <section class="product-related" aria-labelledby="related-heading">
+      <div class="product-section-heading"><span>Keep browsing</span><h2 id="related-heading">Related jerseys</h2></div>
+      <div class="product-related-grid">
+        ${products.map(product => {
+          const prices = product.marketplaces
+            .filter(marketplace => marketplace.price !== null)
+            .map(marketplace => `${marketplace.name} $${marketplace.price.toFixed(2)}`)
+            .join(" · ");
+          return `
+            <article>
+              <a class="product-related-image" href="${escapeHtml(product.canonicalUrl)}"><img src="${escapeHtml(product.images.front.src)}" alt="${escapeHtml(product.images.front.alt)}" title="${escapeHtml(product.images.front.alt)}" width="1280" height="1280" loading="lazy" decoding="async"></a>
+              <div><span>${escapeHtml(product.category.label)}</span><h3><a href="${escapeHtml(product.canonicalUrl)}">${escapeHtml(product.title)}</a></h3>${prices ? `<p>${escapeHtml(prices)}</p>` : ""}</div>
+            </article>`;
+        }).join("")}
+      </div>
+    </section>`;
 }
 
 function marketplaceMarkup(model) {
@@ -435,6 +573,8 @@ function footerMarkup() {
 export function renderProductPage(model) {
   if (!model) return "";
   const schema = structuredProduct(model);
+  const breadcrumbs = breadcrumbSchema(model);
+  const faqs = productFaqs(model);
   const ogPrice = model.marketplaces.find(marketplace => marketplace.price !== null)?.priceDisplay || "";
   const stockMarkup = model.sizes.map(size => `
       <li>
@@ -468,10 +608,12 @@ export function renderProductPage(model) {
   <meta name="twitter:image" content="${escapeHtml(model.images.front?.src || `${model.siteOrigin}/assets/jerseysfrmjb-logo.jpg`)}">
   <meta name="twitter:image:alt" content="${escapeHtml(model.images.front?.alt || model.title)}">
   <script type="application/ld+json">${jsonForHtml(schema)}</script>
-  <link rel="stylesheet" href="/styles.css?v=product-pages-1">
+  <script type="application/ld+json">${jsonForHtml(breadcrumbs)}</script>
+  <script type="application/ld+json">${jsonForHtml(faqSchema(faqs))}</script>
+  <link rel="stylesheet" href="/styles.css?v=seo-pages-1">
   <link rel="stylesheet" href="/design-preview.css?v=mobile-grid-2">
   <script src="/meta-pixel.js?v=1" defer></script>
-  <script src="/storefront.js?v=product-pages-1" defer></script>
+  <script src="/storefront.js?v=seo-pages-1" defer></script>
 </head>
 <body class="product-page-body">
   ${headerMarkup()}
@@ -485,7 +627,7 @@ export function renderProductPage(model) {
     </nav>
     <article class="product-landing-card">
       <section class="product-detail-gallery" aria-label="${escapeHtml(model.title)} photos">
-        ${imageMarkup(model.images.front, "Front")}
+        ${imageMarkup(model.images.front, "Front", "eager")}
         ${imageMarkup(model.images.back, "Back")}
       </section>
       <section
@@ -502,9 +644,12 @@ export function renderProductPage(model) {
         </div>
         <h1>${escapeHtml(model.title)}</h1>
         <p class="product-detail-description">${escapeHtml(model.description)}</p>
+        ${model.reviewSummary?.count > 0 ? `<p class="product-rating-summary" aria-label="${escapeHtml(`${Number(model.reviewSummary.rating).toFixed(1)} out of 5 from ${model.reviewSummary.count} approved reviews`)}"><span aria-hidden="true">★★★★★</span> ${escapeHtml(Number(model.reviewSummary.rating).toFixed(1))} · ${escapeHtml(model.reviewSummary.count)} approved ${model.reviewSummary.count === 1 ? "review" : "reviews"}</p>` : ""}
         <dl class="product-facts">
-          <div><dt>Player</dt><dd>${escapeHtml(model.identity.player)}</dd></div>
-          <div><dt>Team / country</dt><dd>${escapeHtml(model.identity.teamCountry)}</dd></div>
+          ${linkedFact("Player", model.identity.player, model.entityLinks.player)}
+          ${linkedFact("Team / country", model.identity.teamCountry, model.entityLinks.team)}
+          ${model.competition ? linkedFact("Competition", model.competition, model.entityLinks.competition) : ""}
+          ${linkedFact("Category", model.category.label, model.category.href)}
           <div><dt>Condition</dt><dd>${escapeHtml(model.condition)}</dd></div>
         </dl>
         <section class="product-stock" aria-labelledby="stock-heading">
@@ -524,6 +669,12 @@ export function renderProductPage(model) {
         <h2>Check the size guide before buying.</h2>
       </div>
       <a href="/size-guide.html">Open Size Guide</a>
+    </section>
+    ${relatedProductsMarkup(model.relatedProducts)}
+    <section class="seo-faq product-faq" aria-labelledby="product-faq-heading">
+      <span>Jersey guide</span>
+      <h2 id="product-faq-heading">Questions about this jersey</h2>
+      ${faqs.map(faq => `<details><summary>${escapeHtml(faq.question)}</summary><p>${escapeHtml(faq.answer)}</p></details>`).join("")}
     </section>
   </main>
   ${footerMarkup()}

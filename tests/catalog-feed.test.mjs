@@ -113,6 +113,10 @@ assert.equal(facebookProduct.facebook_price, "61.25");
 assert.equal(facebookProduct.price_source, "facebook");
 assert.equal(facebookProduct.player, "Kylian Mbappe");
 assert.equal(facebookProduct.team_country, "Real Madrid");
+assert.equal(facebookProduct.google_product_category, "Apparel & Accessories > Clothing > Shirts & Tops");
+assert.equal(facebookProduct.age_group, "adult");
+assert.equal(facebookProduct.gender, "unisex");
+assert.equal(facebookProduct.canonical_link, facebookProduct.link);
 assert.match(facebookProduct.image_link, /front\.jpg\?v=/);
 assert.match(facebookProduct.additional_image_link, /back\.jpg\?v=/);
 

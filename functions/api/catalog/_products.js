@@ -30,8 +30,43 @@ export const CSV_COLUMNS = [
   "category",
   "product_type",
   "size",
-  "available_sizes"
+  "available_sizes",
+  "google_product_category",
+  "age_group",
+  "gender",
+  "canonical_link"
 ];
+
+const KNOWN_TEAMS = [
+  "Manchester United",
+  "Manchester City",
+  "Real Madrid",
+  "Borussia Dortmund",
+  "AC Milan",
+  "Barcelona",
+  "Liverpool",
+  "Argentina",
+  "Portugal",
+  "England",
+  "Spain",
+  "United States",
+  "USA",
+  "Germany",
+  "Brazil",
+  "France",
+  "Norway",
+  "Morocco",
+  "Mexico",
+  "Colombia",
+  "Japan"
+];
+
+const PLAYER_FALLBACKS = new Map([
+  ["messi", { player: "Lionel Messi", team: "Argentina" }],
+  ["lionel messi", { player: "Lionel Messi", team: "Argentina" }],
+  ["cristiano ronaldo", { player: "Cristiano Ronaldo", team: "Portugal" }],
+  ["ronaldo", { player: "Cristiano Ronaldo", team: "Portugal" }]
+]);
 
 function parseJson(value, fallback) {
   try {
@@ -86,6 +121,11 @@ function cleanPlayer(value = "") {
   return /^no name(?:\s*\/\s*no number)?$/i.test(player) ? "" : player;
 }
 
+function canonicalPlayer(value = "") {
+  const player = cleanPlayer(value);
+  return PLAYER_FALLBACKS.get(player.toLowerCase())?.player || player;
+}
+
 function cleanTeamCountry(value = "") {
   return String(value)
     .replace(/\([^)]*\)/g, " ")
@@ -97,6 +137,15 @@ function cleanTeamCountry(value = "") {
     .trim();
 }
 
+function matchKnownTeam(title = "") {
+  const normalized = String(title).replace(/\s+/g, " ").trim();
+  const match = KNOWN_TEAMS
+    .slice()
+    .sort((a, b) => b.length - a.length)
+    .find(team => new RegExp(`\\b${team.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(normalized));
+  return match === "USA" ? "USA" : match || "";
+}
+
 export function inferProductIdentity(value = "") {
   const title = String(value || "").trim();
   if (!title) return { player: "", team_country: "" };
@@ -104,30 +153,84 @@ export function inferProductIdentity(value = "") {
   if (title.includes("|")) {
     const [playerPart, ...teamParts] = title.split("|");
     return {
-      player: cleanPlayer(playerPart),
+      player: canonicalPlayer(playerPart),
       team_country: cleanTeamCountry(teamParts.join(" "))
     };
   }
 
   const numbered = title.match(/^(.+?)\s+#\d+\b\s*(.*)$/);
   if (numbered) {
+    const team = matchKnownTeam(numbered[2]);
     return {
-      player: cleanPlayer(numbered[1]),
-      team_country: cleanTeamCountry(numbered[2])
+      player: canonicalPlayer(numbered[1]),
+      team_country: team || cleanTeamCountry(numbered[2])
     };
   }
 
+  const team = matchKnownTeam(title);
+  if (team) {
+    const teamIndex = title.toLowerCase().indexOf(team.toLowerCase());
+    const player = canonicalPlayer(title.slice(0, teamIndex));
+    return {
+      player: player && !/^(no name|no number)/i.test(player) ? player : "",
+      team_country: team
+    };
+  }
+
+  const playerCandidate = canonicalPlayer(
+    title
+      .replace(/\b(?:19|20)\d{2}(?:\/\d{2,4})?\b.*$/i, "")
+      .replace(/\bworld cup\b.*$/i, "")
+  );
+  const fallback = PLAYER_FALLBACKS.get(playerCandidate.toLowerCase()) || null;
   return {
-    player: "",
-    team_country: cleanTeamCountry(title)
+    player: fallback?.player || "",
+    team_country: fallback?.team || cleanTeamCountry(title)
   };
 }
 
-function categoryLabel(category = "") {
+export function categoryLabel(category = "") {
   if (category === "world") return "International Team Jerseys";
   if (category === "club") return "Club Jerseys";
   if (category === "retro") return "Retro Jerseys";
   return "Football Jerseys";
+}
+
+export function slugifySeo(value = "") {
+  return String(value)
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+export function extractSeason(value = "") {
+  const title = String(value);
+  const season = title.match(/\b((?:19|20)\d{2})\/(\d{2,4})\b/);
+  if (season) {
+    const end = season[2].length === 2 ? `${season[1].slice(0, 2)}${season[2]}` : season[2];
+    return `${season[1]}/${end}`;
+  }
+  const shortSeason = title.match(/\b(\d{2})\/(\d{2})\b/);
+  if (shortSeason) {
+    const startCentury = Number(shortSeason[1]) >= 70 ? "19" : "20";
+    const endCentury = Number(shortSeason[2]) < Number(shortSeason[1]) ? "20" : startCentury;
+    return `${startCentury}${shortSeason[1]}/${endCentury}${shortSeason[2]}`;
+  }
+  const year = title.match(/\b((?:19|20)\d{2})\b/);
+  return year?.[1] || "";
+}
+
+export function inferCompetition(value = "", category = "") {
+  const title = String(value);
+  if (/\bclub world cup\b/i.test(title)) return "FIFA Club World Cup";
+  if (/\bworld cup\b/i.test(title) || category === "world") return "World Cup";
+  if (/\bchampions league\b/i.test(title)) return "UEFA Champions League";
+  if (/\bcopa am[eé]rica\b/i.test(title)) return "Copa América";
+  if (/\b(?:uefa )?euros?\b/i.test(title)) return "UEFA European Championship";
+  return "";
 }
 
 function numericPrice(value) {
@@ -240,7 +343,11 @@ export function buildCatalogProducts(rows = [], options = {}) {
       category: String(row.category || "").trim(),
       product_type: categoryLabel(row.category),
       size: availableSizes.join(", "),
-      available_sizes: availableSizes.join(", ")
+      available_sizes: availableSizes.join(", "),
+      google_product_category: "Apparel & Accessories > Clothing > Shirts & Tops",
+      age_group: "adult",
+      gender: "unisex",
+      canonical_link: productLandingUrl(id, siteOrigin)
     }];
   });
 }
@@ -258,7 +365,7 @@ export function productsToCsv(products = []) {
   return "\uFEFF" + rows.join("\r\n") + "\r\n";
 }
 
-async function loadCatalogRows(env) {
+export async function loadCatalogRows(env) {
   const result = await env.DB.prepare(`
     SELECT
       inventory.id,

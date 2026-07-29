@@ -180,7 +180,116 @@ function displaySize(item) {
 }
 
 function searchText(item) {
-  return [item.name, item.category, categoryLabel(item.category), item.size, displaySize(item), ...(item.photos || []).map(photo => photo.alt || "")].join(" ").toLowerCase();
+  return [item.id, item.name, item.category, categoryLabel(item.category), item.size, displaySize(item), ...(item.photos || []).map(photo => photo.alt || "")].join(" ").toLowerCase();
+}
+
+const SEARCH_ALIASES = new Map([
+  ["barca", "barcelona"],
+  ["fcb", "barcelona"],
+  ["real", "real madrid"],
+  ["rma", "real madrid"],
+  ["mufc", "manchester united"],
+  ["man u", "manchester united"],
+  ["man utd", "manchester united"],
+  ["mcfc", "manchester city"],
+  ["man city", "manchester city"],
+  ["acm", "ac milan"],
+  ["bvb", "borussia dortmund"],
+  ["usmnt", "usa united states"],
+  ["cr7", "cristiano ronaldo"],
+  ["leo", "lionel messi"],
+  ["la pulga", "lionel messi"],
+  ["ney", "neymar"],
+  ["bellingol", "jude bellingham"]
+]);
+
+function normalizeSearchValue(value = "") {
+  return String(value)
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9/]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function expandedSearchQuery(value = "") {
+  const normalized = normalizeSearchValue(value);
+  return SEARCH_ALIASES.get(normalized) || normalized;
+}
+
+function editDistance(a = "", b = "") {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  const previous = Array.from({ length: b.length + 1 }, (_, index) => index);
+  for (let indexA = 1; indexA <= a.length; indexA += 1) {
+    const current = [indexA];
+    for (let indexB = 1; indexB <= b.length; indexB += 1) {
+      current[indexB] = Math.min(
+        current[indexB - 1] + 1,
+        previous[indexB] + 1,
+        previous[indexB - 1] + (a[indexA - 1] === b[indexB - 1] ? 0 : 1)
+      );
+    }
+    previous.splice(0, previous.length, ...current);
+  }
+  return previous[b.length];
+}
+
+function fuzzyTokenMatch(queryToken, searchTokens) {
+  if (queryToken.length < 4) return searchTokens.includes(queryToken);
+  const allowance = queryToken.length >= 8 ? 2 : 1;
+  return searchTokens.some(token =>
+    Math.abs(token.length - queryToken.length) <= allowance &&
+    editDistance(queryToken, token) <= allowance
+  );
+}
+
+function searchScore(card, query = "") {
+  const expanded = expandedSearchQuery(query);
+  if (!expanded) return 1;
+  const title = normalizeSearchValue(card.querySelector(".product-title-link")?.dataset.originalTitle || card.querySelector(".product-title-link")?.textContent || "");
+  const haystack = normalizeSearchValue(card.dataset.search || "");
+  if (title === expanded) return 1000;
+  if (title.startsWith(expanded)) return 850;
+  if (title.includes(expanded)) return 750;
+  if (haystack.includes(expanded)) return 650;
+  const queryTokens = expanded.split(" ").filter(Boolean);
+  const searchTokens = haystack.split(" ").filter(Boolean);
+  if (queryTokens.every(token => searchTokens.includes(token))) return 500;
+  if (queryTokens.every(token => fuzzyTokenMatch(token, searchTokens))) return 300;
+  return 0;
+}
+
+function highlightCardTitle(card, query = "") {
+  const link = card.querySelector(".product-title-link");
+  if (!link) return;
+  if (!link.dataset.originalTitle) link.dataset.originalTitle = link.textContent || "";
+  const title = link.dataset.originalTitle;
+  const normalizedQuery = expandedSearchQuery(query);
+  if (!normalizedQuery) {
+    link.textContent = title;
+    return;
+  }
+  const directPattern = normalizedQuery
+    .split(" ")
+    .filter(Boolean)
+    .map(token => token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("|");
+  if (!directPattern) {
+    link.textContent = title;
+    return;
+  }
+  const pattern = new RegExp(`(${directPattern})`, "ig");
+  const parts = title.split(pattern);
+  link.replaceChildren(...parts.filter(Boolean).map(part => {
+    if (!pattern.test(part)) return document.createTextNode(part);
+    pattern.lastIndex = 0;
+    const mark = document.createElement("mark");
+    mark.textContent = part;
+    return mark;
+  }));
 }
 
 function categoryLabel(category = "") {
@@ -353,12 +462,22 @@ async function fetchInventory(params = {}) {
   }
 }
 
+function productPhotoAlt(item = {}, photo = {}, index = 0) {
+  const source = `${photo?.src || ""} ${photo?.alt || ""}`;
+  const side = /\bback\b/i.test(source) ? "back" : (/\bfront\b/i.test(source) ? "front" : (index === 0 ? "front" : `view ${index + 1}`));
+  const title = String(item.name || photo?.alt || "Football jersey")
+    .replace(/\s*\|\s*/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return `${title} soccer jersey ${side} view`;
+}
+
 function renderSlides(item) {
   const sold = !isAvailable(item);
   const newArrival = isNewArrival(item) ? '<p class="product-status new-arrival">New Arrival</p>' : "";
   return (item.photos || []).map((photo, index) => `
     <div class="slide${index === 0 ? " active" : ""}">
-      <img decoding="async" loading="lazy" src="${escapeHtml(inventoryImageSrc(photo.src))}" alt="${escapeHtml(photo.alt || item.name)}">
+      <img decoding="async" loading="lazy" width="1280" height="1280" src="${escapeHtml(inventoryImageSrc(photo.src))}" alt="${escapeHtml(productPhotoAlt(item, photo, index))}" title="${escapeHtml(productPhotoAlt(item, photo, index))}">
       ${sold && index === 0 ? '<p class="product-status out-of-stock">Out of Stock</p>' : ""}
       ${index === 0 ? newArrival : ""}
     </div>`).join("");
@@ -388,7 +507,7 @@ function renderFeaturedCard(item, index) {
 
   return `
     <article class="featured-card" ${metaProductAttributes(item, available)} data-stock="${available ? "available" : "sold-out"}">
-      <img src="${escapeHtml(inventoryImageSrc(image.src))}" alt="${escapeHtml(image.alt || item.name)}">
+      <img src="${escapeHtml(inventoryImageSrc(image.src))}" alt="${escapeHtml(productPhotoAlt(item, image, 0))}" title="${escapeHtml(productPhotoAlt(item, image, 0))}" width="1280" height="1280" loading="lazy" decoding="async">
       <div class="featured-copy">
         <span>FEATURED JERSEY ${String(index + 1).padStart(2, "0")}</span>
         <h3><a class="product-title-link" href="${escapeHtml(productDetailsUrl(item.id))}">${escapeHtml(item.name)}</a></h3>
@@ -438,6 +557,11 @@ function setupFilters(filterGroup, cards) {
   const categoryButtons = [...scope.querySelectorAll("[data-category-filter]")];
   const sizeSelect = scope.querySelector("[data-size-filter]");
   const searchInput = scope.querySelector("[data-inventory-search]");
+  cards.forEach((card, index) => {
+    card.dataset.originalIndex = String(index);
+    const titleLink = card.querySelector(".product-title-link");
+    if (titleLink && !titleLink.dataset.originalTitle) titleLink.dataset.originalTitle = titleLink.textContent || "";
+  });
   let emptyMessage = scope.querySelector("[data-filter-empty]") || container?.querySelector("[data-filter-empty]");
   if (!emptyMessage) {
     emptyMessage = document.createElement("p");
@@ -485,7 +609,7 @@ function setupFilters(filterGroup, cards) {
     const activeStock = scope.querySelector("[data-stock-filter].active, [data-filter].active")?.dataset.stockFilter || scope.querySelector("[data-stock-filter].active, [data-filter].active")?.dataset.filter || "all";
     const activeCategory = scope.querySelector("[data-category-filter].active")?.dataset.categoryFilter || "all";
     const selectedSize = sizeSelect?.value || "all";
-    const query = (searchInput?.value || "").trim().toLowerCase();
+    const query = (searchInput?.value || "").trim();
     let visibleCount = 0;
     let availableMatchCount = 0;
     let soldOutMatchCount = 0;
@@ -497,7 +621,9 @@ function setupFilters(filterGroup, cards) {
       const categoryMatch = activeCategory === "all" || card.dataset.category === activeCategory;
       const sizeTokens = (card.dataset.size || "").split("|").filter(Boolean);
       const sizeMatch = selectedSize === "all" || sizeTokens.includes(selectedSize) || (selectedSize === "xl" && sizeTokens.includes("xl+"));
-      const searchMatch = !query || (card.dataset.search || "").includes(query);
+      const score = searchScore(card, query);
+      const searchMatch = score > 0;
+      card.dataset.searchScore = String(score);
       const baseMatch = categoryMatch && sizeMatch && searchMatch;
 
       if (baseMatch) {
@@ -518,7 +644,23 @@ function setupFilters(filterGroup, cards) {
           : selectedSizeLabel(selectedSize);
       }
       if (!card.hidden) visibleCount += 1;
+      highlightCardTitle(card, query);
     });
+
+    const cardParents = [...new Set(cards.map(card => card.parentElement).filter(Boolean))];
+    for (const parent of cardParents) {
+      const ordered = cards
+        .filter(card => card.parentElement === parent)
+        .slice()
+        .sort((a, b) => {
+          if (query) {
+            const scoreDifference = Number(b.dataset.searchScore || 0) - Number(a.dataset.searchScore || 0);
+            if (scoreDifference) return scoreDifference;
+          }
+          return Number(a.dataset.originalIndex || 0) - Number(b.dataset.originalIndex || 0);
+        });
+      parent.append(...ordered);
+    }
 
     const sizeLabel = selectedSizeLabel(selectedSize);
     const sizeSuffix = selectedSize !== "all" && sizeLabel ? ` in ${sizeLabel}` : "";

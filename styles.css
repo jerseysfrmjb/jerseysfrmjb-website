@@ -2862,3 +2862,284 @@
     min-height: 340px;
   }
 }
+
+/* Search, permanent SEO collections, related products, and buying guides */
+.product-title-link mark {
+  padding: 0 .08em;
+  border-radius: 3px;
+  background: #f7d9e4;
+  color: inherit;
+}
+
+.product-facts a {
+  color: #7d1738;
+  font-weight: 850;
+  text-underline-offset: 3px;
+}
+
+.product-rating-summary {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  width: fit-content;
+  margin: -8px 0 18px;
+  color: #5f5550;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.product-rating-summary span {
+  color: #9a244d;
+  letter-spacing: .08em;
+}
+
+.seo-collection-body {
+  background: #f4f1ee;
+}
+
+.seo-collection-main {
+  width: min(1160px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 34px 0 64px;
+}
+
+.seo-collection-hero {
+  position: relative;
+  overflow: hidden;
+  margin: 20px 0;
+  padding: clamp(28px, 6vw, 64px);
+  border: 1px solid #d9cec8;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 85% 20%, rgba(141, 35, 72, .2), transparent 35%),
+    linear-gradient(135deg, #fff 0%, #f7f1f3 100%);
+}
+
+.seo-collection-hero > span,
+.seo-faq > span,
+.seo-product-card-copy > span,
+.product-related article span {
+  color: #8c2348;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.seo-collection-hero h1 {
+  max-width: 18ch;
+  margin: 10px 0 16px;
+  color: #1d1818;
+  font: 900 clamp(38px, 7vw, 72px)/.98 Georgia, serif;
+}
+
+.seo-collection-hero p {
+  max-width: 72ch;
+  margin: 0;
+  color: #5f5550;
+  font-size: clamp(13px, 1.6vw, 17px);
+  line-height: 1.7;
+}
+
+.seo-context-panel {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.seo-context-panel > section {
+  padding: 18px;
+  border: 1px solid #d9cec8;
+  border-radius: 15px;
+  background: #fff;
+}
+
+.seo-context-panel h2 {
+  margin: 0 0 12px;
+  color: #211b1b;
+  font: 900 18px/1.2 Georgia, serif;
+}
+
+.seo-context-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.seo-context-links a {
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: #f3e9ed;
+  color: #7d1738;
+  font-size: 10px;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.seo-product-grid,
+.product-related-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.seo-product-card,
+.product-related article {
+  display: flex;
+  min-width: 0;
+  overflow: hidden;
+  flex-direction: column;
+  border: 1px solid #ddd2cc;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 12px 28px rgba(55, 42, 38, .07);
+}
+
+.seo-product-image,
+.product-related-image {
+  display: block;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  background: #1f1a1a;
+}
+
+.seo-product-image img,
+.product-related-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.seo-product-card-copy,
+.product-related article > div {
+  display: grid;
+  gap: 8px;
+  padding: 15px;
+}
+
+.seo-product-card h2,
+.product-related h3 {
+  min-height: 2.5em;
+  margin: 0;
+  font: 900 16px/1.25 Georgia, serif;
+}
+
+.seo-product-card h2 a,
+.product-related h3 a {
+  color: #211b1b;
+  text-decoration: none;
+}
+
+.seo-product-card p,
+.product-related article p {
+  margin: 0;
+  color: #6b605b;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.seo-product-card strong {
+  color: #7d1738;
+  font-size: 15px;
+}
+
+.seo-faq,
+.product-related {
+  margin-top: 24px;
+  padding: clamp(22px, 4vw, 38px);
+  border: 1px solid #d9cec8;
+  border-radius: 18px;
+  background: #fff;
+}
+
+.seo-faq > h2,
+.product-related .product-section-heading h2 {
+  margin: 8px 0 18px;
+  color: #211b1b;
+  font: 900 clamp(25px, 4vw, 36px)/1.1 Georgia, serif;
+}
+
+.seo-faq details {
+  border-top: 1px solid #e4dad5;
+}
+
+.seo-faq details:last-child {
+  border-bottom: 1px solid #e4dad5;
+}
+
+.seo-faq summary {
+  padding: 16px 2px;
+  color: #2a2221;
+  font-size: 12px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.seo-faq details p {
+  max-width: 78ch;
+  margin: -4px 0 17px;
+  color: #665c57;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.product-related-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 900px) {
+  .seo-product-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .product-related-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .seo-collection-main {
+    width: min(100% - 20px, 520px);
+    padding-top: 22px;
+  }
+
+  .seo-collection-hero {
+    border-radius: 17px;
+  }
+
+  .seo-product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .seo-product-card {
+    border-radius: 12px;
+  }
+
+  .seo-product-card-copy,
+  .product-related article > div {
+    gap: 6px;
+    padding: 10px;
+  }
+
+  .seo-product-card h2,
+  .product-related h3 {
+    display: -webkit-box;
+    min-height: 3.75em;
+    overflow: hidden;
+    font-size: 13px;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+
+  .product-related {
+    padding: 18px 12px;
+  }
+}
+
+@media (max-width: 359px) {
+  .seo-product-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -38,6 +38,11 @@ function structuredData(html) {
   return JSON.parse(match[1]);
 }
 
+function allStructuredData(html) {
+  return [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)]
+    .map(match => JSON.parse(match[1]));
+}
+
 function productDatabase(rows) {
   return {
     prepare(sql) {
@@ -89,7 +94,8 @@ const oneLinkRow = productRow(oneLinkItem, {
 });
 
 const inStockModel = buildProductPageModel(inStockRow, {
-  siteOrigin: "https://jerseysfrmjb.com"
+  siteOrigin: "https://jerseysfrmjb.com",
+  reviewSummary: { count: 2, rating: 5 }
 });
 const soldOutModel = buildProductPageModel(soldOutRow, {
   siteOrigin: "https://jerseysfrmjb.com"
@@ -135,8 +141,15 @@ assert.match(inStockHtml, />Back<\/figcaption>/);
 assert.match(inStockHtml, />Player<\/dt>/);
 assert.match(inStockHtml, />Team \/ country<\/dt>/);
 assert.match(inStockHtml, />Condition<\/dt>/);
+assert.match(inStockHtml, />Category<\/dt>/);
+assert.match(inStockHtml, /\/players\/lionel-messi/);
+assert.match(inStockHtml, /\/teams\/argentina/);
+assert.match(inStockHtml, /\/competitions\/world-cup/);
 assert.match(inStockHtml, />Available sizes:<\/h2>/);
 assert.match(inStockHtml, />Medium<\/strong>/);
+assert.match(inStockHtml, /width="1280" height="1280" loading="eager"/);
+assert.match(inStockHtml, /Questions about this jersey/);
+assert.match(inStockHtml, /5\.0 · 2 approved reviews/);
 assert.doesNotMatch(inStockHtml, /Total stock|Stock quantity|\d+\s+(?:available|remaining)|quantity/i);
 assert.match(inStockHtml, /does not process checkout on this page/);
 assert.doesNotMatch(inStockHtml, /Add to Cart|Checkout Now|Buy from JerseysFrmJB/);
@@ -147,7 +160,16 @@ assert.equal(inStockSchema["@type"], "Product");
 assert.equal(inStockSchema.sku, inStockModel.id);
 assert.equal(inStockSchema.url, inStockModel.canonicalUrl);
 assert.equal(inStockSchema.image.length, 2);
+assert.equal(inStockSchema.image[0]["@type"], "ImageObject");
+assert.match(inStockSchema.image[0].name, /Lionel Messi Argentina 2026 Home soccer jersey front view/);
 assert.equal(inStockSchema.offers.length, 2);
+assert.deepEqual(inStockSchema.size, ["M"]);
+assert.equal("brand" in inStockSchema, false);
+assert.equal("audience" in inStockSchema, false);
+assert.equal("itemCondition" in inStockSchema, false);
+assert.ok(inStockSchema.offers.every(offer => !("itemCondition" in offer)));
+assert.equal(inStockSchema.aggregateRating.ratingValue, "5.0");
+assert.equal(inStockSchema.aggregateRating.reviewCount, 2);
 assert.equal(
   inStockSchema.additionalProperty.some(property => /quantity/i.test(property.name)),
   false
@@ -161,6 +183,9 @@ for (const offer of inStockSchema.offers) {
   assert.equal(offer.availability, "https://schema.org/InStock");
   assert.equal(new URL(offer.url).protocol, "https:");
 }
+const inStockSchemas = allStructuredData(inStockHtml);
+assert.ok(inStockSchemas.some(item => item["@type"] === "BreadcrumbList"));
+assert.ok(inStockSchemas.some(item => item["@type"] === "FAQPage"));
 
 const soldOutSchema = structuredData(soldOutHtml);
 assert.match(soldOutHtml, /Sold out/);

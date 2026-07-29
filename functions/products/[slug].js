@@ -3,6 +3,11 @@ import {
   renderProductNotFound,
   renderProductPage
 } from "./_page.js";
+import {
+  buildSeoProducts,
+  loadSeoRows,
+  relatedProducts
+} from "../_seo.js";
 
 const DEFAULT_SITE_ORIGIN = "https://jerseysfrmjb.com";
 const PRODUCT_PAGE_CACHE = "public, max-age=60, s-maxage=120, stale-while-revalidate=30";
@@ -63,6 +68,28 @@ async function loadProduct(env, id) {
   `).bind(id).first();
 }
 
+async function loadReviewSummary(env, row) {
+  try {
+    const links = JSON.parse(row.links || "{}");
+    const ebayItemId = String(links?.ebay || "").match(/\b(\d{9,})\b/)?.[1] || "";
+    if (!ebayItemId) return null;
+    const summary = await env.DB.prepare(`
+      SELECT COUNT(*) AS count, AVG(star_rating) AS rating
+      FROM ebay_feedback
+      WHERE marketplace = 'ebay'
+        AND moderation_status = 'approved'
+        AND visibility_status = 'active'
+        AND rating_type = 'POSITIVE'
+        AND item_id = ?
+    `).bind(ebayItemId).first();
+    const count = Number(summary?.count || 0);
+    const rating = Number(summary?.rating || 0);
+    return count > 0 && rating > 0 ? { count, rating } : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function onRequestGet(context) {
   const origin = siteOrigin(context);
   if (!context?.env?.DB) {
@@ -82,7 +109,22 @@ export async function onRequestGet(context) {
     const row = await loadProduct(context.env, id);
     if (!row) return htmlResponse(renderProductNotFound(origin), 404, "no-store");
 
-    const model = buildProductPageModel(row, { siteOrigin: origin });
+    let recommendations = [];
+    try {
+      const seoRows = await loadSeoRows(context.env);
+      const seoProducts = buildSeoProducts(seoRows, { siteOrigin: origin });
+      const current = seoProducts.find(product => product.id === id);
+      recommendations = relatedProducts(current, seoProducts, 6);
+    } catch {
+      recommendations = [];
+    }
+
+    const reviewSummary = await loadReviewSummary(context.env, row);
+    const model = buildProductPageModel(row, {
+      siteOrigin: origin,
+      relatedProducts: recommendations,
+      reviewSummary
+    });
     if (!model?.images?.front) {
       return htmlResponse(renderProductNotFound(origin), 404, "no-store");
     }
