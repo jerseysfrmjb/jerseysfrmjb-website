@@ -180,8 +180,24 @@ CREATE TABLE IF NOT EXISTS facebook_post_history (
     CHECK (status IN ('draft', 'posted')),
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  posted_at TEXT
+  posted_at TEXT,
+  facebook_post_id TEXT NOT NULL DEFAULT '',
+  facebook_post_url TEXT NOT NULL DEFAULT '',
+  publish_method TEXT NOT NULL DEFAULT '',
+  publish_error TEXT NOT NULL DEFAULT ''
 );
 
 CREATE INDEX IF NOT EXISTS idx_facebook_post_history_status_created
   ON facebook_post_history(status, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS facebook_connections (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  user_access_token_encrypted TEXT NOT NULL,
+  page_access_token_encrypted TEXT NOT NULL DEFAULT '',
+  page_id TEXT NOT NULL DEFAULT '',
+  page_name TEXT NOT NULL DEFAULT '',
+  scope TEXT NOT NULL DEFAULT '',
+  user_expires_at INTEGER,
+  connected_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

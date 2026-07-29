@@ -1,0 +1,77 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { facebookOauthUrl } from "../functions/api/admin/facebook/_shared.js";
+import { onRequestPost as publishFacebookPost } from "../functions/api/admin/facebook/publish.js";
+
+const workspace = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const sharedSource = await readFile(
+  path.join(workspace, "functions", "api", "admin", "facebook", "_shared.js"),
+  "utf8"
+);
+const publishSource = await readFile(
+  path.join(workspace, "functions", "api", "admin", "facebook", "publish.js"),
+  "utf8"
+);
+const callbackSource = await readFile(
+  path.join(workspace, "functions", "api", "admin", "facebook", "callback.js"),
+  "utf8"
+);
+const schema = await readFile(path.join(workspace, "schema.sql"), "utf8");
+
+const oauth = new URL(facebookOauthUrl({
+  FACEBOOK_APP_ID: "1028637966593790",
+  FACEBOOK_REDIRECT_URI: "https://jerseysfrmjb.com/api/admin/facebook/callback"
+}, "secure-state"));
+assert.equal(oauth.hostname, "www.facebook.com");
+assert.equal(oauth.searchParams.get("client_id"), "1028637966593790");
+assert.equal(oauth.searchParams.get("redirect_uri"), "https://jerseysfrmjb.com/api/admin/facebook/callback");
+assert.equal(oauth.searchParams.get("state"), "secure-state");
+for (const scope of ["pages_show_list", "pages_read_engagement", "pages_manage_posts"]) {
+  assert.match(oauth.searchParams.get("scope") || "", new RegExp(scope));
+}
+
+const businessOauth = new URL(facebookOauthUrl({
+  FACEBOOK_APP_ID: "1028637966593790",
+  FACEBOOK_LOGIN_CONFIG_ID: "business-config",
+  FACEBOOK_REDIRECT_URI: "https://jerseysfrmjb.com/api/admin/facebook/callback"
+}, "business-state"));
+assert.equal(businessOauth.searchParams.get("config_id"), "business-config");
+assert.equal(businessOauth.searchParams.get("override_default_response_type"), "true");
+assert.equal(businessOauth.searchParams.has("scope"), false);
+
+assert.match(sharedSource, /AES-GCM/);
+assert.match(sharedSource, /appsecret_proof/);
+assert.match(sharedSource, /user_access_token_encrypted/);
+assert.match(callbackSource, /__Host-jb_facebook_state/);
+assert.match(callbackSource, /isAuthorized/);
+assert.match(publishSource, /published:\s*"false"/);
+assert.match(publishSource, /attached_media\[/);
+assert.match(publishSource, /facebook_post_id/);
+assert.match(publishSource, /permalink_url/);
+assert.match(schema, /CREATE TABLE IF NOT EXISTS facebook_connections/);
+assert.doesNotMatch(sharedSource, /FACEBOOK_APP_SECRET\s*=\s*["'][^"']+["']/);
+
+const unauthorized = await publishFacebookPost({
+  request: new Request("https://jerseysfrmjb.com/api/admin/facebook/publish", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ post_id: 1 })
+  }),
+  env: {
+    DB: {},
+    ADMIN_PASSWORD: "test",
+    ADMIN_SESSION_SECRET: "secret",
+    FACEBOOK_APP_SECRET: "not-a-real-secret"
+  }
+});
+assert.equal(unauthorized.status, 401, "Facebook publishing is admin-only");
+
+console.log("Facebook Page publishing tests passed:");
+console.log("- OAuth uses the supplied App ID, exact callback, state, and Page scopes");
+console.log("- Business Login configuration mode is supported");
+console.log("- tokens are encrypted and Graph calls use appsecret_proof");
+console.log("- multi-photo posts upload unpublished photos before publishing");
+console.log("- publishing endpoints reject unauthenticated requests");

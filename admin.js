@@ -42,6 +42,15 @@ const pinterestTitleCount = document.querySelector("[data-pinterest-title-count]
 const pinterestDescriptionCount = document.querySelector("[data-pinterest-description-count]");
 const pinterestPreview = document.querySelector("[data-pinterest-preview]");
 const pinterestPublish = document.querySelector("[data-pinterest-publish]");
+const facebookBadge = document.querySelector("[data-facebook-badge]");
+const facebookConnectionName = document.querySelector("[data-facebook-connection-name]");
+const facebookConnectionDetail = document.querySelector("[data-facebook-connection-detail]");
+const facebookConnect = document.querySelector("[data-facebook-connect]");
+const refreshFacebookConnectionButton = document.querySelector("[data-refresh-facebook-connection]");
+const disconnectFacebookButton = document.querySelector("[data-disconnect-facebook]");
+const facebookPagePicker = document.querySelector("[data-facebook-page-picker]");
+const facebookPageSelect = document.querySelector("[data-facebook-page-select]");
+const selectFacebookPageButton = document.querySelector("[data-select-facebook-page]");
 const facebookStatusLine = document.querySelector("[data-facebook-status]");
 const facebookProducts = document.querySelector("[data-facebook-products]");
 const facebookProductSearch = document.querySelector("[data-facebook-product-search]");
@@ -52,6 +61,7 @@ const facebookCaption = document.querySelector("[data-facebook-caption]");
 const facebookCaptionCount = document.querySelector("[data-facebook-caption-count]");
 const facebookPhotos = document.querySelector("[data-facebook-photos]");
 const saveFacebookDraftButton = document.querySelector("[data-save-facebook-draft]");
+const publishFacebookPostButton = document.querySelector("[data-publish-facebook-post]");
 const copyFacebookPostButton = document.querySelector("[data-copy-facebook-post]");
 const markFacebookPostedButton = document.querySelector("[data-mark-facebook-posted]");
 const refreshFacebookHistoryButton = document.querySelector("[data-refresh-facebook-history]");
@@ -109,6 +119,9 @@ let pinterestConnection = null;
 let pinterestBoards = [];
 let pinterestLoaded = false;
 let pinterestPublishing = false;
+let facebookConnection = null;
+let facebookConnectionLoaded = false;
+let facebookConnectionLoading = false;
 let facebookLoaded = false;
 let facebookLoading = false;
 let facebookSaving = false;
@@ -130,7 +143,8 @@ let quickSaleMatches = [];
 let quickSalePriceManuallyEdited = false;
 let quickSalePriceRequest = 0;
 const pinterestCallback = new URLSearchParams(location.search).get("pinterest") || "";
-let currentAdminTab = location.hash === "#facebook"
+const facebookCallback = new URLSearchParams(location.search).get("facebook") || "";
+let currentAdminTab = location.hash === "#facebook" || facebookCallback
   ? "facebook"
   : location.hash === "#pinterest" || pinterestCallback
     ? "pinterest"
@@ -173,7 +187,10 @@ function setAdminTab(tab = "dashboard") {
   if (tab === "sales" && !salesLoaded) loadSales();
   if (tab === "analytics" && !analyticsLoaded) loadAnalytics();
   if (tab === "feedback" && !feedbackLoaded) loadEbayFeedbackAdmin();
-  if (tab === "facebook" && !facebookLoaded) loadFacebookHistory();
+  if (tab === "facebook") {
+    if (!facebookConnectionLoaded) loadFacebookConnection();
+    if (!facebookLoaded) loadFacebookHistory();
+  }
   if (tab === "pinterest" && !pinterestLoaded) loadPinterestStatus();
 }
 
@@ -1574,6 +1591,137 @@ function showPanel() {
   setAdminTab(currentAdminTab || "dashboard");
 }
 
+function renderFacebookConnection() {
+  const connected = Boolean(facebookConnection?.connected);
+  const hasAuthorization = Boolean(facebookConnection?.has_authorization);
+  const needsPage = Boolean(facebookConnection?.needs_page_selection);
+  const pageName = String(facebookConnection?.page?.name || "");
+  if (facebookBadge) {
+    facebookBadge.textContent = connected ? "Connected" : needsPage ? "Choose Page" : "Not connected";
+    facebookBadge.className = `facebook-connection-badge ${connected ? "connected" : "disconnected"}`;
+  }
+  if (facebookConnectionName) {
+    facebookConnectionName.textContent = connected
+      ? pageName
+      : needsPage
+        ? "Authorization received — choose a Page"
+        : "No Facebook Page connected";
+  }
+  if (facebookConnectionDetail) {
+    facebookConnectionDetail.textContent = connected
+      ? "Posts publish directly to this Page. Personal profiles and Marketplace are never used."
+      : needsPage
+        ? "Your Facebook account manages more than one Page."
+        : "Authorize the Page owner once to enable direct publishing.";
+  }
+  if (facebookConnect) {
+    facebookConnect.hidden = hasAuthorization && !facebookConnection?.expired;
+    facebookConnect.textContent = facebookConnection?.expired ? "Reconnect Facebook Page" : "Connect Facebook Page";
+  }
+  if (disconnectFacebookButton) disconnectFacebookButton.hidden = !hasAuthorization;
+  if (facebookPagePicker) facebookPagePicker.hidden = !needsPage;
+  updateFacebookActions();
+}
+
+async function loadFacebookPages() {
+  if (!facebookPageSelect || !facebookConnection?.needs_page_selection) return;
+  facebookPageSelect.disabled = true;
+  facebookPageSelect.innerHTML = '<option value="">Loading Pages...</option>';
+  try {
+    const data = await api("/api/admin/facebook/pages");
+    const pages = Array.isArray(data.pages) ? data.pages : [];
+    facebookPageSelect.innerHTML = '<option value="">Choose a Facebook Page</option>' + pages.map(page =>
+      `<option value="${escapeHtml(page.id)}">${escapeHtml(page.name)}</option>`
+    ).join("");
+    if (!pages.length) facebookPageSelect.innerHTML = '<option value="">No manageable Pages found</option>';
+  } catch (error) {
+    facebookPageSelect.innerHTML = '<option value="">Pages could not be loaded</option>';
+    setFacebookStatus(error.message, "error");
+  } finally {
+    facebookPageSelect.disabled = false;
+  }
+}
+
+async function loadFacebookConnection() {
+  if (!facebookBadge || facebookConnectionLoading) return;
+  facebookConnectionLoading = true;
+  facebookBadge.textContent = "Checking";
+  facebookBadge.className = "facebook-connection-badge";
+  if (refreshFacebookConnectionButton) refreshFacebookConnectionButton.disabled = true;
+  try {
+    facebookConnection = await api("/api/admin/facebook/status");
+    facebookConnectionLoaded = true;
+    renderFacebookConnection();
+    if (facebookConnection.needs_page_selection) await loadFacebookPages();
+
+    const callbackMessage = new URLSearchParams(location.search).get("message") || "";
+    if (facebookCallback === "error") {
+      setFacebookStatus(callbackMessage || "Facebook could not be connected.", "error");
+    } else if (facebookCallback === "select-page") {
+      setFacebookStatus(callbackMessage || "Choose the Facebook Page to publish to.", "success");
+    } else if (facebookCallback === "connected") {
+      setFacebookStatus(callbackMessage || "Facebook Page connected successfully.", "success");
+    }
+  } catch (error) {
+    facebookConnectionLoaded = false;
+    facebookConnection = null;
+    renderFacebookConnection();
+    if (facebookConnectionDetail) facebookConnectionDetail.textContent = error.message;
+    setFacebookStatus(error.message, "error");
+  } finally {
+    facebookConnectionLoading = false;
+    if (refreshFacebookConnectionButton) refreshFacebookConnectionButton.disabled = false;
+  }
+}
+
+async function chooseFacebookPage() {
+  const pageId = String(facebookPageSelect?.value || "");
+  if (!pageId || selectFacebookPageButton?.disabled) {
+    setFacebookStatus("Choose a Facebook Page.", "error");
+    return;
+  }
+  selectFacebookPageButton.disabled = true;
+  selectFacebookPageButton.textContent = "Connecting...";
+  setFacebookStatus("Connecting the selected Facebook Page...");
+  try {
+    const data = await api("/api/admin/facebook/pages", {
+      method: "POST",
+      body: JSON.stringify({ page_id: pageId })
+    });
+    facebookConnection = {
+      ...(facebookConnection || {}),
+      connected: true,
+      has_authorization: true,
+      needs_page_selection: false,
+      page: data.page
+    };
+    renderFacebookConnection();
+    setFacebookStatus(`${data.page.name} is connected for direct publishing.`, "success");
+  } catch (error) {
+    setFacebookStatus(error.message, "error");
+  } finally {
+    selectFacebookPageButton.disabled = false;
+    selectFacebookPageButton.textContent = "Use This Page";
+  }
+}
+
+async function disconnectFacebook() {
+  if (!facebookConnection?.has_authorization
+    || !confirm("Disconnect this Facebook Page? Existing Facebook posts will not be deleted.")) return;
+  if (disconnectFacebookButton) disconnectFacebookButton.disabled = true;
+  setFacebookStatus("Disconnecting Facebook...");
+  try {
+    await api("/api/admin/facebook/disconnect", { method: "POST", body: "{}" });
+    facebookConnection = { connected: false, has_authorization: false };
+    renderFacebookConnection();
+    setFacebookStatus("Facebook disconnected. Existing Page posts were not changed.", "success");
+  } catch (error) {
+    setFacebookStatus(error.message, "error");
+  } finally {
+    if (disconnectFacebookButton) disconnectFacebookButton.disabled = false;
+  }
+}
+
 const FACEBOOK_MAX_PRODUCTS = 5;
 const FACEBOOK_SITE_ORIGIN = "https://jerseysfrmjb.com";
 
@@ -1721,6 +1869,14 @@ function updateFacebookActions() {
       || Boolean(currentFacebookPost);
   }
   if (copyFacebookPostButton) copyFacebookPostButton.disabled = !hasCaption;
+  if (publishFacebookPostButton) {
+    publishFacebookPostButton.disabled = facebookSaving
+      || !facebookConnection?.connected
+      || selectionCount < 1
+      || !facebookCaptionGenerated
+      || !hasCaption
+      || currentFacebookPost?.status === "posted";
+  }
   if (markFacebookPostedButton) {
     markFacebookPostedButton.disabled = facebookSaving
       || !currentFacebookPost
@@ -1811,6 +1967,9 @@ function renderFacebookHistory() {
         <div class="facebook-history-actions">
           <button type="button" data-facebook-history-load="${escapeHtml(post.id)}">${posted ? "View Post" : "Open Draft"}</button>
           <button type="button" data-facebook-history-copy="${escapeHtml(post.id)}">Copy Text</button>
+          ${post.facebook_post_url
+            ? `<a href="${escapeHtml(post.facebook_post_url)}" target="_blank" rel="noopener">View on Facebook</a>`
+            : ""}
           ${posted
             ? ""
             : `<button type="button" data-facebook-history-posted="${escapeHtml(post.id)}">Mark Posted</button>
@@ -1838,8 +1997,12 @@ function openFacebookHistoryPost(post) {
   updateFacebookActions();
   setFacebookStatus(
     post.status === "posted"
-      ? "Posted history opened. You can copy its text, but it cannot be marked twice."
-      : "Saved draft opened. Copy it into Meta Business Suite when ready.",
+      ? post.facebook_post_url
+        ? "Published Facebook post opened. Use View on Facebook to see the live Page post."
+        : "Manually posted history opened. You can copy its text, but it cannot be marked twice."
+      : post.publish_error
+        ? `Draft opened. Last publishing attempt: ${post.publish_error}`
+        : "Saved draft opened. Publish it directly or use the manual fallback.",
     "success"
   );
   facebookEditor?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1874,12 +2037,7 @@ async function loadFacebookHistory() {
   }
 }
 
-async function saveFacebookDraft() {
-  if (facebookSaving || !facebookCaption?.value.trim()) return;
-  facebookSaving = true;
-  updateFacebookActions();
-  if (saveFacebookDraftButton) saveFacebookDraftButton.textContent = "Saving...";
-  setFacebookStatus("Saving Facebook draft...");
+async function persistFacebookDraft() {
   try {
     const data = await api("/api/admin/facebook-posts", {
       method: "POST",
@@ -1891,18 +2049,83 @@ async function saveFacebookDraft() {
     currentFacebookPost = data.post;
     updateFacebookPostInHistory(data.post);
     renderFacebookPhotos(data.post.photo_urls || []);
-    setFacebookStatus("Draft saved. Copy the text and photos into Meta Business Suite.", "success");
+    return data.post;
+  } catch (error) {
+    if (!error.duplicate) throw error;
+    currentFacebookPost = error.duplicate;
+    updateFacebookPostInHistory(error.duplicate);
+    renderFacebookPhotos(error.duplicate.photo_urls || []);
+    return error.duplicate;
+  }
+}
+
+async function saveFacebookDraft() {
+  if (facebookSaving || !facebookCaption?.value.trim()) return null;
+  facebookSaving = true;
+  updateFacebookActions();
+  if (saveFacebookDraftButton) saveFacebookDraftButton.textContent = "Saving...";
+  setFacebookStatus("Saving Facebook draft...");
+  try {
+    const post = await persistFacebookDraft();
+    setFacebookStatus("Draft saved. Publish directly or use the manual fallback.", "success");
+    return post;
   } catch (error) {
     if (error.duplicate) {
       currentFacebookPost = error.duplicate;
       updateFacebookPostInHistory(error.duplicate);
       openFacebookHistoryPost(error.duplicate);
+      return error.duplicate;
     } else {
       setFacebookStatus(error.message, "error");
     }
+    return null;
   } finally {
     facebookSaving = false;
     if (saveFacebookDraftButton) saveFacebookDraftButton.textContent = "Save Draft";
+    updateFacebookActions();
+  }
+}
+
+async function publishFacebookPost() {
+  if (facebookSaving || !facebookConnection?.connected || !facebookCaption?.value.trim()) return;
+  if (!confirm(`Publish this post now to ${facebookConnection.page?.name || "the connected Facebook Page"}?`)) return;
+
+  facebookSaving = true;
+  updateFacebookActions();
+  if (publishFacebookPostButton) publishFacebookPostButton.textContent = "Publishing...";
+  setFacebookStatus("Preparing photos and publishing to Facebook...");
+  try {
+    let post = currentFacebookPost;
+    if (!post) post = await persistFacebookDraft();
+    if (!post || post.status === "posted") {
+      if (post?.facebook_post_url) {
+        setFacebookStatus("This post was already published. Open it from Post History.", "success");
+      }
+      return;
+    }
+    const data = await api("/api/admin/facebook/publish", {
+      method: "POST",
+      body: JSON.stringify({ post_id: post.id })
+    });
+    currentFacebookPost = data.post;
+    updateFacebookPostInHistory(data.post);
+    setFacebookStatus(
+      `Published successfully to ${facebookConnection.page?.name || "Facebook"}.`,
+      "success"
+    );
+  } catch (error) {
+    setFacebookStatus(error.message, "error");
+    if (error.reconnect_required) {
+      facebookConnection = { connected: false, has_authorization: false, expired: true };
+      renderFacebookConnection();
+    }
+    if (currentFacebookPost) {
+      currentFacebookPost.publish_error = error.message;
+      updateFacebookPostInHistory(currentFacebookPost);
+    }
+  } finally {
+    facebookSaving = false;
+    if (publishFacebookPostButton) publishFacebookPostButton.textContent = "Publish to Facebook";
     updateFacebookActions();
   }
 }
@@ -3281,6 +3504,9 @@ refreshMessages?.addEventListener("click", loadMessages);
 refreshFeedback?.addEventListener("click", loadEbayFeedbackAdmin);
 feedbackFilter?.addEventListener("change", renderEbayFeedbackAdmin);
 refreshFacebookHistoryButton?.addEventListener("click", loadFacebookHistory);
+refreshFacebookConnectionButton?.addEventListener("click", loadFacebookConnection);
+disconnectFacebookButton?.addEventListener("click", disconnectFacebook);
+selectFacebookPageButton?.addEventListener("click", chooseFacebookPage);
 facebookProductSearch?.addEventListener("input", renderFacebookProducts);
 facebookProducts?.addEventListener("change", event => {
   const checkbox = event.target.closest("[data-facebook-product]");
@@ -3312,6 +3538,7 @@ facebookCaption?.addEventListener("input", () => {
   updateFacebookActions();
 });
 saveFacebookDraftButton?.addEventListener("click", saveFacebookDraft);
+publishFacebookPostButton?.addEventListener("click", publishFacebookPost);
 copyFacebookPostButton?.addEventListener("click", () => copyFacebookCaption());
 markFacebookPostedButton?.addEventListener("click", () => markFacebookPostAsPosted());
 facebookHistoryList?.addEventListener("click", event => {

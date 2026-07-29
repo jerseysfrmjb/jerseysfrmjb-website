@@ -20,13 +20,17 @@ function normalizePost(row) {
     caption: row.caption || "",
     photo_urls: parseJson(row.photo_urls, []),
     status: row.status || "draft",
+    facebook_post_id: row.facebook_post_id || "",
+    facebook_post_url: row.facebook_post_url || "",
+    publish_method: row.publish_method || "",
+    publish_error: row.publish_error || "",
     created_at: row.created_at,
     updated_at: row.updated_at,
     posted_at: row.posted_at || ""
   };
 }
 
-async function ensureFacebookPostHistorySchema(env) {
+export async function ensureFacebookPostHistorySchema(env) {
   await env.DB.prepare(`
     CREATE TABLE IF NOT EXISTS facebook_post_history (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -39,9 +43,26 @@ async function ensureFacebookPostHistorySchema(env) {
         CHECK (status IN ('draft', 'posted')),
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      posted_at TEXT
+      posted_at TEXT,
+      facebook_post_id TEXT NOT NULL DEFAULT '',
+      facebook_post_url TEXT NOT NULL DEFAULT '',
+      publish_method TEXT NOT NULL DEFAULT '',
+      publish_error TEXT NOT NULL DEFAULT ''
     )
   `).run();
+  const additions = [
+    "ALTER TABLE facebook_post_history ADD COLUMN facebook_post_id TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE facebook_post_history ADD COLUMN facebook_post_url TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE facebook_post_history ADD COLUMN publish_method TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE facebook_post_history ADD COLUMN publish_error TEXT NOT NULL DEFAULT ''"
+  ];
+  for (const statement of additions) {
+    try {
+      await env.DB.prepare(statement).run();
+    } catch (error) {
+      if (!/duplicate column|already exists/i.test(String(error?.message || error || ""))) throw error;
+    }
+  }
   await env.DB.prepare(`
     CREATE INDEX IF NOT EXISTS idx_facebook_post_history_status_created
       ON facebook_post_history(status, created_at DESC)
@@ -60,9 +81,10 @@ async function contentHash(productIds, caption) {
     .join("");
 }
 
-async function historyRecord(env, id) {
+export async function historyRecord(env, id) {
   const row = await env.DB.prepare(`
     SELECT id, product_ids, product_names, caption, photo_urls, status,
+      facebook_post_id, facebook_post_url, publish_method, publish_error,
       created_at, updated_at, posted_at
     FROM facebook_post_history
     WHERE id = ?
@@ -73,6 +95,7 @@ async function historyRecord(env, id) {
 async function listHistory(env) {
   const result = await env.DB.prepare(`
     SELECT id, product_ids, product_names, caption, photo_urls, status,
+      facebook_post_id, facebook_post_url, publish_method, publish_error,
       created_at, updated_at, posted_at
     FROM facebook_post_history
     ORDER BY created_at DESC, id DESC
@@ -162,6 +185,7 @@ export async function onRequestPost({ request, env }) {
   const hash = await contentHash(productIds, caption);
   const duplicate = await env.DB.prepare(`
     SELECT id, product_ids, product_names, caption, photo_urls, status,
+      facebook_post_id, facebook_post_url, publish_method, publish_error,
       created_at, updated_at, posted_at
     FROM facebook_post_history
     WHERE content_hash = ?
@@ -216,7 +240,11 @@ export async function onRequestPatch({ request, env }) {
 
   await env.DB.prepare(`
     UPDATE facebook_post_history
-    SET status = 'posted', posted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+    SET status = 'posted',
+      publish_method = CASE WHEN publish_method = '' THEN 'manual' ELSE publish_method END,
+      publish_error = '',
+      posted_at = CURRENT_TIMESTAMP,
+      updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
   `).bind(id).run();
   return json({ post: await historyRecord(env, id) });

@@ -6,8 +6,8 @@
   <title>Inventory Admin | JerseysFrmJB</title>
   <meta name="robots" content="noindex,nofollow">
   <link rel="icon" href="assets/jerseysfrmjb-logo.jpg" type="image/jpeg">
-  <link rel="stylesheet" href="styles.css?v=facebook-publisher-1">
-  <script src="admin.js?v=facebook-publisher-1" defer></script>
+  <link rel="stylesheet" href="styles.css?v=facebook-publisher-2">
+  <script src="admin.js?v=facebook-publisher-2" defer></script>
 </head>
 <body class="admin-body">
   <main class="admin-shell">
@@ -153,11 +153,32 @@
         <div class="admin-messages-head">
           <div>
             <span class="section-kicker">Page Content Publisher</span>
-            <h2>Facebook Posts</h2>
-            <p>Create posts from live inventory, then publish them manually through your Facebook Page. This never posts to Marketplace.</p>
+            <h2>Facebook Posts <span class="facebook-connection-badge" data-facebook-badge>Checking</span></h2>
+            <p>Create posts from live inventory and publish them directly to your connected Facebook Page. This never posts to Marketplace.</p>
           </div>
           <a class="shop-button secondary-admin" href="https://business.facebook.com/latest/home" target="_blank" rel="noopener">Open Meta Business Suite</a>
         </div>
+        <section class="facebook-connection-card" aria-label="Facebook Page connection">
+          <div>
+            <span>Page connection</span>
+            <strong data-facebook-connection-name>Checking Facebook configuration...</strong>
+            <small data-facebook-connection-detail>Direct publishing is available only after the Page owner authorizes this app.</small>
+          </div>
+          <div class="facebook-connection-actions">
+            <a class="shop-button secondary-admin" href="/api/admin/facebook/connect" data-facebook-connect>Connect Facebook Page</a>
+            <button class="shop-button secondary-admin" type="button" data-refresh-facebook-connection>Refresh</button>
+            <button class="shop-button secondary-admin" type="button" data-disconnect-facebook hidden>Disconnect</button>
+          </div>
+          <div class="facebook-page-picker" data-facebook-page-picker hidden>
+            <label>
+              Choose Page
+              <select data-facebook-page-select>
+                <option value="">Loading Pages...</option>
+              </select>
+            </label>
+            <button class="shop-button" type="button" data-select-facebook-page>Use This Page</button>
+          </div>
+        </section>
         <p class="form-status" data-facebook-status role="status">Choose up to five jerseys to prepare a Facebook post.</p>
 
         <div class="facebook-publisher-grid">
@@ -196,11 +217,12 @@
             </div>
             <div class="facebook-post-actions">
               <button class="shop-button" type="button" data-save-facebook-draft disabled>Save Draft</button>
+              <button class="shop-button facebook-publish-button" type="button" data-publish-facebook-post disabled>Publish to Facebook</button>
               <button class="shop-button secondary-admin" type="button" data-copy-facebook-post disabled>Copy Post Text</button>
               <a class="shop-button secondary-admin" href="https://business.facebook.com/latest/home" target="_blank" rel="noopener">Open Facebook</a>
               <button class="shop-button secondary-admin" type="button" data-mark-facebook-posted disabled>Mark as Posted</button>
             </div>
-            <p class="facebook-post-note">Download the photos below, copy the post text, publish it in Meta Business Suite, then mark it as posted here.</p>
+            <p class="facebook-post-note">Connect your Page for direct publishing. Copy, download, and manual marking remain available as a fallback.</p>
           </section>
         </div>
 
