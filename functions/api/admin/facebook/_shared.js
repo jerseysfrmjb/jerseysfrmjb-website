@@ -224,7 +224,7 @@ export async function listManagedPages(env, userAccessToken) {
     try {
       const preferredPage = normalizePage(await graphRequest(
         env,
-        `/${encodeURIComponent(preferredPageId)}?fields=id,name,access_token,tasks`,
+        `/${encodeURIComponent(preferredPageId)}?fields=id,name,access_token`,
         {},
         userAccessToken
       ));

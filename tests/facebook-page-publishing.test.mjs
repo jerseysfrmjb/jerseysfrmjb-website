@@ -80,6 +80,7 @@ try {
   assert.equal(pages[0].access_token, "page-token");
   assert.equal(graphRequests.length, 2);
   assert.match(graphRequests[1].pathname, /1196832170185323$/);
+  assert.equal(graphRequests[1].searchParams.get("fields"), "id,name,access_token");
 } finally {
   globalThis.fetch = originalFetch;
 }
