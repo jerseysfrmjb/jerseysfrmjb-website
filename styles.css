@@ -393,6 +393,241 @@
   }
 }
 
+.planner-order-builder {
+  margin: 18px 0;
+  padding: 17px;
+  border: 1px solid #ded6cf;
+  border-radius: 16px;
+  background: #faf8f5;
+}
+
+.planner-order-builder > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 14px;
+}
+
+.planner-order-builder h3 {
+  margin: 4px 0;
+}
+
+.planner-order-builder p {
+  margin: 0;
+  color: #6e6560;
+}
+
+.planner-order-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #ded5ce;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.planner-order-table {
+  width: 100%;
+  min-width: 1180px;
+  border-collapse: collapse;
+  font-size: .72rem;
+}
+
+.planner-order-table th {
+  padding: 9px 7px;
+  background: #241c1d;
+  color: #fff;
+  font-size: .58rem;
+  letter-spacing: .06em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.planner-order-table td {
+  padding: 7px;
+  border-top: 1px solid #e5ddd6;
+  vertical-align: middle;
+}
+
+.planner-order-table td:first-child {
+  min-width: 245px;
+}
+
+.planner-order-table input,
+.planner-order-table select {
+  width: 100%;
+  min-width: 78px;
+  padding: 8px;
+  border: 1px solid #d8cec6;
+  border-radius: 8px;
+  background: #fff;
+  color: #211718;
+  font: inherit;
+}
+
+.planner-order-name {
+  display: grid;
+  gap: 4px;
+}
+
+.planner-order-name span {
+  width: max-content;
+  padding: 2px 6px;
+  border-radius: 99px;
+  font-size: .54rem;
+  font-weight: 900;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.planner-order-name span.matched {
+  background: #dff1e4;
+  color: #176b39;
+}
+
+.planner-order-name span.new {
+  background: #f2e7ce;
+  color: #7b5414;
+}
+
+.planner-order-table .planner-order-size {
+  min-width: 60px;
+}
+
+.planner-order-table .planner-order-qty {
+  min-width: 55px;
+}
+
+.planner-money-input.compact {
+  min-width: 90px;
+}
+
+.planner-order-remove {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #e2b7c2;
+  border-radius: 50%;
+  background: #fff2f5;
+  color: #9e1737;
+  font-size: 1rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+@media (max-width: 720px) {
+  .planner-order-builder {
+    padding: 13px;
+  }
+
+  .planner-order-builder > header {
+    display: grid;
+  }
+
+  .planner-order-builder > header .shop-button {
+    width: 100%;
+  }
+
+  .planner-order-table-wrap {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+  }
+
+  .planner-order-table {
+    min-width: 0;
+  }
+
+  .planner-order-table thead {
+    display: none;
+  }
+
+  .planner-order-table,
+  .planner-order-table tbody,
+  .planner-order-table tr,
+  .planner-order-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .planner-order-table tr {
+    margin-bottom: 12px;
+    padding: 10px;
+    border: 1px solid #ded5ce;
+    border-radius: 12px;
+    background: #fff;
+  }
+
+  .planner-order-table td {
+    display: grid;
+    grid-template-columns: 90px minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    min-width: 0 !important;
+    padding: 6px 0;
+    border: 0;
+  }
+
+  .planner-order-table td::before {
+    content: attr(data-label);
+    color: #7b1638;
+    font-size: .57rem;
+    font-weight: 900;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+  }
+
+  .planner-order-table td:first-child {
+    display: block;
+    padding-bottom: 10px;
+  }
+
+  .planner-order-table td:first-child::before,
+  .planner-order-table td:last-child::before {
+    display: none;
+  }
+
+  .planner-order-table td:last-child {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .planner-order-table .sales-empty {
+    display: block;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .planner-order-builder,
+  .planner-order-table-wrap {
+    background: #2d2727;
+    border-color: #504647;
+  }
+
+  .planner-order-table td {
+    border-color: #504647;
+  }
+
+  .planner-order-table input,
+  .planner-order-table select {
+    background: #1d1919;
+    color: #fff;
+    border-color: #54494a;
+  }
+
+  .planner-order-builder p {
+    color: #c4baba;
+  }
+
+}
+
+@media (prefers-color-scheme: dark) and (max-width: 720px) {
+  .planner-order-table tr {
+    background: #241f20;
+    border-color: #504647;
+  }
+}
+
 .reviews-section .trusted-heading h2,
 .reviews-section .proof-heading h3 {
   color: #171414;

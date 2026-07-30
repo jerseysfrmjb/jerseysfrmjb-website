@@ -116,6 +116,9 @@ const addPlannerSupplier = document.querySelector("[data-add-planner-supplier]")
 const savePlannerSuppliers = document.querySelector("[data-save-planner-suppliers]");
 const plannerSummary = document.querySelector("[data-planner-summary]");
 const plannerPurchaseSummary = document.querySelector("[data-planner-purchase-summary]");
+const plannerPurchaseTable = document.querySelector("[data-planner-purchase-table]");
+const plannerProductOptions = document.querySelector("[data-planner-product-options]");
+const addPurchaseRow = document.querySelector("[data-add-purchase-row]");
 const plannerReorders = document.querySelector("[data-planner-reorders]");
 const plannerRisks = document.querySelector("[data-planner-risks]");
 const plannerProfit = document.querySelector("[data-planner-profit]");
@@ -4114,27 +4117,171 @@ function renderPlannerProducts() {
   }).join("") : '<p class="analytics-empty">No jerseys match these planner filters.</p>';
 }
 
+function plannerSupplierOptions(jerseyType, customization) {
+  if (!plannerData) return [];
+  const rule = `${jerseyType}:${customization}`;
+  return plannerData.suppliers
+    .filter(supplier => supplier.enabled)
+    .map(supplier => ({ id: supplier.id, name: supplier.name, cost: supplier.costs?.[rule] }))
+    .filter(option => option.cost !== null && option.cost !== undefined && Number.isFinite(Number(option.cost)))
+    .sort((a, b) => Number(a.cost) - Number(b.cost) || a.name.localeCompare(b.name));
+}
+
+function plannerPurchaseProduct(rowId, purchase) {
+  if (!plannerData) return null;
+  const productId = purchase.product_id || (plannerData.products.some(product => product.id === rowId) ? rowId : "");
+  return plannerData.products.find(product => product.id === productId) || null;
+}
+
+function addPlannerPurchaseRow(seed = {}) {
+  if (!plannerData) return;
+  const rowId = seed.row_id || `purchase-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  const product = seed.product_id ? plannerData.products.find(item => item.id === seed.product_id) : null;
+  const category = seed.category || product?.category || "club";
+  const jerseyType = seed.jersey_type || product?.jersey_type || (category === "retro" ? "retro_short" : "fan");
+  const customization = seed.customization || product?.customization || "nameset_patches";
+  const options = plannerSupplierOptions(jerseyType, customization);
+  plannerPurchase.set(rowId, {
+    product_id: product?.id || "",
+    name: seed.name || product?.name || "",
+    category,
+    jersey_type: jerseyType,
+    customization,
+    size: seed.size || "",
+    supplier_id: seed.supplier_id || product?.preferred_supplier_id || options[0]?.id || "",
+    quantity: Math.max(1, Number(seed.quantity || product?.recommended_quantity || 1)),
+    selling_price: seed.selling_price ?? product?.planning_price ?? ""
+  });
+  renderPlannerPurchaseTable();
+  renderPlannerPurchaseSummary();
+  renderPlannerProducts();
+  plannerPurchaseTable?.querySelector(`[data-purchase-row="${CSS.escape(rowId)}"] [data-purchase-name]`)?.focus();
+}
+
+function matchPlannerPurchaseProduct(rowId) {
+  const purchase = plannerPurchase.get(rowId);
+  if (!purchase || !plannerData) return;
+  const query = String(purchase.name || "").trim().toLowerCase();
+  let product = plannerData.products.find(item =>
+    item.id.toLowerCase() === query || item.name.toLowerCase() === query
+  );
+  if (!product && query.length >= 3) {
+    const partialMatches = plannerData.products.filter(item =>
+      item.name.toLowerCase().includes(query)
+      || `${item.player} ${item.team_country}`.toLowerCase().includes(query)
+    );
+    if (partialMatches.length === 1) product = partialMatches[0];
+  }
+  if (product) {
+    const options = plannerSupplierOptions(product.jersey_type, product.customization);
+    Object.assign(purchase, {
+      product_id: product.id,
+      name: product.name,
+      category: product.category,
+      jersey_type: product.jersey_type,
+      customization: product.customization,
+      supplier_id: product.preferred_supplier_id || options[0]?.id || "",
+      selling_price: product.planning_price
+    });
+  } else {
+    purchase.product_id = "";
+    const options = plannerSupplierOptions(purchase.jersey_type, purchase.customization);
+    if (!options.some(option => option.id === purchase.supplier_id)) {
+      purchase.supplier_id = options[0]?.id || "";
+    }
+  }
+  plannerPurchase.set(rowId, purchase);
+  renderPlannerPurchaseTable();
+  renderPlannerPurchaseSummary();
+}
+
+function renderPlannerPurchaseTable() {
+  if (!plannerPurchaseTable || !plannerData) return;
+  if (plannerProductOptions) {
+    plannerProductOptions.innerHTML = plannerData.products.map(product =>
+      `<option value="${escapeHtml(product.name)}">${escapeHtml(product.id)}</option>`
+    ).join("");
+  }
+  if (!plannerPurchase.size) {
+    plannerPurchaseTable.innerHTML = '<tr><td colspan="11" class="sales-empty">Add a jersey row or select a product below.</td></tr>';
+    return;
+  }
+  plannerPurchaseTable.innerHTML = [...plannerPurchase.entries()].map(([rowId, purchase]) => {
+    const product = plannerPurchaseProduct(rowId, purchase);
+    const options = plannerSupplierOptions(purchase.jersey_type, purchase.customization);
+    const supplier = options.find(option => option.id === purchase.supplier_id) || options[0] || null;
+    if (supplier && supplier.id !== purchase.supplier_id) purchase.supplier_id = supplier.id;
+    const quantity = Math.max(1, Number(purchase.quantity || 1));
+    const unitCost = Number(supplier?.cost || 0);
+    return `
+      <tr data-purchase-row="${escapeHtml(rowId)}">
+        <td data-label="Jersey">
+          <label class="planner-order-name">
+            <input type="text" list="planner-existing-products" data-purchase-name value="${escapeHtml(purchase.name || "")}" placeholder="Type or match a jersey">
+            <span class="${product ? "matched" : "new"}">${product ? "Matched to inventory" : "New jersey"}</span>
+          </label>
+        </td>
+        <td data-label="Category"><select data-purchase-category>
+          <option value="club" ${purchase.category === "club" ? "selected" : ""}>Club</option>
+          <option value="world" ${purchase.category === "world" ? "selected" : ""}>International</option>
+          <option value="retro" ${purchase.category === "retro" ? "selected" : ""}>Retro</option>
+        </select></td>
+        <td data-label="Version"><select data-purchase-type>
+          <option value="fan" ${purchase.jersey_type === "fan" ? "selected" : ""}>Fan</option>
+          <option value="retro_short" ${purchase.jersey_type === "retro_short" ? "selected" : ""}>Retro short</option>
+          <option value="retro_long" ${purchase.jersey_type === "retro_long" ? "selected" : ""}>Retro long</option>
+        </select></td>
+        <td data-label="Customization"><select data-purchase-customization>
+          <option value="base" ${purchase.customization === "base" ? "selected" : ""}>Base</option>
+          <option value="nameset_patches" ${purchase.customization === "nameset_patches" ? "selected" : ""}>Nameset + patches</option>
+        </select></td>
+        <td data-label="Size"><input class="planner-order-size" type="text" list="planner-size-options" data-purchase-size value="${escapeHtml(purchase.size || "")}" placeholder="M"></td>
+        <td data-label="Supplier"><select data-purchase-supplier ${options.length ? "" : "disabled"}>
+          ${options.length ? options.map(option => `<option value="${escapeHtml(option.id)}" ${option.id === supplier?.id ? "selected" : ""}>${escapeHtml(option.name)}</option>`).join("") : '<option value="">Add pricing</option>'}
+        </select></td>
+        <td data-label="Qty"><input class="planner-order-qty" type="number" min="1" max="99" step="1" data-purchase-quantity value="${quantity}"></td>
+        <td data-label="Unit Cost"><strong data-purchase-unit-cost>${plannerMoney(supplier?.cost)}</strong></td>
+        <td data-label="Expected Sell"><span class="planner-money-input compact"><i>$</i><input type="number" min="0" step="0.01" data-purchase-selling-price value="${purchase.selling_price ?? ""}" placeholder="0.00"></span></td>
+        <td data-label="Line Total"><strong data-purchase-line-total>${plannerMoney(unitCost * quantity)}</strong></td>
+        <td><button class="planner-order-remove" type="button" data-remove-purchase-row aria-label="Remove ${escapeHtml(purchase.name || "jersey")}">×</button></td>
+      </tr>`;
+  }).join("");
+  if (plannerProductOptions) plannerProductOptions.id = "planner-existing-products";
+}
+
 function plannerSelectedRows() {
   if (!plannerData) return [];
-  return [...plannerPurchase.entries()].map(([productId, purchase]) => {
-    const product = plannerData.products.find(item => item.id === productId);
-    if (!product) return null;
-    const supplier = product.supplier_options.find(option => option.id === purchase.supplier_id)
-      || product.recommended_supplier;
+  return [...plannerPurchase.entries()].map(([rowId, purchase]) => {
+    const matchedProduct = plannerPurchaseProduct(rowId, purchase);
+    const options = plannerSupplierOptions(purchase.jersey_type, purchase.customization);
+    const supplier = options.find(option => option.id === purchase.supplier_id) || options[0] || null;
     const quantity = Math.max(1, Number(purchase.quantity || 1));
     const cost = Number(supplier?.cost || 0);
-    const revenue = quantity * Number(product.planning_price || 0);
+    const sellingPrice = Number(purchase.selling_price ?? matchedProduct?.planning_price ?? 0);
     const supplierTotal = quantity * cost;
+    const revenue = quantity * sellingPrice;
     return {
-      product,
+      row_id: rowId,
+      product: matchedProduct || {
+        id: "",
+        name: purchase.name || "New jersey",
+        category: purchase.category,
+        jersey_type: purchase.jersey_type,
+        customization: purchase.customization
+      },
+      size: purchase.size || "",
+      category: purchase.category,
+      jersey_type: purchase.jersey_type,
+      customization: purchase.customization,
+      selling_price: sellingPrice,
       supplier,
       quantity,
       unit_cost: cost,
       supplier_total: supplierTotal,
       estimated_revenue: revenue,
-      expected_profit: revenue - supplierTotal
+      expected_profit: sellingPrice > 0 ? revenue - supplierTotal : 0
     };
-  }).filter(Boolean);
+  });
 }
 
 function renderPlannerPurchaseSummary() {
@@ -4149,10 +4296,11 @@ function renderPlannerPurchaseSummary() {
   const units = rows.reduce((sum, row) => sum + row.quantity, 0);
   const cost = rows.reduce((sum, row) => sum + row.supplier_total, 0);
   const revenue = rows.reduce((sum, row) => sum + row.estimated_revenue, 0);
-  const profit = revenue - cost;
+  const profit = rows.reduce((sum, row) => sum + row.expected_profit, 0);
   const margin = revenue > 0 ? profit / revenue * 100 : 0;
+  const missingSellPrices = rows.filter(row => row.selling_price <= 0).length;
   plannerPurchaseSummary.innerHTML = `
-    <div><span class="section-kicker">Purchase List</span><h3>${analyticsNumber(rows.length)} jerseys selected</h3><p>${analyticsNumber(units)} total units across ${analyticsNumber(new Set(rows.map(row => row.supplier?.id)).size)} supplier${new Set(rows.map(row => row.supplier?.id)).size === 1 ? "" : "s"}.</p></div>
+    <div><span class="section-kicker">Purchase List</span><h3>${analyticsNumber(rows.length)} jersey styles selected</h3><p>${analyticsNumber(units)} total jerseys across ${analyticsNumber(new Set(rows.map(row => row.supplier?.id).filter(Boolean)).size)} supplier${new Set(rows.map(row => row.supplier?.id).filter(Boolean)).size === 1 ? "" : "s"}.${missingSellPrices ? ` Add an expected sell price to ${analyticsNumber(missingSellPrices)} row${missingSellPrices === 1 ? "" : "s"} for complete profit projections.` : ""}</p></div>
     <div class="planner-purchase-totals">
       <span><small>Supplier total</small><strong>${plannerMoney(cost)}</strong></span>
       <span><small>Estimated revenue</small><strong>${plannerMoney(revenue)}</strong></span>
@@ -4170,6 +4318,7 @@ function renderInventoryPlanner() {
   renderPlannerRisks();
   renderPlannerProfit();
   renderPlannerProducts();
+  renderPlannerPurchaseTable();
   renderPlannerPurchaseSummary();
 }
 
@@ -4181,8 +4330,11 @@ async function loadInventoryPlanner() {
   if (refreshPlanner) refreshPlanner.disabled = true;
   try {
     plannerData = await api("/api/admin/inventory-planner");
-    for (const productId of [...plannerPurchase.keys()]) {
-      if (!plannerData.products.some(product => product.id === productId)) plannerPurchase.delete(productId);
+    for (const [rowId, purchase] of plannerPurchase) {
+      if (purchase.product_id && !plannerData.products.some(product => product.id === purchase.product_id)) {
+        purchase.product_id = "";
+        plannerPurchase.set(rowId, purchase);
+      }
     }
     renderInventoryPlanner();
     plannerLoaded = true;
@@ -4280,14 +4432,19 @@ function exportPlannerPurchaseCsv() {
   const rows = plannerSelectedRows();
   if (!rows.length) return;
   const csvRows = [
-    ["Product ID", "Jersey", "Supplier", "Quantity", "Unit Cost", "Supplier Total", "Estimated Revenue", "Expected Profit", "Profit Margin"],
+    ["Product ID", "Jersey", "Category", "Version", "Customization", "Size", "Supplier", "Quantity", "Unit Cost", "Supplier Total", "Expected Sell Price", "Estimated Revenue", "Expected Profit", "Profit Margin"],
     ...rows.map(row => [
       row.product.id,
       row.product.name,
+      row.category === "world" ? "International" : row.category === "retro" ? "Retro" : "Club",
+      plannerTypeLabel(row.jersey_type),
+      plannerCustomizationLabel(row.customization),
+      row.size,
       row.supplier?.name || "",
       row.quantity,
       row.unit_cost.toFixed(2),
       row.supplier_total.toFixed(2),
+      row.selling_price.toFixed(2),
       row.estimated_revenue.toFixed(2),
       row.expected_profit.toFixed(2),
       row.estimated_revenue > 0 ? `${(row.expected_profit / row.estimated_revenue * 100).toFixed(1)}%` : "0%"
@@ -4491,6 +4648,7 @@ refreshPlanner?.addEventListener("click", () => {
 });
 savePlannerSuppliers?.addEventListener("click", savePlannerSupplierSettings);
 addPlannerSupplier?.addEventListener("click", addInventoryPlannerSupplier);
+addPurchaseRow?.addEventListener("click", () => addPlannerPurchaseRow());
 exportPurchase?.addEventListener("click", exportPlannerPurchaseCsv);
 plannerSearch?.addEventListener("input", renderPlannerProducts);
 plannerRiskFilter?.addEventListener("change", renderPlannerProducts);
@@ -4504,8 +4662,15 @@ plannerProducts?.addEventListener("change", event => {
   if (event.target.matches("[data-planner-select]")) {
     if (event.target.checked) {
       plannerPurchase.set(productId, {
+        product_id: product.id,
+        name: product.name,
+        category: product.category,
+        jersey_type: product.jersey_type,
+        customization: product.customization,
+        size: "",
         quantity: Math.max(1, Number(card.querySelector("[data-planner-quantity]")?.value || product.recommended_quantity || 1)),
-        supplier_id: card.querySelector("[data-planner-purchase-supplier]")?.value || product.recommended_supplier?.id || ""
+        supplier_id: card.querySelector("[data-planner-purchase-supplier]")?.value || product.recommended_supplier?.id || "",
+        selling_price: product.planning_price
       });
     } else {
       plannerPurchase.delete(productId);
@@ -4513,11 +4678,12 @@ plannerProducts?.addEventListener("change", event => {
     card.classList.toggle("selected", event.target.checked);
   }
   if (event.target.matches("[data-planner-quantity], [data-planner-purchase-supplier]") && plannerPurchase.has(productId)) {
-    plannerPurchase.set(productId, {
-      quantity: Math.max(1, Number(card.querySelector("[data-planner-quantity]")?.value || 1)),
-      supplier_id: card.querySelector("[data-planner-purchase-supplier]")?.value || ""
-    });
+    const current = plannerPurchase.get(productId);
+    current.quantity = Math.max(1, Number(card.querySelector("[data-planner-quantity]")?.value || 1));
+    current.supplier_id = card.querySelector("[data-planner-purchase-supplier]")?.value || "";
+    plannerPurchase.set(productId, current);
   }
+  renderPlannerPurchaseTable();
   renderPlannerPurchaseSummary();
 });
 plannerProducts?.addEventListener("input", event => {
@@ -4527,11 +4693,80 @@ plannerProducts?.addEventListener("input", event => {
   const current = plannerPurchase.get(card.dataset.plannerProduct);
   current.quantity = Math.max(1, Number(event.target.value || 1));
   plannerPurchase.set(card.dataset.plannerProduct, current);
+  renderPlannerPurchaseTable();
   renderPlannerPurchaseSummary();
 });
 plannerProducts?.addEventListener("click", event => {
   const save = event.target.closest("[data-save-planner-product]");
   if (save) savePlannerProductSettings(save.closest("[data-planner-product]"));
+});
+plannerPurchaseTable?.addEventListener("input", event => {
+  const row = event.target.closest("[data-purchase-row]");
+  const purchase = row ? plannerPurchase.get(row.dataset.purchaseRow) : null;
+  if (!row || !purchase) return;
+  if (event.target.matches("[data-purchase-name]")) purchase.name = event.target.value;
+  if (event.target.matches("[data-purchase-size]")) purchase.size = event.target.value;
+  if (event.target.matches("[data-purchase-quantity]")) purchase.quantity = Math.max(1, Number(event.target.value || 1));
+  if (event.target.matches("[data-purchase-selling-price]")) purchase.selling_price = event.target.value;
+  plannerPurchase.set(row.dataset.purchaseRow, purchase);
+  if (event.target.matches("[data-purchase-quantity]")) {
+    const options = plannerSupplierOptions(purchase.jersey_type, purchase.customization);
+    const supplier = options.find(option => option.id === purchase.supplier_id) || options[0];
+    const total = Number(supplier?.cost || 0) * purchase.quantity;
+    const totalElement = row.querySelector("[data-purchase-line-total]");
+    if (totalElement) totalElement.textContent = plannerMoney(total);
+  }
+  renderPlannerPurchaseSummary();
+});
+plannerPurchaseTable?.addEventListener("change", event => {
+  const row = event.target.closest("[data-purchase-row]");
+  const purchase = row ? plannerPurchase.get(row.dataset.purchaseRow) : null;
+  if (!row || !purchase) return;
+  const rowId = row.dataset.purchaseRow;
+  if (event.target.matches("[data-purchase-name]")) {
+    purchase.name = event.target.value;
+    plannerPurchase.set(rowId, purchase);
+    matchPlannerPurchaseProduct(rowId);
+    return;
+  }
+  if (event.target.matches("[data-purchase-category]")) {
+    const previousCategory = purchase.category;
+    purchase.category = event.target.value;
+    if (purchase.category === "retro" && previousCategory !== "retro") {
+      purchase.jersey_type = "retro_short";
+      purchase.customization = "nameset_patches";
+    } else if (purchase.category !== "retro" && previousCategory === "retro") {
+      purchase.jersey_type = "fan";
+      purchase.customization = "nameset_patches";
+    }
+    purchase.product_id = "";
+  }
+  if (event.target.matches("[data-purchase-type]")) {
+    purchase.jersey_type = event.target.value;
+    purchase.product_id = "";
+  }
+  if (event.target.matches("[data-purchase-customization]")) {
+    purchase.customization = event.target.value;
+    purchase.product_id = "";
+  }
+  if (event.target.matches("[data-purchase-supplier]")) purchase.supplier_id = event.target.value;
+  if (event.target.matches("[data-purchase-size]")) purchase.size = event.target.value;
+  if (event.target.matches("[data-purchase-quantity]")) purchase.quantity = Math.max(1, Number(event.target.value || 1));
+  if (event.target.matches("[data-purchase-selling-price]")) purchase.selling_price = event.target.value;
+  const options = plannerSupplierOptions(purchase.jersey_type, purchase.customization);
+  if (!options.some(option => option.id === purchase.supplier_id)) purchase.supplier_id = options[0]?.id || "";
+  plannerPurchase.set(rowId, purchase);
+  renderPlannerPurchaseTable();
+  renderPlannerPurchaseSummary();
+});
+plannerPurchaseTable?.addEventListener("click", event => {
+  const remove = event.target.closest("[data-remove-purchase-row]");
+  const row = remove?.closest("[data-purchase-row]");
+  if (!row) return;
+  plannerPurchase.delete(row.dataset.purchaseRow);
+  renderPlannerPurchaseTable();
+  renderPlannerPurchaseSummary();
+  renderPlannerProducts();
 });
 refreshSales?.addEventListener("click", loadSales);
 refreshAnalytics?.addEventListener("click", loadAnalytics);

@@ -6,8 +6,8 @@
   <title>Inventory Admin | JerseysFrmJB</title>
   <meta name="robots" content="noindex,nofollow">
   <link rel="icon" href="assets/jerseysfrmjb-logo.jpg" type="image/jpeg">
-  <link rel="stylesheet" href="styles.css?v=inventory-planner-1">
-  <script src="admin.js?v=inventory-planner-1" defer></script>
+  <link rel="stylesheet" href="styles.css?v=inventory-planner-2">
+  <script src="admin.js?v=inventory-planner-2" defer></script>
 </head>
 <body class="admin-body">
   <main class="admin-shell">
@@ -129,6 +129,49 @@
           </section>
 
           <div class="planner-summary-grid" data-planner-summary></div>
+
+          <section class="planner-order-builder">
+            <header>
+              <div>
+                <span class="section-kicker">Purchase Order Builder</span>
+                <h3>Jerseys to Purchase</h3>
+                <p>Match an existing jersey or type a new one. Category and customization determine the supplier cost.</p>
+              </div>
+              <button class="shop-button secondary-admin" type="button" data-add-purchase-row>Add Jersey Row</button>
+            </header>
+            <datalist id="planner-existing-products" data-planner-product-options></datalist>
+            <datalist id="planner-size-options">
+              <option value="S"></option>
+              <option value="M"></option>
+              <option value="L"></option>
+              <option value="XL"></option>
+              <option value="2XL"></option>
+              <option value="3XL"></option>
+              <option value="4XL"></option>
+            </datalist>
+            <div class="planner-order-table-wrap">
+              <table class="planner-order-table">
+                <thead>
+                  <tr>
+                    <th>Jersey</th>
+                    <th>Category</th>
+                    <th>Version</th>
+                    <th>Customization</th>
+                    <th>Size</th>
+                    <th>Supplier</th>
+                    <th>Qty</th>
+                    <th>Unit Cost</th>
+                    <th>Expected Sell</th>
+                    <th>Line Total</th>
+                    <th><span class="sr-only">Remove</span></th>
+                  </tr>
+                </thead>
+                <tbody data-planner-purchase-table>
+                  <tr><td colspan="11" class="sales-empty">Add a jersey row or select a product below.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
 
           <section class="planner-purchase-summary" data-planner-purchase-summary>
             <div>
