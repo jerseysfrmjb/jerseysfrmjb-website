@@ -58,6 +58,7 @@ const facebookSelectionCount = document.querySelector("[data-facebook-selection-
 const generateFacebookPostButton = document.querySelector("[data-generate-facebook-post]");
 const facebookEditor = document.querySelector("[data-facebook-editor]");
 const facebookCaption = document.querySelector("[data-facebook-caption]");
+const facebookCampaign = document.querySelector("[data-facebook-campaign]");
 const facebookCaptionCount = document.querySelector("[data-facebook-caption-count]");
 const facebookPhotos = document.querySelector("[data-facebook-photos]");
 const saveFacebookDraftButton = document.querySelector("[data-save-facebook-draft]");
@@ -106,6 +107,11 @@ const analyticsStatus = document.querySelector("[data-analytics-status]");
 const analyticsRange = document.querySelector("[data-analytics-range]");
 const refreshAnalytics = document.querySelector("[data-refresh-analytics]");
 const exportAnalytics = document.querySelector("[data-export-analytics]");
+const operationsStatus = document.querySelector("[data-operations-status]");
+const operationsProtection = document.querySelector("[data-operations-protection]");
+const operationsActivity = document.querySelector("[data-operations-activity]");
+const operationsErrors = document.querySelector("[data-operations-errors]");
+const refreshOperations = document.querySelector("[data-refresh-operations]");
 let inventory = [];
 let settings = {};
 let featuredLimit = 3;
@@ -138,6 +144,7 @@ let salesLoaded = false;
 let analyticsLoaded = false;
 let analyticsLoading = false;
 let analyticsData = null;
+let operationsLoaded = false;
 let salesAnalyticsPanel = document.querySelector("[data-sales-analytics]");
 let quickSaleMatches = [];
 let quickSalePriceManuallyEdited = false;
@@ -186,6 +193,7 @@ function setAdminTab(tab = "dashboard") {
   });
   if (tab === "sales" && !salesLoaded) loadSales();
   if (tab === "analytics" && !analyticsLoaded) loadAnalytics();
+  if (tab === "operations" && !operationsLoaded) loadOperations();
   if (tab === "feedback" && !feedbackLoaded) loadEbayFeedbackAdmin();
   if (tab === "facebook") {
     if (!facebookConnectionLoaded) loadFacebookConnection();
@@ -208,11 +216,73 @@ function analyticsDuration(value) {
   return `${minutes}m ${remainder}s`;
 }
 
+function renderOperations(data = {}) {
+  if (operationsProtection) {
+    const protection = data.protection || {};
+    operationsProtection.innerHTML = [
+      ["Cloudflare D1 Time Travel", protection.cloudflare_time_travel, "Point-in-time database recovery", "Active"],
+      ["Weekly export workflow", protection.weekly_export_workflow_installed, "Add the three GitHub secrets once to activate scheduled SQL and CSV artifacts", "Installed"],
+      ["API error alerts", protection.api_error_alerts, "Discord alert with 15-minute deduplication", "Active"]
+    ].map(([label, active, detail, activeLabel]) => `
+      <article class="${active ? "active" : "attention"}">
+        <span>${active ? activeLabel : "Setup needed"}</span>
+        <strong>${escapeHtml(label)}</strong>
+        <small>${escapeHtml(detail)}</small>
+      </article>`).join("");
+  }
+  if (operationsActivity) {
+    operationsActivity.innerHTML = (data.activity || []).length
+      ? data.activity.map(item => `
+        <article>
+          <div><strong>${escapeHtml(item.action)} · ${escapeHtml(item.area)}</strong><time>${escapeHtml(analyticsDate(item.created_at))}</time></div>
+          <p>${escapeHtml(item.summary || "Admin change")}</p>
+          <small>Status ${analyticsNumber(item.status_code)}</small>
+        </article>`).join("")
+      : '<p class="analytics-empty">Admin changes will appear here.</p>';
+  }
+  if (operationsErrors) {
+    operationsErrors.innerHTML = (data.errors || []).length
+      ? data.errors.map(item => `
+        <article class="error">
+          <div><strong>${escapeHtml(item.method)} ${escapeHtml(item.path)}</strong><time>${escapeHtml(analyticsDate(item.created_at))}</time></div>
+          <p>${escapeHtml(item.message || "Server error response")}</p>
+          <small>Status ${analyticsNumber(item.status_code)} · Request ${escapeHtml(item.request_id)}</small>
+        </article>`).join("")
+      : '<p class="analytics-empty">No API errors recorded.</p>';
+  }
+}
+
+async function loadOperations() {
+  if (!operationsStatus) return;
+  operationsStatus.textContent = "Loading operations...";
+  operationsStatus.className = "form-status";
+  if (refreshOperations) refreshOperations.disabled = true;
+  try {
+    const data = await api("/api/admin/operations");
+    renderOperations(data);
+    operationsLoaded = true;
+    operationsStatus.textContent = "Protection status and activity are up to date.";
+    operationsStatus.classList.add("success");
+  } catch (error) {
+    operationsStatus.textContent = error.message;
+    operationsStatus.classList.add("error");
+  } finally {
+    if (refreshOperations) refreshOperations.disabled = false;
+  }
+}
+
 function analyticsDate(value = "") {
   if (!value) return "Never";
   const date = new Date(String(value).endsWith("Z") ? value : `${value}Z`);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+function analyticsDayLabel(value = "") {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value));
+  if (!match) return value;
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 12);
+  return date.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
 function analyticsEmpty(message = "No data collected for this period yet.") {
@@ -235,8 +305,8 @@ function analyticsLineChart(rows = [], series = []) {
     const points = rows.map((row, index) => `${x(index)},${y(row[item.key])}`).join(" ");
     return `<polyline points="${points}" style="--chart-color:${ANALYTICS_COLORS[seriesIndex % ANALYTICS_COLORS.length]}"></polyline>`;
   }).join("");
-  const firstDay = rows[0]?.day || "";
-  const lastDay = rows.at(-1)?.day || "";
+  const firstDay = analyticsDayLabel(rows[0]?.day || "");
+  const lastDay = analyticsDayLabel(rows.at(-1)?.day || "");
   return `
     <div class="analytics-chart-wrap">
       <svg class="analytics-line-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(series.map(item => item.label).join(" and "))} over time">
@@ -319,7 +389,7 @@ function analyticsDailyMatrix(rows = [], groupKey, valueKey) {
       ${days.map(day => {
         const values = groups.map(group => lookup.get(`${day}|${group}`) || 0);
         return `<div class="analytics-daily-row">
-          <time datetime="${escapeHtml(day)}">${escapeHtml(day)}</time>
+          <time datetime="${escapeHtml(day)}" title="${escapeHtml(day)}">${escapeHtml(analyticsDayLabel(day))}</time>
           <div class="analytics-daily-values">
             ${groups.map((group, index) => `<span><small>${escapeHtml(group)}</small><b>${analyticsNumber(values[index])}</b></span>`).join("")}
             <span class="analytics-daily-total"><small>Total</small><b>${analyticsNumber(values.reduce((sum, value) => sum + value, 0))}</b></span>
@@ -339,6 +409,24 @@ function analyticsMarketplaceClickList(items = []) {
       <time>${escapeHtml(analyticsDate(item.occurred_at))}</time>
     </div>`;
   }).join("")}</div>`;
+}
+
+function analyticsCampaignTable(items = []) {
+  if (!items.length) return analyticsEmpty("Facebook post visits will appear after shoppers open tracked post links.");
+  return `
+    <div class="analytics-table-wrap">
+      <table class="analytics-table">
+        <thead><tr><th>Jersey / post</th><th>Campaign</th><th>Visitors</th><th>Page views</th><th>Marketplace clicks</th></tr></thead>
+        <tbody>${items.map(item => `
+          <tr>
+            <td>${escapeHtml(item.product_name || item.content || "Facebook post")}</td>
+            <td>${escapeHtml(String(item.campaign || "").replace(/_/g, " "))}</td>
+            <td>${analyticsNumber(item.visitors)}</td>
+            <td>${analyticsNumber(item.page_views)}</td>
+            <td>${analyticsNumber(item.marketplace_clicks)}</td>
+          </tr>`).join("")}</tbody>
+      </table>
+    </div>`;
 }
 
 function renderAnalytics() {
@@ -407,6 +495,11 @@ function renderAnalytics() {
     <section class="analytics-card">
       <header><span>Marketplace activity</span><h3>Recent marketplace clicks</h3></header>
       ${analyticsMarketplaceClickList(market.recent_clicks)}
+    </section>
+
+    <section class="analytics-card">
+      <header><span>Campaign attribution</span><h3>Facebook post results</h3></header>
+      ${analyticsCampaignTable(data.campaigns?.facebook)}
     </section>
 
     <section class="analytics-detail-grid">
@@ -1781,11 +1874,11 @@ function facebookAvailableSizes(product) {
     .map(([size]) => facebookSizeLabel(size));
 }
 
-function facebookProductLink(product) {
+function facebookProductLink(product, campaign = facebookCampaign?.value || "new_arrivals") {
   const url = new URL(`/products/${encodeURIComponent(String(product.id))}`, FACEBOOK_SITE_ORIGIN);
   url.searchParams.set("utm_source", "facebook");
   url.searchParams.set("utm_medium", "organic_social");
-  url.searchParams.set("utm_campaign", "new_inventory");
+  url.searchParams.set("utm_campaign", campaign);
   url.searchParams.set("utm_content", String(product.id));
   return url.toString();
 }
@@ -2012,6 +2105,7 @@ function openFacebookHistoryPost(post) {
   selectedFacebookProductIds = new Set((post.product_ids || []).map(String));
   currentFacebookPost = post;
   facebookCaptionGenerated = true;
+  if (facebookCampaign) facebookCampaign.value = post.campaign || "new_arrivals";
   if (facebookCaption) facebookCaption.value = post.caption || "";
   renderFacebookProducts();
   renderFacebookPhotos(post.photo_urls || []);
@@ -2066,7 +2160,8 @@ async function persistFacebookDraft() {
       method: "POST",
       body: JSON.stringify({
         product_ids: [...selectedFacebookProductIds],
-        caption: facebookCaption.value.trim()
+        caption: facebookCaption.value.trim(),
+        campaign: facebookCampaign?.value || "new_arrivals"
       })
     });
     currentFacebookPost = data.post;
@@ -2554,26 +2649,51 @@ function instagramProfile(username = "") {
 
 function renderMessages() {
   if (!messagesList) return;
-  if (messageCount) messageCount.textContent = unreadMessages + " unread";
+  if (messageCount) messageCount.textContent = unreadMessages + " new";
   messagesList.innerHTML = messages.length ? messages.map(message => {
-    const read = message.status === "read";
+    const normalizedStatus = message.status === "read"
+      ? "in_progress"
+      : message.status === "unread"
+        ? "new"
+        : message.status || "new";
+    const read = normalizedStatus !== "new";
     const username = String(message.instagram_username || "").replace(/^@+/, "");
+    const contactLabel = message.contact_preference === "email" ? message.email : `@${username}`;
+    const replyUrl = message.contact_preference === "email"
+      ? `mailto:${encodeURIComponent(message.email || "")}`
+      : instagramProfile(username);
+    const requestLabel = String(message.request_type || "jersey_request").replace(/_/g, " ");
     return `
-      <article class="admin-message-card ${read ? "read" : "unread"}" data-id="${escapeHtml(message.id)}" data-status="${escapeHtml(message.status || "unread")}">
+      <article class="admin-message-card ${read ? "read" : "unread"}" data-id="${escapeHtml(message.id)}" data-status="${escapeHtml(normalizedStatus)}">
         <div class="admin-message-main">
           <div class="admin-message-title">
-            <span>${read ? "Read" : "Unread"}</span>
-            <h3>@${escapeHtml(username)}</h3>
+            <span>${escapeHtml(requestLabel)}</span>
+            <h3>${escapeHtml(contactLabel)}</h3>
           </div>
           <p><b>Jersey/request:</b> ${escapeHtml(message.jersey_request)}</p>
-          <p><b>Size:</b> ${escapeHtml(message.size)}</p>
+          ${message.product_name ? `<p><b>Product:</b> ${escapeHtml(message.product_name)}</p>` : ""}
+          <p><b>Size:</b> ${escapeHtml(message.size || "Not specified")}</p>
+          <p><b>Marketplace:</b> ${escapeHtml(message.marketplace_preference || "No preference")}</p>
           <p class="admin-message-body">${escapeHtml(message.message)}</p>
           <small>${escapeHtml(formatMessageDate(message.created_at))}</small>
         </div>
+        <label class="message-status-control">Status
+          <select data-message-status>
+            ${[
+              ["new", "New"],
+              ["in_progress", "In progress"],
+              ["waiting", "Waiting for customer"],
+              ["resolved", "Resolved"]
+            ].map(([value, label]) => `<option value="${value}" ${normalizedStatus === value ? "selected" : ""}>${label}</option>`).join("")}
+          </select>
+        </label>
+        <label class="message-notes-control">Private admin notes
+          <textarea rows="2" maxlength="1000" data-message-notes placeholder="Add follow-up notes...">${escapeHtml(message.admin_notes || "")}</textarea>
+        </label>
         <div class="admin-message-actions">
-          <button type="button" data-copy-username="${escapeHtml(username)}">Copy Username</button>
-          <a href="${escapeHtml(instagramProfile(username))}" target="_blank" rel="noopener">Open Instagram</a>
-          <button type="button" data-toggle-read>${read ? "Mark Unread" : "Mark Read"}</button>
+          <button type="button" data-copy-contact="${escapeHtml(contactLabel)}">Copy Contact</button>
+          <a href="${escapeHtml(replyUrl)}" ${message.contact_preference === "email" ? "" : 'target="_blank" rel="noopener"'}>Reply</a>
+          <button type="button" data-save-message>Save Request</button>
           <button type="button" data-delete-message>Delete</button>
         </div>
       </article>`;
@@ -2596,9 +2716,12 @@ async function loadMessages() {
   }
 }
 
-async function updateMessage(id, status) {
+async function updateMessage(id, status, adminNotes = "") {
   statusLine.textContent = "Updating message...";
-  applyMessageData(await api("/api/admin/messages", { method: "PATCH", body: JSON.stringify({ id, status }) }));
+  applyMessageData(await api("/api/admin/messages", {
+    method: "PATCH",
+    body: JSON.stringify({ id, status, admin_notes: adminNotes })
+  }));
   statusLine.textContent = "Message updated.";
 }
 
@@ -2929,7 +3052,11 @@ async function addDevelopmentSampleFeedback() {
 }
 
 async function copyUsername(username) {
-  const value = username.startsWith("@") ? username : "@" + username;
+  const value = /^[^@\s]+@[^@\s]+$/.test(username)
+    ? username
+    : username.startsWith("@")
+      ? username
+      : "@" + username;
   try {
     await navigator.clipboard.writeText(value);
     statusLine.textContent = value + " copied.";
@@ -3524,6 +3651,10 @@ featuredPreview?.addEventListener("drop", async event => {
 });
 
 refreshMessages?.addEventListener("click", loadMessages);
+refreshOperations?.addEventListener("click", () => {
+  operationsLoaded = false;
+  loadOperations();
+});
 refreshFeedback?.addEventListener("click", loadEbayFeedbackAdmin);
 feedbackFilter?.addEventListener("change", renderEbayFeedbackAdmin);
 refreshFacebookHistoryButton?.addEventListener("click", loadFacebookHistory);
@@ -3553,6 +3684,14 @@ facebookProducts?.addEventListener("change", event => {
   setFacebookStatus("Selection changed. Generate the Facebook post when ready.");
 });
 generateFacebookPostButton?.addEventListener("click", generateFacebookPost);
+facebookCampaign?.addEventListener("change", () => {
+  currentFacebookPost = null;
+  if (facebookCaptionGenerated && selectedFacebookProductIds.size) {
+    facebookCaption.value = facebookDefaultCaption(selectedFacebookProducts());
+    setFacebookStatus("Campaign changed. Tracked product links were refreshed.", "success");
+  }
+  updateFacebookActions();
+});
 facebookCaption?.addEventListener("input", () => {
   if (currentFacebookPost && facebookCaption.value.trim() !== currentFacebookPost.caption) {
     currentFacebookPost = null;
@@ -3643,15 +3782,16 @@ messagesList?.addEventListener("click", async event => {
   const card = event.target.closest(".admin-message-card");
   if (!card) return;
 
-  if (event.target.matches("[data-copy-username]")) {
-    copyUsername(event.target.dataset.copyUsername || "");
+  if (event.target.matches("[data-copy-contact]")) {
+    copyUsername(event.target.dataset.copyContact || "");
     return;
   }
 
-  if (event.target.matches("[data-toggle-read]")) {
-    const nextStatus = card.dataset.status === "read" ? "unread" : "read";
+  if (event.target.matches("[data-save-message]")) {
+    const nextStatus = card.querySelector("[data-message-status]")?.value || "new";
+    const notes = card.querySelector("[data-message-notes]")?.value || "";
     try {
-      await updateMessage(card.dataset.id, nextStatus);
+      await updateMessage(card.dataset.id, nextStatus, notes);
     } catch (error) {
       statusLine.textContent = error.message;
     }

@@ -79,11 +79,19 @@ INSERT OR IGNORE INTO site_settings (key, value) VALUES ('homepage_stat_message'
 
 CREATE TABLE IF NOT EXISTS contact_messages (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  instagram_username TEXT NOT NULL,
+  instagram_username TEXT NOT NULL DEFAULT '',
+  email TEXT NOT NULL DEFAULT '',
+  contact_preference TEXT NOT NULL DEFAULT 'instagram',
+  request_type TEXT NOT NULL DEFAULT 'jersey_request',
   jersey_request TEXT NOT NULL,
-  size TEXT NOT NULL,
+  size TEXT NOT NULL DEFAULT '',
+  marketplace_preference TEXT NOT NULL DEFAULT '',
+  product_id TEXT NOT NULL DEFAULT '',
+  product_name TEXT NOT NULL DEFAULT '',
   message TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'unread',
+  status TEXT NOT NULL DEFAULT 'new',
+  admin_notes TEXT NOT NULL DEFAULT '',
+  resolved_at TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -160,7 +168,12 @@ CREATE TABLE IF NOT EXISTS analytics_events (
   region TEXT NOT NULL DEFAULT '',
   device_type TEXT NOT NULL DEFAULT 'Unknown',
   browser TEXT NOT NULL DEFAULT 'Other',
-  duration_seconds INTEGER NOT NULL DEFAULT 0
+  duration_seconds INTEGER NOT NULL DEFAULT 0,
+  local_day TEXT NOT NULL DEFAULT '',
+  utm_source TEXT NOT NULL DEFAULT '',
+  utm_medium TEXT NOT NULL DEFAULT '',
+  utm_campaign TEXT NOT NULL DEFAULT '',
+  utm_content TEXT NOT NULL DEFAULT ''
 );
 
 CREATE INDEX IF NOT EXISTS idx_analytics_events_time ON analytics_events(occurred_at DESC);
@@ -168,6 +181,8 @@ CREATE INDEX IF NOT EXISTS idx_analytics_events_type_time ON analytics_events(ev
 CREATE INDEX IF NOT EXISTS idx_analytics_events_product_time ON analytics_events(product_id, occurred_at DESC);
 CREATE INDEX IF NOT EXISTS idx_analytics_events_session ON analytics_events(session_id, occurred_at);
 CREATE INDEX IF NOT EXISTS idx_analytics_events_source_time ON analytics_events(traffic_source, occurred_at DESC);
+CREATE INDEX IF NOT EXISTS idx_analytics_events_local_day ON analytics_events(local_day, event_type);
+CREATE INDEX IF NOT EXISTS idx_analytics_events_campaign ON analytics_events(utm_campaign, utm_content, occurred_at DESC);
 
 CREATE TABLE IF NOT EXISTS facebook_post_history (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -184,7 +199,8 @@ CREATE TABLE IF NOT EXISTS facebook_post_history (
   facebook_post_id TEXT NOT NULL DEFAULT '',
   facebook_post_url TEXT NOT NULL DEFAULT '',
   publish_method TEXT NOT NULL DEFAULT '',
-  publish_error TEXT NOT NULL DEFAULT ''
+  publish_error TEXT NOT NULL DEFAULT '',
+  campaign TEXT NOT NULL DEFAULT 'new_arrivals'
 );
 
 CREATE INDEX IF NOT EXISTS idx_facebook_post_history_status_created
@@ -201,3 +217,37 @@ CREATE TABLE IF NOT EXISTS facebook_connections (
   connected_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS admin_activity_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  action TEXT NOT NULL,
+  area TEXT NOT NULL,
+  entity_id TEXT NOT NULL DEFAULT '',
+  summary TEXT NOT NULL DEFAULT '',
+  status_code INTEGER NOT NULL DEFAULT 200,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_admin_activity_log_created
+  ON admin_activity_log(created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_admin_activity_log_area_created
+  ON admin_activity_log(area, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS api_error_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  request_id TEXT NOT NULL,
+  method TEXT NOT NULL,
+  path TEXT NOT NULL,
+  status_code INTEGER NOT NULL,
+  message TEXT NOT NULL DEFAULT '',
+  fingerprint TEXT NOT NULL DEFAULT '',
+  alerted_at TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_api_error_log_created
+  ON api_error_log(created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_api_error_log_fingerprint
+  ON api_error_log(fingerprint, created_at DESC);

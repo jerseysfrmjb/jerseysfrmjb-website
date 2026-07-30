@@ -12,6 +12,7 @@
   const STORAGE_VISITOR = "jerseys_analytics_visitor";
   const STORAGE_SESSION = "jerseys_analytics_session";
   const STORAGE_SOURCE = "jerseys_analytics_source";
+  const STORAGE_CAMPAIGN = "jerseys_analytics_campaign";
   const privacyOptOut = navigator.globalPrivacyControl === true || navigator.doNotTrack === "1";
   const viewedProducts = new Set();
   const trackedSearches = new Set();
@@ -77,6 +78,28 @@
 
   const trafficSource = sessionSource();
 
+  function sessionCampaign() {
+    try {
+      const existing = window.sessionStorage.getItem(STORAGE_CAMPAIGN);
+      if (existing) return JSON.parse(existing);
+      const params = new URLSearchParams(window.location.search);
+      const campaign = {
+        utm_source: String(params.get("utm_source") || "").trim().toLowerCase().slice(0, 80),
+        utm_medium: String(params.get("utm_medium") || "").trim().toLowerCase().slice(0, 80),
+        utm_campaign: String(params.get("utm_campaign") || "").trim().toLowerCase().slice(0, 120),
+        utm_content: String(params.get("utm_content") || "").trim().toLowerCase().slice(0, 160)
+      };
+      if (Object.values(campaign).some(Boolean)) {
+        window.sessionStorage.setItem(STORAGE_CAMPAIGN, JSON.stringify(campaign));
+      }
+      return campaign;
+    } catch {
+      return {};
+    }
+  }
+
+  const campaignAttribution = sessionCampaign();
+
   function basePayload(eventType, details = {}) {
     return {
       event_type: eventType,
@@ -85,6 +108,7 @@
       page_path: window.location.pathname,
       page_title: document.title,
       traffic_source: trafficSource,
+      ...campaignAttribution,
       ...details
     };
   }

@@ -6,8 +6,8 @@
   <title>Inventory Admin | JerseysFrmJB</title>
   <meta name="robots" content="noindex,nofollow">
   <link rel="icon" href="assets/jerseysfrmjb-logo.jpg" type="image/jpeg">
-  <link rel="stylesheet" href="styles.css?v=facebook-publisher-2">
-  <script src="admin.js?v=facebook-publisher-2" defer></script>
+  <link rel="stylesheet" href="styles.css?v=operations-1">
+  <script src="admin.js?v=operations-1" defer></script>
 </head>
 <body class="admin-body">
   <main class="admin-shell">
@@ -34,6 +34,7 @@
       <nav class="admin-section-tabs" aria-label="Admin sections">
         <button class="active" type="button" data-admin-tab="dashboard">Dashboard</button>
         <button type="button" data-admin-tab="analytics">Analytics</button>
+        <button type="button" data-admin-tab="operations">Operations</button>
         <button type="button" data-admin-tab="inventory">Inventory</button>
         <button type="button" data-admin-tab="bulk">Bulk Restock</button>
         <button type="button" data-admin-tab="sales">Sales</button>
@@ -48,6 +49,7 @@
         <select data-admin-mobile-tab aria-label="Admin section">
           <option value="dashboard">Dashboard</option>
           <option value="analytics">Analytics</option>
+          <option value="operations">Operations</option>
           <option value="inventory">Inventory</option>
           <option value="bulk">Bulk Restock</option>
           <option value="sales">Sales</option>
@@ -91,12 +93,38 @@
         <div class="analytics-dashboard" data-analytics-dashboard></div>
       </section>
 
+      <section class="admin-operations-panel" data-admin-section="operations" aria-label="Operations and protection" hidden>
+        <header class="admin-messages-head">
+          <div>
+            <span class="section-kicker">Protection &amp; Audit</span>
+            <h2>Operations</h2>
+            <p>Review admin changes and API failures, and download a private inventory export.</p>
+          </div>
+          <div class="operations-actions">
+            <a class="shop-button secondary-admin" href="/api/admin/operations?format=inventory.csv">Download Inventory CSV</a>
+            <button class="shop-button secondary-admin" type="button" data-refresh-operations>Refresh</button>
+          </div>
+        </header>
+        <p class="form-status" data-operations-status role="status">Open Operations to load protection status.</p>
+        <div class="operations-protection" data-operations-protection></div>
+        <div class="operations-grid">
+          <section>
+            <h3>Admin Activity</h3>
+            <div class="operations-log" data-operations-activity></div>
+          </section>
+          <section>
+            <h3>API Errors</h3>
+            <div class="operations-log" data-operations-errors></div>
+          </section>
+        </div>
+      </section>
+
       <section class="admin-messages-panel" data-admin-section="messages" aria-label="Customer messages" hidden>
         <div class="admin-messages-head">
           <div>
             <span class="section-kicker">Customer Messages</span>
-            <h2>Messages <span class="message-badge" data-message-count>0 unread</span></h2>
-            <p>New website messages appear here first. Copy usernames or open Instagram to continue the conversation.</p>
+            <h2>Requests <span class="message-badge" data-message-count>0 new</span></h2>
+            <p>Track jersey requests, restocks, sizing questions, and order help from first reply through resolution.</p>
           </div>
           <button class="shop-button secondary-admin" type="button" data-refresh-messages>Refresh Messages</button>
         </div>
@@ -208,6 +236,16 @@
               </div>
               <strong><span data-facebook-caption-count>0</span> characters</strong>
             </div>
+            <label class="facebook-campaign-field">
+              Campaign
+              <select data-facebook-campaign>
+                <option value="new_arrivals">New arrivals</option>
+                <option value="restock">Restock</option>
+                <option value="featured_jerseys">Featured jerseys</option>
+                <option value="general_inventory">General inventory</option>
+              </select>
+              <small>Tracked links identify this campaign and each jersey in Analytics.</small>
+            </label>
             <label class="facebook-caption-field">
               Facebook caption
               <textarea rows="14" maxlength="6000" data-facebook-caption placeholder="Choose jerseys and generate a post."></textarea>

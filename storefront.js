@@ -905,18 +905,48 @@ function createHelpWidget() {
         </div>
         <button class="help-widget-close" type="button" aria-label="Close message form">&times;</button>
       </div>
-      <p class="help-widget-copy">Instagram DMs are currently not working for some people. Leave your Instagram username and message below. Please follow @jerseysfrmjb so I can message you back and continue the conversation.</p>
+      <p class="help-widget-copy">Tell us what you need and choose how you would like a reply. For Instagram replies, follow @jerseysfrmjb so we can message you back.</p>
       <a class="help-instagram-link" href="${instagramUrl}" target="_blank" rel="noopener">Follow @jerseysfrmjb</a>
       <form class="help-widget-form" data-help-form>
         <input type="text" name="website" autocomplete="off" tabindex="-1" aria-hidden="true">
-        <label>Instagram username
+        <input type="hidden" name="product_id">
+        <input type="hidden" name="product_name">
+        <label>What can I help with?
+          <select name="request_type">
+            <option value="jersey_request">Request a jersey</option>
+            <option value="restock_request">Restock request</option>
+            <option value="size_question">Sizing question</option>
+            <option value="order_help">Order help</option>
+            <option value="other">Other</option>
+          </select>
+        </label>
+        <label>Reply to me by
+          <select name="contact_preference" data-help-contact-preference>
+            <option value="instagram">Instagram</option>
+            <option value="email">Email</option>
+          </select>
+        </label>
+        <label data-help-instagram>Instagram username
           <input name="instagram_username" type="text" placeholder="@username" autocomplete="username" required>
+        </label>
+        <label data-help-email hidden>Email address
+          <input name="email" type="email" placeholder="you@example.com" autocomplete="email">
         </label>
         <label>Jersey or request
           <input name="jersey_request" type="text" placeholder="Example: Messi Argentina Home" required>
         </label>
-        <label>Size
-          <input name="size" type="text" placeholder="Example: M" required>
+        <label>Size <small>(optional)</small>
+          <input name="size" type="text" placeholder="Example: M">
+        </label>
+        <label>Preferred marketplace <small>(optional)</small>
+          <select name="marketplace_preference">
+            <option value="">No preference</option>
+            <option value="eBay">eBay</option>
+            <option value="Depop">Depop</option>
+            <option value="Facebook">Facebook</option>
+            <option value="Website">Website</option>
+            <option value="Other">Other</option>
+          </select>
         </label>
         <label>Message
           <textarea name="message" rows="4" placeholder="What do you need help with?" required></textarea>
@@ -925,7 +955,7 @@ function createHelpWidget() {
         <p class="help-widget-status" data-help-status role="status"></p>
       </form>
       <div class="help-widget-success" data-help-success hidden>
-        <p>Thanks! Your message has been received. You can leave the website now. Please make sure you follow @jerseysfrmjb so I can message you back.</p>
+        <p data-help-success-message>Thanks! Your request has been received.</p>
         <a class="help-instagram-link" href="${instagramUrl}" target="_blank" rel="noopener">Open Instagram</a>
       </div>
     </section>
@@ -941,10 +971,32 @@ function createHelpWidget() {
   const status = widget.querySelector("[data-help-status]");
   const success = widget.querySelector("[data-help-success]");
   const submit = widget.querySelector(".help-submit");
+  const contactPreference = widget.querySelector("[data-help-contact-preference]");
+  const instagramField = widget.querySelector("[data-help-instagram]");
+  const emailField = widget.querySelector("[data-help-email]");
+  const successMessage = widget.querySelector("[data-help-success-message]");
   const defaultSubmitText = submit.textContent;
   let sent = false;
   let submitting = false;
   let touchStartY = 0;
+  const pageProducts = [...document.querySelectorAll("[data-meta-product]")];
+  if (pageProducts.length === 1) {
+    const product = pageProducts[0];
+    form.elements.product_id.value = product.dataset.productId || "";
+    form.elements.product_name.value = product.dataset.productName || "";
+    form.elements.jersey_request.value = product.dataset.productName || "";
+  }
+
+  function updateContactFields() {
+    const email = contactPreference.value === "email";
+    instagramField.hidden = email;
+    emailField.hidden = !email;
+    form.elements.instagram_username.required = !email;
+    form.elements.email.required = email;
+  }
+
+  contactPreference.addEventListener("change", updateContactFields);
+  updateContactFields();
 
   function setOpen(open) {
     panel.hidden = !open;
@@ -1008,6 +1060,9 @@ function createHelpWidget() {
       form.reset();
       form.hidden = true;
       success.hidden = false;
+      successMessage.textContent = data.request_id
+        ? `Thanks! Request #${data.request_id} has been received. I’ll reply using your selected contact method.`
+        : "Thanks! Your request has been received. I’ll reply using your selected contact method.";
     } catch (error) {
       status.textContent = error.message || "Message could not send right now. Please try again.";
       status.classList.add("error");

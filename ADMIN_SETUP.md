@@ -27,6 +27,28 @@ The local file `data/inventory.json` is only a preview/seed fallback. Live admin
    - `ADMIN_SESSION_SECRET`: any long random phrase, different from the password
 6. Redeploy the site.
 
+## Weekly D1 backups
+
+The repository includes a weekly GitHub Actions workflow that exports:
+
+- A full D1 SQL backup.
+- A private inventory CSV with exact quantities and platform prices.
+
+Add these repository secrets under **GitHub → Settings → Secrets and variables → Actions**:
+
+- `CLOUDFLARE_ACCOUNT_ID`
+- `CLOUDFLARE_D1_DATABASE_ID`
+- `CLOUDFLARE_API_TOKEN`
+
+Create the API token with permission to read and export the JerseysFrmJB D1
+database. After adding the secrets, open **GitHub → Actions → Weekly D1 backup**
+and run it once manually. Successful backup artifacts are retained for 30 days.
+Cloudflare D1 Time Travel remains a separate recovery option.
+
+The admin **Operations** section also provides an on-demand inventory CSV,
+recent admin activity, and recent API errors. API errors use the existing
+`DISCORD_WEBHOOK_URL` secret for deduplicated alerts.
+
 ## How it works
 
 - Quantity `0` means sold out.

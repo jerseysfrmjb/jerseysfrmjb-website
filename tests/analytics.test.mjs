@@ -62,6 +62,11 @@ assert.match(analyticsSource, /analyticsProductId/);
 assert.match(analyticsSource, /search_results/);
 assert.match(analyticsSource, /gtag\/js\?id=/);
 assert.match(analyticsSource, /anonymize_ip: true/);
+assert.match(analyticsSource, /utm_campaign/);
+assert.match(adminSource, /Facebook post results/);
+assert.match(adminSource, /analyticsDayLabel/);
+assert.match(schema, /local_day TEXT NOT NULL DEFAULT ''/);
+assert.match(schema, /utm_campaign TEXT NOT NULL DEFAULT ''/);
 
 const configured = await getAnalyticsConfig({ env: { GA4_MEASUREMENT_ID: "G-ABC1234567" } });
 assert.equal(configured.status, 200);
@@ -130,6 +135,15 @@ assert.equal(recorded[0][10], "US");
 assert.equal(recorded[0][11], "Maryland");
 assert.equal(recorded[0][12], "Mobile");
 assert.equal(recorded[0][13], "Safari");
+assert.match(recorded[0][15], /^\d{4}-\d{2}-\d{2}$/, "events store an Eastern calendar day");
+const expectedEasternParts = Object.fromEntries(new Intl.DateTimeFormat("en-US", {
+  timeZone: "America/New_York",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit"
+}).formatToParts(new Date()).map(part => [part.type, part.value]));
+const expectedEasternDay = `${expectedEasternParts.year}-${expectedEasternParts.month}-${expectedEasternParts.day}`;
+assert.equal(recorded[0][15], expectedEasternDay, "events use the current America/New_York date");
 
 const crossSiteResponse = await postAnalyticsEvent({
   request: new Request("https://jerseysfrmjb.com/api/analytics/events", {

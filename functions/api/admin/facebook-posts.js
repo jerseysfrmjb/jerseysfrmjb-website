@@ -24,6 +24,7 @@ function normalizePost(row) {
     facebook_post_url: row.facebook_post_url || "",
     publish_method: row.publish_method || "",
     publish_error: row.publish_error || "",
+    campaign: row.campaign || "new_arrivals",
     created_at: row.created_at,
     updated_at: row.updated_at,
     posted_at: row.posted_at || ""
@@ -47,14 +48,16 @@ export async function ensureFacebookPostHistorySchema(env) {
       facebook_post_id TEXT NOT NULL DEFAULT '',
       facebook_post_url TEXT NOT NULL DEFAULT '',
       publish_method TEXT NOT NULL DEFAULT '',
-      publish_error TEXT NOT NULL DEFAULT ''
+      publish_error TEXT NOT NULL DEFAULT '',
+      campaign TEXT NOT NULL DEFAULT 'new_arrivals'
     )
   `).run();
   const additions = [
     "ALTER TABLE facebook_post_history ADD COLUMN facebook_post_id TEXT NOT NULL DEFAULT ''",
     "ALTER TABLE facebook_post_history ADD COLUMN facebook_post_url TEXT NOT NULL DEFAULT ''",
     "ALTER TABLE facebook_post_history ADD COLUMN publish_method TEXT NOT NULL DEFAULT ''",
-    "ALTER TABLE facebook_post_history ADD COLUMN publish_error TEXT NOT NULL DEFAULT ''"
+    "ALTER TABLE facebook_post_history ADD COLUMN publish_error TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE facebook_post_history ADD COLUMN campaign TEXT NOT NULL DEFAULT 'new_arrivals'"
   ];
   for (const statement of additions) {
     try {
@@ -84,7 +87,7 @@ async function contentHash(productIds, caption) {
 export async function historyRecord(env, id) {
   const row = await env.DB.prepare(`
     SELECT id, product_ids, product_names, caption, photo_urls, status,
-      facebook_post_id, facebook_post_url, publish_method, publish_error,
+      facebook_post_id, facebook_post_url, publish_method, publish_error, campaign,
       created_at, updated_at, posted_at
     FROM facebook_post_history
     WHERE id = ?
@@ -95,7 +98,7 @@ export async function historyRecord(env, id) {
 async function listHistory(env) {
   const result = await env.DB.prepare(`
     SELECT id, product_ids, product_names, caption, photo_urls, status,
-      facebook_post_id, facebook_post_url, publish_method, publish_error,
+      facebook_post_id, facebook_post_url, publish_method, publish_error, campaign,
       created_at, updated_at, posted_at
     FROM facebook_post_history
     ORDER BY created_at DESC, id DESC
@@ -170,6 +173,9 @@ export async function onRequestPost({ request, env }) {
   }
 
   const caption = String(body.caption || "").trim();
+  const campaign = /^[a-z0-9_]{2,60}$/.test(String(body.campaign || ""))
+    ? String(body.campaign)
+    : "new_arrivals";
   if (caption.length < 20) {
     return json({ error: "Add a complete Facebook caption before saving." }, 400);
   }
@@ -185,7 +191,7 @@ export async function onRequestPost({ request, env }) {
   const hash = await contentHash(productIds, caption);
   const duplicate = await env.DB.prepare(`
     SELECT id, product_ids, product_names, caption, photo_urls, status,
-      facebook_post_id, facebook_post_url, publish_method, publish_error,
+      facebook_post_id, facebook_post_url, publish_method, publish_error, campaign,
       created_at, updated_at, posted_at
     FROM facebook_post_history
     WHERE content_hash = ?
@@ -201,15 +207,16 @@ export async function onRequestPost({ request, env }) {
   const photos = productPhotos(products);
   const result = await env.DB.prepare(`
     INSERT INTO facebook_post_history (
-      product_ids, product_names, caption, photo_urls, content_hash, status
+      product_ids, product_names, caption, photo_urls, content_hash, status, campaign
     )
-    VALUES (?, ?, ?, ?, ?, 'draft')
+    VALUES (?, ?, ?, ?, ?, 'draft', ?)
   `).bind(
     JSON.stringify(productIds),
     JSON.stringify(productNames),
     caption,
     JSON.stringify(photos),
-    hash
+    hash,
+    campaign
   ).run();
 
   const id = Number(result.meta?.last_row_id || 0);

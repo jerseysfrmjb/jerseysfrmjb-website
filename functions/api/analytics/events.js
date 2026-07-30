@@ -71,6 +71,17 @@ function safeSearchQuery(value) {
   return query;
 }
 
+function easternDay(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
 export async function onRequestPost({ request, env }) {
   try {
     if (!env.DB) return json({ error: "Analytics storage unavailable" }, 503);
@@ -107,14 +118,19 @@ export async function onRequestPost({ request, env }) {
       : 0;
     const country = clean(request.cf?.country || "", 2).toUpperCase();
     const region = country === "US" ? clean(request.cf?.region || "", 80) : "";
+    const utmSource = clean(body.utm_source, 80).toLowerCase();
+    const utmMedium = clean(body.utm_medium, 80).toLowerCase();
+    const utmCampaign = clean(body.utm_campaign, 120).toLowerCase();
+    const utmContent = clean(body.utm_content, 160).toLowerCase();
 
     await ensureAnalyticsSchema(env);
     await env.DB.prepare(`
       INSERT INTO analytics_events (
         event_type, visitor_id, session_id, page_path, page_title, product_id,
         marketplace, search_query, search_results, traffic_source, country,
-        region, device_type, browser, duration_seconds
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        region, device_type, browser, duration_seconds, local_day, utm_source,
+        utm_medium, utm_campaign, utm_content
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       eventType,
       visitorId,
@@ -130,7 +146,12 @@ export async function onRequestPost({ request, env }) {
       region,
       deviceType(userAgent),
       browserName(userAgent),
-      durationSeconds
+      durationSeconds,
+      easternDay(),
+      utmSource,
+      utmMedium,
+      utmCampaign,
+      utmContent
     ).run();
 
     return new Response(null, { status: 204 });

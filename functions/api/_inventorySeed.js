@@ -1090,14 +1090,30 @@ export async function ensureInventory(env) {
 
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS contact_messages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    instagram_username TEXT NOT NULL,
+    instagram_username TEXT NOT NULL DEFAULT '',
+    email TEXT NOT NULL DEFAULT '',
+    contact_preference TEXT NOT NULL DEFAULT 'instagram',
+    request_type TEXT NOT NULL DEFAULT 'jersey_request',
     jersey_request TEXT NOT NULL,
-    size TEXT NOT NULL,
+    size TEXT NOT NULL DEFAULT '',
+    marketplace_preference TEXT NOT NULL DEFAULT '',
+    product_id TEXT NOT NULL DEFAULT '',
+    product_name TEXT NOT NULL DEFAULT '',
     message TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'unread',
+    status TEXT NOT NULL DEFAULT 'new',
+    admin_notes TEXT NOT NULL DEFAULT '',
+    resolved_at TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`).run();
+  await addColumnIfMissing(env, "ALTER TABLE contact_messages ADD COLUMN email TEXT NOT NULL DEFAULT ''");
+  await addColumnIfMissing(env, "ALTER TABLE contact_messages ADD COLUMN contact_preference TEXT NOT NULL DEFAULT 'instagram'");
+  await addColumnIfMissing(env, "ALTER TABLE contact_messages ADD COLUMN request_type TEXT NOT NULL DEFAULT 'jersey_request'");
+  await addColumnIfMissing(env, "ALTER TABLE contact_messages ADD COLUMN marketplace_preference TEXT NOT NULL DEFAULT ''");
+  await addColumnIfMissing(env, "ALTER TABLE contact_messages ADD COLUMN product_id TEXT NOT NULL DEFAULT ''");
+  await addColumnIfMissing(env, "ALTER TABLE contact_messages ADD COLUMN product_name TEXT NOT NULL DEFAULT ''");
+  await addColumnIfMissing(env, "ALTER TABLE contact_messages ADD COLUMN admin_notes TEXT NOT NULL DEFAULT ''");
+  await addColumnIfMissing(env, "ALTER TABLE contact_messages ADD COLUMN resolved_at TEXT");
   await env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_contact_messages_created ON contact_messages(created_at DESC)`).run();
   await env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_contact_messages_status ON contact_messages(status, created_at DESC)`).run();
 

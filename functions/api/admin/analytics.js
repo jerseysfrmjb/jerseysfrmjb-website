@@ -268,14 +268,14 @@ export async function onRequestGet({ request, env }) {
     const detailResults = await env.DB.batch([
       env.DB.prepare(`
         SELECT
-          date(occurred_at) AS day,
+          COALESCE(NULLIF(local_day, ''), date(occurred_at, '-4 hours')) AS day,
           SUM(CASE WHEN event_type = 'page_view' THEN 1 ELSE 0 END) AS page_views,
           COUNT(DISTINCT visitor_id) AS visitors,
           SUM(CASE WHEN event_type = 'marketplace_click' THEN 1 ELSE 0 END) AS marketplace_clicks,
           SUM(CASE WHEN event_type = 'search' THEN 1 ELSE 0 END) AS searches
         FROM analytics_events
         WHERE occurred_at >= ?
-        GROUP BY date(occurred_at)
+        GROUP BY COALESCE(NULLIF(local_day, ''), date(occurred_at, '-4 hours'))
         ORDER BY day`).bind(chartCutoff),
       env.DB.prepare(`
         SELECT
@@ -316,12 +316,12 @@ export async function onRequestGet({ request, env }) {
         ORDER BY visitors DESC, page_views DESC`).bind(selectedCutoff),
       env.DB.prepare(`
         SELECT
-          date(occurred_at) AS day,
+          COALESCE(NULLIF(local_day, ''), date(occurred_at, '-4 hours')) AS day,
           traffic_source,
           COUNT(DISTINCT visitor_id) AS visitors
         FROM analytics_events
         WHERE occurred_at >= ?
-        GROUP BY date(occurred_at), traffic_source
+        GROUP BY COALESCE(NULLIF(local_day, ''), date(occurred_at, '-4 hours')), traffic_source
         ORDER BY day, visitors DESC`).bind(chartCutoff),
       env.DB.prepare(`
         SELECT country, region, COUNT(DISTINCT visitor_id) AS visitors
@@ -361,10 +361,10 @@ export async function onRequestGet({ request, env }) {
         GROUP BY marketplace
         ORDER BY clicks DESC`).bind(selectedCutoff),
       env.DB.prepare(`
-        SELECT date(occurred_at) AS day, marketplace, COUNT(*) AS clicks
+        SELECT COALESCE(NULLIF(local_day, ''), date(occurred_at, '-4 hours')) AS day, marketplace, COUNT(*) AS clicks
         FROM analytics_events
         WHERE event_type = 'marketplace_click' AND occurred_at >= ?
-        GROUP BY date(occurred_at), marketplace
+        GROUP BY COALESCE(NULLIF(local_day, ''), date(occurred_at, '-4 hours')), marketplace
         ORDER BY day, clicks DESC`).bind(chartCutoff),
       env.DB.prepare(`
         SELECT
@@ -390,7 +390,21 @@ export async function onRequestGet({ request, env }) {
         ) AS clicks
         LEFT JOIN inventory
           ON CAST(inventory.id AS TEXT) = clicks.product_id
-        ORDER BY clicks.occurred_at DESC`).bind(selectedCutoff)
+        ORDER BY clicks.occurred_at DESC`).bind(selectedCutoff),
+      env.DB.prepare(`
+        SELECT
+          utm_campaign,
+          utm_content,
+          COUNT(DISTINCT visitor_id) AS visitors,
+          SUM(CASE WHEN event_type = 'page_view' THEN 1 ELSE 0 END) AS page_views,
+          SUM(CASE WHEN event_type = 'marketplace_click' THEN 1 ELSE 0 END) AS marketplace_clicks,
+          inventory.name AS product_name
+        FROM analytics_events
+        LEFT JOIN inventory ON CAST(inventory.id AS TEXT) = analytics_events.utm_content
+        WHERE occurred_at >= ? AND utm_source = 'facebook' AND utm_campaign <> ''
+        GROUP BY utm_campaign, utm_content, inventory.name
+        ORDER BY visitors DESC, page_views DESC, marketplace_clicks DESC
+        LIMIT 100`).bind(selectedCutoff)
     ]);
 
     const products = productRows(detailResults[1]?.results || []);
@@ -477,6 +491,16 @@ export async function onRequestGet({ request, env }) {
         source: row.traffic_source || "Other",
         visitors: number(row.visitors)
       })),
+      campaigns: {
+        facebook: (detailResults[12]?.results || []).map(row => ({
+          campaign: row.utm_campaign || "facebook",
+          content: row.utm_content || "",
+          product_name: row.product_name || row.utm_content || "Facebook post",
+          visitors: number(row.visitors),
+          page_views: number(row.page_views),
+          marketplace_clicks: number(row.marketplace_clicks)
+        }))
+      },
       geography: (detailResults[4]?.results || []).map(row => ({
         country: row.country,
         region: row.region,

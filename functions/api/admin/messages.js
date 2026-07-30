@@ -4,11 +4,19 @@ import { adminConfigError, isAuthorized, json, unauthorized } from "./_auth.js";
 function normalizeMessage(row) {
   return {
     id: row.id,
-    instagram_username: row.instagram_username,
+    instagram_username: row.instagram_username || "",
+    email: row.email || "",
+    contact_preference: row.contact_preference || "instagram",
+    request_type: row.request_type || "jersey_request",
     jersey_request: row.jersey_request,
-    size: row.size,
+    size: row.size || "",
+    marketplace_preference: row.marketplace_preference || "",
+    product_id: row.product_id || "",
+    product_name: row.product_name || "",
     message: row.message,
     status: row.status,
+    admin_notes: row.admin_notes || "",
+    resolved_at: row.resolved_at || "",
     created_at: row.created_at,
     updated_at: row.updated_at
   };
@@ -25,7 +33,7 @@ async function requireAdmin(request, env) {
 async function loadMessages(env) {
   const result = await env.DB.prepare("SELECT * FROM contact_messages ORDER BY created_at DESC, id DESC LIMIT 250").all();
   const messages = (result.results || []).map(normalizeMessage);
-  const unread = messages.filter(message => message.status !== "read").length;
+  const unread = messages.filter(message => ["new", "unread"].includes(message.status)).length;
   return { messages, unread };
 }
 
@@ -46,8 +54,22 @@ export async function onRequestPatch({ request, env }) {
     const body = await request.json().catch(() => ({}));
     const id = Math.floor(Number(body.id));
     if (!id) return json({ error: "Missing message id" }, 400);
-    const status = body.status === "read" ? "read" : "unread";
-    await env.DB.prepare("UPDATE contact_messages SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(status, id).run();
+    const allowedStatuses = new Set(["new", "in_progress", "waiting", "resolved"]);
+    const requestedStatus = body.status === "read"
+      ? "in_progress"
+      : body.status === "unread"
+        ? "new"
+        : body.status;
+    const status = allowedStatuses.has(requestedStatus) ? requestedStatus : "new";
+    const adminNotes = String(body.admin_notes || "").replace(/\s+/g, " ").trim().slice(0, 1000);
+    await env.DB.prepare(`
+      UPDATE contact_messages
+      SET status = ?,
+        admin_notes = ?,
+        resolved_at = CASE WHEN ? = 'resolved' THEN COALESCE(resolved_at, CURRENT_TIMESTAMP) ELSE NULL END,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).bind(status, adminNotes, status, id).run();
     return json(await loadMessages(env));
   } catch (error) {
     return json({ error: `Message update error: ${error?.message || "Unknown error"}` }, 500);
