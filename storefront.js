@@ -890,12 +890,19 @@ function initReviewLightbox() {
 
 function createHelpWidget() {
   const instagramUrl = "https://www.instagram.com/jerseysfrmjb/";
+  if (!document.querySelector('link[data-help-widget-style]')) {
+    const widgetStyle = document.createElement("link");
+    widgetStyle.rel = "stylesheet";
+    widgetStyle.href = "/help-widget.css?v=desktop-fix-1";
+    widgetStyle.dataset.helpWidgetStyle = "";
+    document.head.appendChild(widgetStyle);
+  }
   const widget = document.createElement("div");
   widget.className = "help-widget";
   widget.innerHTML = `
     <button class="help-widget-button" type="button" aria-expanded="false">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4 5 6l-3 4 3 2 2-2v10h10V10l2 2 3-2-3-4-3-2c-.8 1.2-2.2 2-4 2S8.8 5.2 8 4Z"></path></svg>
-      <span>Request a Jersey</span>
+      <span class="help-widget-button-icon" aria-hidden="true">+</span>
+      <span>Requests &amp; Help</span>
     </button>
     <div class="help-widget-overlay" data-help-overlay hidden></div>
     <section class="help-widget-panel" aria-label="JerseysFrmJB requests and help" hidden>

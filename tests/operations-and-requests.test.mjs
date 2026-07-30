@@ -18,7 +18,8 @@ const [
   migration,
   workflow,
   backupScript,
-  productPage
+  productPage,
+  helpWidgetStyles
 ] = await Promise.all([
   read("admin.html"),
   read("admin.js"),
@@ -31,7 +32,8 @@ const [
   read("migrations/0011_operations_requests_attribution.sql"),
   read(".github/workflows/weekly-d1-backup.yml"),
   read("scripts/export-d1-backup.mjs"),
-  read("functions/products/_page.js")
+  read("functions/products/_page.js"),
+  read("help-widget.css")
 ]);
 
 assert.match(adminHtml, /data-admin-tab="operations"/);
@@ -80,6 +82,11 @@ assert.match(storefront, /data-help-request-type="size_question"/);
 assert.match(storefront, /data-help-request-type="order_help"/);
 assert.match(storefront, /data-help-product-context/);
 assert.match(storefront, /Replies are sent on Instagram/);
+assert.match(storefront, /help-widget\.css\?v=desktop-fix-1/);
+assert.doesNotMatch(storefront, /<svg[^>]*help-widget-button/);
+assert.match(helpWidgetStyles, /\.help-widget \.help-widget-button/);
+assert.match(helpWidgetStyles, /\.help-widget \.help-request-choices > button/);
+assert.match(helpWidgetStyles, /@media \(max-width: 520px\)/);
 assert.match(adminHtml, /Customer Requests/);
 assert.match(productPage, /data-help-request-type="jersey_request"/);
 assert.match(messagesApi, /const contact_preference = "instagram"/);
