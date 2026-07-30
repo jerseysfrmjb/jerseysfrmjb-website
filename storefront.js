@@ -331,7 +331,7 @@ function renderPlatformAvailability(item = {}, available = true) {
       <div class="platform-offers">
         ${offers.map(offer => {
           const action = available
-            ? `<a class="platform-buy-button" href="${escapeHtml(links[offer.linkKey] || links.depop || DEFAULT_PURCHASE_URL)}" target="_blank" rel="noopener">Buy on ${escapeHtml(offer.name)}</a>`
+            ? `<a class="platform-buy-button" href="${escapeHtml(links[offer.linkKey] || links.depop || DEFAULT_PURCHASE_URL)}" target="_blank" rel="noopener" data-analytics-product-id="${escapeHtml(item.id || "")}" data-analytics-product-name="${escapeHtml(item.name || "")}" data-analytics-marketplace="${escapeHtml(offer.name)}">Buy on ${escapeHtml(offer.name)}</a>`
             : `<span class="platform-buy-button disabled" aria-disabled="true">Sold Out</span>`;
           return `
             <div class="platform-offer">

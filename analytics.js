@@ -139,11 +139,14 @@
   }
 
   function productData(element) {
+    const product = element?.matches?.(PRODUCT_SELECTOR)
+      ? element
+      : element?.closest?.(PRODUCT_SELECTOR);
     return {
-      id: String(element?.dataset?.productId || "").trim(),
-      name: String(element?.dataset?.productName || "").trim(),
-      category: String(element?.dataset?.productCategory || "").trim(),
-      value: Number(element?.dataset?.productValue || 0)
+      id: String(element?.dataset?.analyticsProductId || product?.dataset?.productId || "").trim(),
+      name: String(element?.dataset?.analyticsProductName || product?.dataset?.productName || "").trim(),
+      category: String(product?.dataset?.productCategory || "").trim(),
+      value: Number(product?.dataset?.productValue || 0)
     };
   }
 
@@ -201,10 +204,11 @@
     } catch {
       return;
     }
-    const marketplace = marketplaceName(destination)
+    const marketplace = String(link.dataset.analyticsMarketplace || "").trim()
+      || marketplaceName(destination)
       || (destination.origin !== window.location.origin && link.matches(MARKETPLACE_BUTTON_SELECTOR) ? "Other" : "");
     if (!marketplace) return;
-    const product = productData(link.closest(PRODUCT_SELECTOR));
+    const product = productData(link);
     send(basePayload("marketplace_click", {
       product_id: product.id,
       marketplace

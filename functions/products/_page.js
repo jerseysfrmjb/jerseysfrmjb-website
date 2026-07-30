@@ -484,7 +484,7 @@ function marketplaceMarkup(model) {
           if (!model.available) {
             action = '<span class="platform-buy-button disabled" aria-disabled="true">Sold Out</span>';
           } else if (marketplace.link) {
-            action = `<a class="platform-buy-button product-marketplace-button" href="${escapeHtml(marketplace.link)}" target="_blank" rel="noopener">Buy on ${escapeHtml(marketplace.name)}</a>`;
+            action = `<a class="platform-buy-button product-marketplace-button" href="${escapeHtml(marketplace.link)}" target="_blank" rel="noopener" data-analytics-product-id="${escapeHtml(model.id)}" data-analytics-product-name="${escapeHtml(model.title)}" data-analytics-marketplace="${escapeHtml(marketplace.name)}">Buy on ${escapeHtml(marketplace.name)}</a>`;
           }
           return `
             <article class="product-marketplace-option">

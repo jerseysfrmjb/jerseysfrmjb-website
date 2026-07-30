@@ -41,8 +41,11 @@ assert.match(adminSource, /\/api\/admin\/analytics\?range=/);
 assert.match(adminSource, /exportAnalyticsCsv/);
 assert.match(adminSource, /Highest views with no clicks/);
 assert.match(adminSource, /Not viewed in 30 days/);
+assert.match(adminSource, /Recent marketplace clicks/);
+assert.match(adminSource, /General marketplace link/);
 assert.match(styles, /@media\(max-width:560px\)/);
 assert.match(styles, /\.analytics-table-wrap\{overflow:auto/);
+assert.match(styles, /\.analytics-daily-matrix/);
 assert.match(styles, /@media\(prefers-color-scheme:dark\)/);
 
 for (const sql of [schema, migration]) {
@@ -55,6 +58,7 @@ assert.match(analyticsSource, /navigator\.globalPrivacyControl/);
 assert.match(analyticsSource, /navigator\.doNotTrack/);
 assert.match(analyticsSource, /event_type: eventType/);
 assert.match(analyticsSource, /marketplace_click/);
+assert.match(analyticsSource, /analyticsProductId/);
 assert.match(analyticsSource, /search_results/);
 assert.match(analyticsSource, /gtag\/js\?id=/);
 assert.match(analyticsSource, /anonymize_ip: true/);

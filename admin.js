@@ -315,15 +315,30 @@ function analyticsDailyMatrix(rows = [], groupKey, valueKey) {
   const groups = [...new Set(rows.map(item => item[groupKey] || "Other"))].slice(0, 8);
   const lookup = new Map(rows.map(item => [`${item.day}|${item[groupKey] || "Other"}`, Number(item[valueKey] || 0)]));
   return `
-    <div class="analytics-table-wrap">
-      <table class="analytics-table analytics-daily-table">
-        <thead><tr><th>Date</th>${groups.map(group => `<th>${escapeHtml(group)}</th>`).join("")}<th>Total</th></tr></thead>
-        <tbody>${days.map(day => {
-          const values = groups.map(group => lookup.get(`${day}|${group}`) || 0);
-          return `<tr><td>${escapeHtml(day)}</td>${values.map(value => `<td>${analyticsNumber(value)}</td>`).join("")}<td><strong>${analyticsNumber(values.reduce((sum, value) => sum + value, 0))}</strong></td></tr>`;
-        }).join("")}</tbody>
-      </table>
+    <div class="analytics-daily-matrix">
+      ${days.map(day => {
+        const values = groups.map(group => lookup.get(`${day}|${group}`) || 0);
+        return `<div class="analytics-daily-row">
+          <time datetime="${escapeHtml(day)}">${escapeHtml(day)}</time>
+          <div class="analytics-daily-values">
+            ${groups.map((group, index) => `<span><small>${escapeHtml(group)}</small><b>${analyticsNumber(values[index])}</b></span>`).join("")}
+            <span class="analytics-daily-total"><small>Total</small><b>${analyticsNumber(values.reduce((sum, value) => sum + value, 0))}</b></span>
+          </div>
+        </div>`;
+      }).join("")}
     </div>`;
+}
+
+function analyticsMarketplaceClickList(items = []) {
+  if (!items.length) return analyticsEmpty("Marketplace clicks will appear here as shoppers open listings.");
+  return `<div class="analytics-click-list">${items.slice(0, 12).map(item => {
+    const productLabel = item.product_name || (item.product_id ? `Product ${item.product_id}` : "General marketplace link");
+    return `<div class="analytics-click-row">
+      <div><strong>${escapeHtml(productLabel)}</strong><small>${escapeHtml(item.product_name ? item.page_path : "Profile, review, footer, or other non-product link")}</small></div>
+      <span>${escapeHtml(item.marketplace || "Other")}</span>
+      <time>${escapeHtml(analyticsDate(item.occurred_at))}</time>
+    </div>`;
+  }).join("")}</div>`;
 }
 
 function renderAnalytics() {
@@ -385,7 +400,13 @@ function renderAnalytics() {
 
     <section class="analytics-card">
       <header class="analytics-section-heading"><div><span>Marketplace Analytics</span><h3>eBay and Depop performance</h3></div><div class="analytics-inline-stats"><b>${analyticsNumber(ebayClicks)}<small>eBay clicks</small></b><b>${analyticsNumber(depopClicks)}<small>Depop clicks</small></b><b>${analyticsNumber(market.ctr, 1)}%<small>overall CTR</small></b></div></header>
+      ${market.general_clicks > 0 ? `<p class="analytics-attribution-note">${analyticsNumber(market.general_clicks)} ${market.general_clicks === 1 ? "click came" : "clicks came"} from a general marketplace link, so ${market.general_clicks === 1 ? "it is" : "they are"} not assigned to a jersey.</p>` : ""}
       ${analyticsProductTable((data.products || []).filter(item => item.clicks > 0).sort((a, b) => b.clicks - a.clicks).slice(0, 20), "Marketplace clicks by product will appear here.")}
+    </section>
+
+    <section class="analytics-card">
+      <header><span>Marketplace activity</span><h3>Recent marketplace clicks</h3></header>
+      ${analyticsMarketplaceClickList(market.recent_clicks)}
     </section>
 
     <section class="analytics-detail-grid">

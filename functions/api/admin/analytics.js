@@ -373,7 +373,24 @@ export async function onRequestGet({ request, env }) {
           COUNT(DISTINCT CASE WHEN occurred_at >= ? AND occurred_at < ? THEN visitor_id END) AS previous_visitors
         FROM analytics_events
         WHERE occurred_at >= ?
-        GROUP BY traffic_source`).bind(currentWeekStart, previousWeekStart, currentWeekStart, previousWeekStart)
+        GROUP BY traffic_source`).bind(currentWeekStart, previousWeekStart, currentWeekStart, previousWeekStart),
+      env.DB.prepare(`
+        SELECT
+          clicks.occurred_at,
+          clicks.marketplace,
+          clicks.page_path,
+          clicks.product_id,
+          inventory.name AS product_name
+        FROM (
+          SELECT occurred_at, marketplace, page_path, product_id
+          FROM analytics_events
+          WHERE event_type = 'marketplace_click' AND occurred_at >= ?
+          ORDER BY occurred_at DESC
+          LIMIT 50
+        ) AS clicks
+        LEFT JOIN inventory
+          ON CAST(inventory.id AS TEXT) = clicks.product_id
+        ORDER BY clicks.occurred_at DESC`).bind(selectedCutoff)
     ]);
 
     const products = productRows(detailResults[1]?.results || []);
@@ -402,6 +419,7 @@ export async function onRequestGet({ request, env }) {
     const marketplaceCtr = selectedSummary.product_views
       ? round((selectedSummary.marketplace_clicks / selectedSummary.product_views) * 100, 1)
       : 0;
+    const attributedMarketplaceClicks = products.reduce((sum, product) => sum + product.clicks, 0);
 
     return json({
       generated_at: now.toISOString(),
@@ -432,10 +450,19 @@ export async function onRequestGet({ request, env }) {
       marketplace: {
         totals: marketplaceTotals,
         ctr: marketplaceCtr,
+        attributed_clicks: attributedMarketplaceClicks,
+        general_clicks: Math.max(0, selectedSummary.marketplace_clicks - attributedMarketplaceClicks),
         daily: (detailResults[9]?.results || []).map(row => ({
           day: row.day,
           marketplace: row.marketplace || "Other",
           clicks: number(row.clicks)
+        })),
+        recent_clicks: (detailResults[11]?.results || []).map(row => ({
+          occurred_at: row.occurred_at || "",
+          marketplace: row.marketplace || "Other",
+          page_path: row.page_path || "/",
+          product_id: row.product_id || "",
+          product_name: row.product_name || ""
         }))
       },
       searches: {

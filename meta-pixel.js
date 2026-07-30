@@ -129,7 +129,11 @@
     if (!isKnownMarketplace && !isMarketplaceButton) return;
 
     const card = link.closest(PRODUCT_SELECTOR);
-    const product = card ? productParameters(card) : {};
+    const product = card ? productParameters(card) : {
+      content_ids: link.dataset.analyticsProductId ? [link.dataset.analyticsProductId] : [],
+      content_name: String(link.dataset.analyticsProductName || "").trim(),
+      content_type: "product"
+    };
     window.fbq("trackCustom", "MarketplaceOutboundClick", {
       marketplace,
       destination_url: safeDestination(destination),
