@@ -18,11 +18,6 @@ function cleanUsername(value = "") {
   return clean(value, 80).replace(/^@+/, "").replace(/[^a-zA-Z0-9._]/g, "");
 }
 
-function cleanEmail(value = "") {
-  const email = clean(value, 160).toLowerCase();
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : "";
-}
-
 function instagramProfileUrl(username) {
   return `https://www.instagram.com/${encodeURIComponent(username)}/`;
 }
@@ -36,9 +31,7 @@ async function sendDiscordNotification(env, data) {
   if (!env.DISCORD_WEBHOOK_URL) return;
 
   const profileUrl = data.instagram_username ? instagramProfileUrl(data.instagram_username) : "";
-  const contact = data.contact_preference === "email"
-    ? data.email
-    : `@${data.instagram_username}`;
+  const contact = `@${data.instagram_username}`;
   const payload = {
     content: `@everyone New JerseysFrmJB ${data.request_type.replace(/_/g, " ")} request from ${contact}`,
     allowed_mentions: {
@@ -52,10 +45,8 @@ async function sendDiscordNotification(env, data) {
         timestamp: data.submitted_at,
         fields: [
           {
-            name: "Reply using",
-            value: data.contact_preference === "email"
-              ? data.email
-              : `[@${data.instagram_username}](${profileUrl})`,
+            name: "Reply on Instagram",
+            value: `[@${data.instagram_username}](${profileUrl})`,
             inline: true
           },
           {
@@ -115,13 +106,12 @@ export async function onRequestPost({ request, env }) {
     if (body.website) return json({ ok: true });
 
     const requestTypes = new Set(["jersey_request", "size_question", "order_help", "restock_request", "other"]);
-    const contactPreferences = new Set(["instagram", "email"]);
-    const marketplacePreferences = new Set(["", "eBay", "Depop", "Facebook", "Website", "Other"]);
+    const marketplacePreferences = new Set(["", "eBay", "Depop", "Other"]);
     const request_type = requestTypes.has(body.request_type) ? body.request_type : "jersey_request";
-    const contact_preference = contactPreferences.has(body.contact_preference) ? body.contact_preference : "instagram";
+    const contact_preference = "instagram";
     const marketplace_preference = marketplacePreferences.has(body.marketplace_preference) ? body.marketplace_preference : "";
     const instagram_username = cleanUsername(body.instagram_username);
-    const email = cleanEmail(body.email);
+    const email = "";
     const jersey_request = clean(body.jersey_request, 160);
     const size = clean(body.size, 40);
     const message = clean(body.message, 1200);
@@ -131,11 +121,18 @@ export async function onRequestPost({ request, env }) {
     if (!jersey_request || !message) {
       return json({ error: "Please describe what you need and include a message." }, 400);
     }
-    if (contact_preference === "instagram" && !instagram_username) {
+    if (!instagram_username) {
       return json({ error: "Add your Instagram username so I can reply." }, 400);
     }
-    if (contact_preference === "email" && !email) {
-      return json({ error: "Add a valid email address so I can reply." }, 400);
+
+    const recentRequests = await env.DB.prepare(`
+      SELECT COUNT(*) AS count
+      FROM contact_messages
+      WHERE lower(COALESCE(instagram_username, '')) = lower(?)
+        AND created_at >= datetime('now', '-10 minutes')
+    `).bind(instagram_username).first();
+    if (Number(recentRequests?.count || 0) >= 5) {
+      return json({ error: "Too many requests were sent recently. Please wait a few minutes and try again." }, 429);
     }
 
     const duplicate = await env.DB.prepare(`

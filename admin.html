@@ -6,8 +6,8 @@
   <title>Inventory Admin | JerseysFrmJB</title>
   <meta name="robots" content="noindex,nofollow">
   <link rel="icon" href="assets/jerseysfrmjb-logo.jpg" type="image/jpeg">
-  <link rel="stylesheet" href="styles.css?v=operations-1">
-  <script src="admin.js?v=operations-1" defer></script>
+  <link rel="stylesheet" href="styles.css?v=catalog-health-1">
+  <script src="admin.js?v=catalog-health-1" defer></script>
 </head>
 <body class="admin-body">
   <main class="admin-shell">
@@ -107,6 +107,18 @@
         </header>
         <p class="form-status" data-operations-status role="status">Open Operations to load protection status.</p>
         <div class="operations-protection" data-operations-protection></div>
+        <section class="catalog-health-panel">
+          <div class="catalog-health-head">
+            <div>
+              <span class="section-kicker">Storefront Health</span>
+              <h3>Images &amp; Marketplace Links</h3>
+              <p>Check every product image and saved eBay or Depop link without changing inventory.</p>
+            </div>
+            <button class="shop-button secondary-admin" type="button" data-run-catalog-health>Run Check</button>
+          </div>
+          <p class="form-status" data-catalog-health-status role="status">Run a check when you want to verify the live catalog.</p>
+          <div data-catalog-health-results></div>
+        </section>
         <div class="operations-grid">
           <section>
             <h3>Admin Activity</h3>

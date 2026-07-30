@@ -12,6 +12,7 @@ const [
   storefront,
   middleware,
   operationsApi,
+  catalogHealthApi,
   messagesApi,
   schema,
   migration,
@@ -23,6 +24,7 @@ const [
   read("storefront.js"),
   read("functions/_middleware.js"),
   read("functions/api/admin/operations.js"),
+  read("functions/api/admin/catalog-health.js"),
   read("functions/api/messages.js"),
   read("schema.sql"),
   read("migrations/0011_operations_requests_attribution.sql"),
@@ -36,6 +38,11 @@ assert.match(adminHtml, /Admin Activity/);
 assert.match(adminSource, /\/api\/admin\/operations/);
 assert.match(operationsApi, /isAuthorized\(request, env\)/);
 assert.match(operationsApi, /format.*inventory\.csv/);
+assert.match(adminHtml, /data-run-catalog-health/);
+assert.match(adminSource, /\/api\/admin\/catalog-health/);
+assert.match(catalogHealthApi, /isAuthorized\(request, env\)/);
+assert.match(catalogHealthApi, /method = "HEAD"/);
+assert.match(catalogHealthApi, /MARKETPLACE_HOSTS/);
 
 for (const sql of [schema, migration]) {
   assert.match(sql, /CREATE TABLE IF NOT EXISTS admin_activity_log/);
@@ -59,13 +66,21 @@ assert.match(backupScript, /inventory\.quantity/);
 assert.match(storefront, /name="request_type"/);
 assert.match(storefront, /name="contact_preference"/);
 assert.match(storefront, /name="marketplace_preference"/);
+assert.match(storefront, /name="contact_preference" value="instagram"/);
+assert.doesNotMatch(storefront, /<option value="email">Email<\/option>/);
+assert.doesNotMatch(storefront, /<option value="Facebook">Facebook<\/option>/);
+assert.doesNotMatch(storefront, /<option value="Website">Website<\/option>/);
 assert.match(storefront, /data-help-success-message/);
-assert.match(messagesApi, /contact_preference/);
+assert.match(messagesApi, /const contact_preference = "instagram"/);
+assert.match(messagesApi, /new Set\(\["", "eBay", "Depop", "Other"\]\)/);
 assert.match(messagesApi, /request_id/);
 assert.match(messagesApi, /product_name/);
+assert.match(messagesApi, /Too many requests were sent recently/);
+assert.match(adminSource, /Jersey views to marketplace clicks/);
 
 console.log("Operations and request workflow tests passed:");
 console.log("- admin-only audit and inventory export are present");
 console.log("- API errors are logged and deduplicated before Discord alerts");
 console.log("- weekly D1 SQL and inventory CSV workflow is configured");
-console.log("- Need Help supports typed requests, reply preferences, and product context");
+console.log("- Need Help uses Instagram replies, approved marketplace choices, product context, and rate limiting");
+console.log("- authenticated catalog health checks and the conversion funnel are present");

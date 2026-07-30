@@ -905,8 +905,8 @@ function createHelpWidget() {
         </div>
         <button class="help-widget-close" type="button" aria-label="Close message form">&times;</button>
       </div>
-      <p class="help-widget-copy">Tell us what you need and choose how you would like a reply. For Instagram replies, follow @jerseysfrmjb so we can message you back.</p>
-      <a class="help-instagram-link" href="${instagramUrl}" target="_blank" rel="noopener">Follow @jerseysfrmjb</a>
+      <p class="help-widget-copy">Send your jersey request or question here. Replies are sent through Instagram, so please follow @jerseysfrmjb and enter the username we should message.</p>
+      <a class="help-instagram-link" href="${instagramUrl}" target="_blank" rel="noopener">Follow @jerseysfrmjb on Instagram</a>
       <form class="help-widget-form" data-help-form>
         <input type="text" name="website" autocomplete="off" tabindex="-1" aria-hidden="true">
         <input type="hidden" name="product_id">
@@ -920,17 +920,9 @@ function createHelpWidget() {
             <option value="other">Other</option>
           </select>
         </label>
-        <label>Reply to me by
-          <select name="contact_preference" data-help-contact-preference>
-            <option value="instagram">Instagram</option>
-            <option value="email">Email</option>
-          </select>
-        </label>
-        <label data-help-instagram>Instagram username
+        <input type="hidden" name="contact_preference" value="instagram">
+        <label>Instagram username <small>(where the reply will be sent)</small>
           <input name="instagram_username" type="text" placeholder="@username" autocomplete="username" required>
-        </label>
-        <label data-help-email hidden>Email address
-          <input name="email" type="email" placeholder="you@example.com" autocomplete="email">
         </label>
         <label>Jersey or request
           <input name="jersey_request" type="text" placeholder="Example: Messi Argentina Home" required>
@@ -943,8 +935,6 @@ function createHelpWidget() {
             <option value="">No preference</option>
             <option value="eBay">eBay</option>
             <option value="Depop">Depop</option>
-            <option value="Facebook">Facebook</option>
-            <option value="Website">Website</option>
             <option value="Other">Other</option>
           </select>
         </label>
@@ -971,9 +961,6 @@ function createHelpWidget() {
   const status = widget.querySelector("[data-help-status]");
   const success = widget.querySelector("[data-help-success]");
   const submit = widget.querySelector(".help-submit");
-  const contactPreference = widget.querySelector("[data-help-contact-preference]");
-  const instagramField = widget.querySelector("[data-help-instagram]");
-  const emailField = widget.querySelector("[data-help-email]");
   const successMessage = widget.querySelector("[data-help-success-message]");
   const defaultSubmitText = submit.textContent;
   let sent = false;
@@ -986,17 +973,6 @@ function createHelpWidget() {
     form.elements.product_name.value = product.dataset.productName || "";
     form.elements.jersey_request.value = product.dataset.productName || "";
   }
-
-  function updateContactFields() {
-    const email = contactPreference.value === "email";
-    instagramField.hidden = email;
-    emailField.hidden = !email;
-    form.elements.instagram_username.required = !email;
-    form.elements.email.required = email;
-  }
-
-  contactPreference.addEventListener("change", updateContactFields);
-  updateContactFields();
 
   function setOpen(open) {
     panel.hidden = !open;
@@ -1061,8 +1037,8 @@ function createHelpWidget() {
       form.hidden = true;
       success.hidden = false;
       successMessage.textContent = data.request_id
-        ? `Thanks! Request #${data.request_id} has been received. I’ll reply using your selected contact method.`
-        : "Thanks! Your request has been received. I’ll reply using your selected contact method.";
+        ? `Thanks! Request #${data.request_id} has been received. I’ll reply to your Instagram account.`
+        : "Thanks! Your request has been received. I’ll reply to your Instagram account.";
     } catch (error) {
       status.textContent = error.message || "Message could not send right now. Please try again.";
       status.classList.add("error");

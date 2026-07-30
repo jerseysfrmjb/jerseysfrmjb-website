@@ -112,6 +112,9 @@ const operationsProtection = document.querySelector("[data-operations-protection
 const operationsActivity = document.querySelector("[data-operations-activity]");
 const operationsErrors = document.querySelector("[data-operations-errors]");
 const refreshOperations = document.querySelector("[data-refresh-operations]");
+const runCatalogHealthButton = document.querySelector("[data-run-catalog-health]");
+const catalogHealthStatus = document.querySelector("[data-catalog-health-status]");
+const catalogHealthResults = document.querySelector("[data-catalog-health-results]");
 let inventory = [];
 let settings = {};
 let featuredLimit = 3;
@@ -268,6 +271,60 @@ async function loadOperations() {
     operationsStatus.classList.add("error");
   } finally {
     if (refreshOperations) refreshOperations.disabled = false;
+  }
+}
+
+function renderCatalogHealth(data = {}) {
+  if (!catalogHealthResults) return;
+  const summary = data.summary || {};
+  const issues = (data.items || []).filter(item => item.status !== "healthy");
+  catalogHealthResults.innerHTML = `
+    <div class="catalog-health-summary">
+      ${[
+        ["Healthy", summary.healthy, "healthy"],
+        ["Broken", summary.broken, "broken"],
+        ["Warnings", Number(summary.warning || 0) + Number(summary.protected || 0), "warning"],
+        ["Missing", summary.missing, "missing"]
+      ].map(([label, value, tone]) => `<article class="${tone}"><span>${escapeHtml(label)}</span><strong>${analyticsNumber(value)}</strong></article>`).join("")}
+    </div>
+    ${issues.length ? `
+      <div class="catalog-health-issues">
+        ${issues.map(item => `
+          <article class="${escapeHtml(item.status)}">
+            <div>
+              <strong>${escapeHtml(item.product_name)}</strong>
+              <span>${escapeHtml(item.label)} · ${escapeHtml(item.status)}</span>
+            </div>
+            <p>${escapeHtml(item.detail)}</p>
+            ${item.url ? `<a href="${escapeHtml(item.url)}" target="_blank" rel="noopener">Open URL</a>` : ""}
+          </article>`).join("")}
+      </div>` : '<p class="catalog-health-clear">All saved product images and marketplace links passed the check.</p>'}
+  `;
+}
+
+async function runCatalogHealth() {
+  if (!catalogHealthStatus || !runCatalogHealthButton) return;
+  runCatalogHealthButton.disabled = true;
+  runCatalogHealthButton.textContent = "Checking...";
+  catalogHealthStatus.textContent = "Checking live product images and marketplace links. This can take a moment.";
+  catalogHealthStatus.className = "form-status";
+  try {
+    const data = await api("/api/admin/catalog-health");
+    renderCatalogHealth(data);
+    const issueCount = Number(data.summary?.broken || 0)
+      + Number(data.summary?.warning || 0)
+      + Number(data.summary?.protected || 0)
+      + Number(data.summary?.missing || 0);
+    catalogHealthStatus.textContent = issueCount
+      ? `Checked ${analyticsNumber(data.products)} products. Review ${analyticsNumber(issueCount)} item${issueCount === 1 ? "" : "s"} below.`
+      : `Checked ${analyticsNumber(data.products)} products. Everything passed.`;
+    catalogHealthStatus.classList.add(issueCount ? "error" : "success");
+  } catch (error) {
+    catalogHealthStatus.textContent = error.message;
+    catalogHealthStatus.classList.add("error");
+  } finally {
+    runCatalogHealthButton.disabled = false;
+    runCatalogHealthButton.textContent = "Run Check";
   }
 }
 
@@ -429,6 +486,52 @@ function analyticsCampaignTable(items = []) {
     </div>`;
 }
 
+function analyticsConversionFunnel(data = {}) {
+  const productViews = Number(data.current?.product_views || 0);
+  const products = data.products || [];
+  const ebayClicks = products.reduce((sum, item) => sum + Number(item.ebay_clicks || 0), 0);
+  const depopClicks = products.reduce((sum, item) => sum + Number(item.depop_clicks || 0), 0);
+  const listingClicks = ebayClicks + depopClicks;
+  const conversionRate = productViews > 0 ? (listingClicks / productViews) * 100 : 0;
+  const clickWidth = productViews > 0 ? Math.min(100, Math.max(listingClicks > 0 ? 8 : 0, conversionRate)) : 0;
+  const ebayShare = listingClicks > 0 ? (ebayClicks / listingClicks) * 100 : 0;
+  const depopShare = listingClicks > 0 ? 100 - ebayShare : 0;
+
+  return `
+    <section class="analytics-card analytics-funnel-card">
+      <header class="analytics-section-heading">
+        <div><span>Conversion Funnel</span><h3>Jersey views to marketplace clicks</h3></div>
+        <div class="analytics-funnel-rate"><strong>${analyticsNumber(conversionRate, 1)}%</strong><small>view-to-click rate</small></div>
+      </header>
+      <div class="analytics-funnel" aria-label="${analyticsNumber(productViews)} product view events led to ${analyticsNumber(listingClicks)} attributed marketplace click events">
+        <article class="views">
+          <span>1</span>
+          <div><small>Jersey views</small><strong>${analyticsNumber(productViews)}</strong><p>Product view events</p></div>
+        </article>
+        <i aria-hidden="true">→</i>
+        <article class="clicks" style="--funnel-width:${clickWidth}%">
+          <span>2</span>
+          <div><small>Listing clicks</small><strong>${analyticsNumber(listingClicks)}</strong><p>Clicks tied to a jersey</p></div>
+        </article>
+        <i aria-hidden="true">→</i>
+        <article class="destinations">
+          <span>3</span>
+          <div>
+            <small>Destination</small>
+            <div class="analytics-funnel-split">
+              <b>eBay <em>${analyticsNumber(ebayClicks)}</em></b>
+              <b>Depop <em>${analyticsNumber(depopClicks)}</em></b>
+            </div>
+            <div class="analytics-funnel-share" title="eBay ${analyticsNumber(ebayShare, 1)}%, Depop ${analyticsNumber(depopShare, 1)}%">
+              <span style="width:${ebayShare}%"></span>
+            </div>
+          </div>
+        </article>
+      </div>
+      <p class="analytics-funnel-note">This funnel uses event totals, not unique shoppers. General footer or profile clicks are excluded so every click shown here is tied to a specific jersey.</p>
+    </section>`;
+}
+
 function renderAnalytics() {
   if (!analyticsDashboard || !analyticsData) return;
   const data = analyticsData;
@@ -475,6 +578,8 @@ function renderAnalytics() {
         ["Marketplace CTR", `${analyticsNumber(current.marketplace_ctr, 1)}%`, "Clicks / product views"]
       ].map(([label, value, note]) => `<article><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong><small>${escapeHtml(note)}</small></article>`).join("")}
     </section>
+
+    ${analyticsConversionFunnel(data)}
 
     <section class="analytics-chart-grid">
       <article class="analytics-card analytics-card-wide"><header><span>Traffic</span><h3>Daily visitors and page views</h3></header>${analyticsLineChart(data.daily, [{ key: "visitors", label: "Visitors" }, { key: "page_views", label: "Page views" }])}</article>
@@ -2692,7 +2797,7 @@ function renderMessages() {
         </label>
         <div class="admin-message-actions">
           <button type="button" data-copy-contact="${escapeHtml(contactLabel)}">Copy Contact</button>
-          <a href="${escapeHtml(replyUrl)}" ${message.contact_preference === "email" ? "" : 'target="_blank" rel="noopener"'}>Reply</a>
+          <a href="${escapeHtml(replyUrl)}" ${message.contact_preference === "email" ? "" : 'target="_blank" rel="noopener"'}>${message.contact_preference === "email" ? "Reply to legacy email" : "Open Instagram"}</a>
           <button type="button" data-save-message>Save Request</button>
           <button type="button" data-delete-message>Delete</button>
         </div>
@@ -3655,6 +3760,7 @@ refreshOperations?.addEventListener("click", () => {
   operationsLoaded = false;
   loadOperations();
 });
+runCatalogHealthButton?.addEventListener("click", runCatalogHealth);
 refreshFeedback?.addEventListener("click", loadEbayFeedbackAdmin);
 feedbackFilter?.addEventListener("change", renderEbayFeedbackAdmin);
 refreshFacebookHistoryButton?.addEventListener("click", loadFacebookHistory);
