@@ -107,6 +107,22 @@ const analyticsStatus = document.querySelector("[data-analytics-status]");
 const analyticsRange = document.querySelector("[data-analytics-range]");
 const refreshAnalytics = document.querySelector("[data-refresh-analytics]");
 const exportAnalytics = document.querySelector("[data-export-analytics]");
+const plannerDashboard = document.querySelector("[data-inventory-planner]");
+const plannerStatus = document.querySelector("[data-planner-status]");
+const refreshPlanner = document.querySelector("[data-refresh-planner]");
+const exportPurchase = document.querySelector("[data-export-purchase]");
+const plannerSuppliers = document.querySelector("[data-planner-suppliers]");
+const addPlannerSupplier = document.querySelector("[data-add-planner-supplier]");
+const savePlannerSuppliers = document.querySelector("[data-save-planner-suppliers]");
+const plannerSummary = document.querySelector("[data-planner-summary]");
+const plannerPurchaseSummary = document.querySelector("[data-planner-purchase-summary]");
+const plannerReorders = document.querySelector("[data-planner-reorders]");
+const plannerRisks = document.querySelector("[data-planner-risks]");
+const plannerProfit = document.querySelector("[data-planner-profit]");
+const plannerProducts = document.querySelector("[data-planner-products]");
+const plannerSearch = document.querySelector("[data-planner-search]");
+const plannerRiskFilter = document.querySelector("[data-planner-risk-filter]");
+const plannerSort = document.querySelector("[data-planner-sort]");
 const operationsStatus = document.querySelector("[data-operations-status]");
 const operationsProtection = document.querySelector("[data-operations-protection]");
 const operationsActivity = document.querySelector("[data-operations-activity]");
@@ -147,6 +163,10 @@ let salesLoaded = false;
 let analyticsLoaded = false;
 let analyticsLoading = false;
 let analyticsData = null;
+let plannerLoaded = false;
+let plannerLoading = false;
+let plannerData = null;
+const plannerPurchase = new Map();
 let operationsLoaded = false;
 let salesAnalyticsPanel = document.querySelector("[data-sales-analytics]");
 let quickSaleMatches = [];
@@ -196,6 +216,7 @@ function setAdminTab(tab = "dashboard") {
   });
   if (tab === "sales" && !salesLoaded) loadSales();
   if (tab === "analytics" && !analyticsLoaded) loadAnalytics();
+  if (tab === "planner" && !plannerLoaded) loadInventoryPlanner();
   if (tab === "operations" && !operationsLoaded) loadOperations();
   if (tab === "feedback" && !feedbackLoaded) loadEbayFeedbackAdmin();
   if (tab === "facebook") {
@@ -3852,6 +3873,436 @@ if (addSampleFeedback && ["localhost", "127.0.0.1", "::1", "[::1]"].includes(loc
   addSampleFeedback.hidden = false;
 }
 
+function plannerMoney(value, blank = "—") {
+  if (value === null || value === undefined || value === "") return blank;
+  return Number(value).toLocaleString(undefined, { style: "currency", currency: "USD" });
+}
+
+function plannerPercent(value) {
+  if (value === null || value === undefined) return "—";
+  return `${analyticsNumber(value, 1)}%`;
+}
+
+function plannerTypeLabel(value) {
+  return {
+    fan: "Fan Version",
+    retro_short: "Retro Short Sleeve",
+    retro_long: "Retro Long Sleeve"
+  }[value] || value;
+}
+
+function plannerCustomizationLabel(value) {
+  return value === "nameset_patches" ? "Name + Number + Patches" : "Base";
+}
+
+function plannerRiskLabel(value) {
+  return {
+    sold_out: "Sold out",
+    one_unit: "One unit left",
+    one_size: "One size left",
+    selling_quickly: "Selling quickly",
+    not_selling: "Not selling"
+  }[value] || value;
+}
+
+function renderPlannerSuppliers() {
+  if (!plannerSuppliers || !plannerData) return;
+  const rules = [
+    ["fan:base", "Fan", "Base"],
+    ["fan:nameset_patches", "Fan", "Nameset + patches"],
+    ["retro_short:base", "Retro short", "Base"],
+    ["retro_short:nameset_patches", "Retro short", "Nameset + patches"],
+    ["retro_long:base", "Retro long", "Base"],
+    ["retro_long:nameset_patches", "Retro long", "Nameset + patches"]
+  ];
+  plannerSuppliers.innerHTML = plannerData.suppliers.map((supplier, index) => `
+    <article class="planner-supplier-card" data-planner-supplier="${escapeHtml(supplier.id)}">
+      <div class="planner-supplier-head">
+        <label>
+          <span>Supplier name</span>
+          <input type="text" data-supplier-name value="${escapeHtml(supplier.name)}" maxlength="80">
+        </label>
+        <label class="planner-enabled-toggle">
+          <input type="checkbox" data-supplier-enabled ${supplier.enabled ? "checked" : ""}>
+          <span>Use in comparisons</span>
+        </label>
+      </div>
+      <div class="planner-cost-grid">
+        ${rules.map(([key, type, customization]) => `
+          <label>
+            <span>${escapeHtml(type)} <small>${escapeHtml(customization)}</small></span>
+            <span class="planner-money-input"><i>$</i><input type="number" min="0" step="0.01" data-supplier-rule="${escapeHtml(key)}" value="${supplier.costs?.[key] ?? ""}" placeholder="—"></span>
+          </label>`).join("")}
+      </div>
+    </article>`).join("");
+}
+
+function renderPlannerSummary() {
+  if (!plannerSummary || !plannerData) return;
+  const summary = plannerData.summary || {};
+  const cards = [
+    ["Products", summary.products, "Live inventory"],
+    ["Sold Out", summary.sold_out, "Restock candidates"],
+    ["One Unit Left", summary.one_unit, "Low-stock risk"],
+    ["Suggested Units", summary.suggested_units, "Across recommendations"],
+    ["Suggested Cost", plannerMoney(summary.suggested_supplier_total), "Cheapest suppliers"],
+    ["Expected Profit", plannerMoney(summary.suggested_expected_profit), "If suggestions sell"]
+  ];
+  plannerSummary.innerHTML = cards.map(([label, value, detail], index) => `
+    <article class="${index === cards.length - 1 ? "featured" : ""}">
+      <span>${escapeHtml(label)}</span>
+      <strong>${typeof value === "number" ? analyticsNumber(value) : escapeHtml(value)}</strong>
+      <small>${escapeHtml(detail)}</small>
+    </article>`).join("");
+}
+
+function renderPlannerReorders() {
+  if (!plannerReorders || !plannerData) return;
+  const items = plannerData.reorder_suggestions || [];
+  plannerReorders.innerHTML = items.length ? `
+    <div class="planner-ranked-list">
+      ${items.slice(0, 7).map(product => `
+        <article>
+          <span class="planner-score ${product.demand_score >= 70 ? "hot" : ""}">${analyticsNumber(product.demand_score)}</span>
+          <div><strong>${escapeHtml(product.name)}</strong><small>${escapeHtml(product.demand_label)} demand · ${analyticsNumber(product.inventory_remaining)} in stock</small></div>
+          <span><b>Order ${analyticsNumber(product.recommended_quantity)}</b><small>${plannerMoney(product.expected_profit)} profit</small></span>
+        </article>`).join("")}
+    </div>` : '<p class="analytics-empty">No reorder suggestions yet.</p>';
+}
+
+function renderPlannerRisks() {
+  if (!plannerRisks || !plannerData) return;
+  const products = (plannerData.products || [])
+    .filter(product => product.risks?.length)
+    .sort((a, b) => b.demand_score - a.demand_score)
+    .slice(0, 8);
+  plannerRisks.innerHTML = products.length ? `
+    <div class="planner-risk-list">
+      ${products.map(product => `
+        <article>
+          <div><strong>${escapeHtml(product.name)}</strong><small>${analyticsNumber(product.inventory_remaining)} units · ${escapeHtml(product.available_sizes.join(", ") || "No sizes")}</small></div>
+          <div class="planner-risk-chips">${product.risks.map(risk => `<span class="${escapeHtml(risk)}">${escapeHtml(plannerRiskLabel(risk))}</span>`).join("")}</div>
+        </article>`).join("")}
+    </div>` : '<p class="analytics-empty">No inventory risks detected.</p>';
+}
+
+function renderPlannerProfit() {
+  if (!plannerProfit || !plannerData) return;
+  const analysis = plannerData.profit_analysis || {};
+  const profitList = (title, items) => `
+    <section>
+      <h4>${escapeHtml(title)}</h4>
+      ${(items || []).length ? `<div class="planner-profit-list">${items.map(product => `
+        <article><span>${escapeHtml(product.name)}</span><strong>${plannerMoney(product.gross_profit)}</strong></article>`).join("")}</div>` : '<p class="analytics-empty">Add supplier costs to calculate profit.</p>'}
+    </section>`;
+  plannerProfit.innerHTML = `
+    <div class="planner-profit-grid">
+      ${profitList("Highest profit", analysis.highest)}
+      ${profitList("Lowest profit", analysis.lowest)}
+      <section>
+        <h4>Average profit by group</h4>
+        <div class="planner-profit-list">
+          ${(analysis.averages || []).slice(0, 12).map(group => `
+            <article><span>${escapeHtml(group.name)} <small>${analyticsNumber(group.products)} products</small></span><strong>${plannerMoney(group.average_profit)}</strong></article>`).join("")}
+        </div>
+      </section>
+    </div>`;
+}
+
+function plannerFilteredProducts() {
+  if (!plannerData) return [];
+  const query = String(plannerSearch?.value || "").trim().toLowerCase();
+  const risk = plannerRiskFilter?.value || "all";
+  const sort = plannerSort?.value || "demand";
+  const products = (plannerData.products || []).filter(product => {
+    const matchesSearch = !query || `${product.name} ${product.player} ${product.team_country}`.toLowerCase().includes(query);
+    const matchesRisk = risk === "all"
+      || (risk === "reorder" ? product.recommended_quantity > 0 : product.risks.includes(risk));
+    return matchesSearch && matchesRisk;
+  });
+  const sorters = {
+    demand: (a, b) => b.demand_score - a.demand_score || b.total_sales - a.total_sales,
+    reorder: (a, b) => b.recommended_quantity - a.recommended_quantity || b.demand_score - a.demand_score,
+    profit: (a, b) => Number(b.gross_profit ?? -Infinity) - Number(a.gross_profit ?? -Infinity),
+    inventory: (a, b) => a.inventory_remaining - b.inventory_remaining || b.demand_score - a.demand_score,
+    name: (a, b) => a.name.localeCompare(b.name)
+  };
+  return products.sort(sorters[sort] || sorters.demand);
+}
+
+function plannerTimingLabel(days, neverLabel) {
+  if (days === null || days === undefined) return neverLabel;
+  if (Number(days) === 0) return "Today";
+  return `${analyticsNumber(days)}d ago`;
+}
+
+function renderPlannerProducts() {
+  if (!plannerProducts || !plannerData) return;
+  const products = plannerFilteredProducts();
+  plannerProducts.innerHTML = products.length ? products.map(product => {
+    const purchase = plannerPurchase.get(product.id);
+    const selectedSupplier = purchase?.supplier_id
+      || product.preferred_supplier_id
+      || product.recommended_supplier?.id
+      || product.supplier_options?.[0]?.id
+      || "";
+    const purchaseQuantity = purchase?.quantity || Math.max(1, product.recommended_quantity || 1);
+    const scoreTone = product.demand_score >= 70 ? "hot" : product.demand_score >= 40 ? "warm" : "";
+    return `
+      <article class="planner-product-card ${purchase ? "selected" : ""}" data-planner-product="${escapeHtml(product.id)}">
+        <header class="planner-product-card-head">
+          <label class="planner-product-select">
+            <input type="checkbox" data-planner-select ${purchase ? "checked" : ""} ${product.supplier_options?.length ? "" : "disabled"}>
+            <span>${product.supplier_options?.length ? "Add to purchase list" : "Add supplier cost first"}</span>
+          </label>
+          <span class="planner-demand-badge ${scoreTone}"><b>${product.demand_score >= 85 ? "🔥 " : ""}${analyticsNumber(product.demand_score)}</b><small>${escapeHtml(product.demand_label)} demand</small></span>
+        </header>
+        <div class="planner-product-identity">
+          ${product.photo ? `<img src="${escapeHtml(product.photo)}" alt="">` : ""}
+          <div>
+            <span>${escapeHtml(product.category === "retro" ? "Retro" : "Fan Version")}</span>
+            <h4>${escapeHtml(product.name)}</h4>
+            <p>${escapeHtml([product.player, product.team_country].filter(Boolean).join(" · "))}</p>
+          </div>
+        </div>
+        <div class="planner-price-strip">
+          <article class="supplier"><span>${escapeHtml(product.recommended_supplier?.name || "No supplier")}</span><strong>${plannerMoney(product.supplier_cost)}</strong><small>Supplier cost</small></article>
+          ${["Website", "eBay", "Depop", "Facebook"].map(platform => `
+            <article><span>${escapeHtml(platform)}</span><strong>${plannerMoney(product.prices[platform])}</strong><small>Selling price</small></article>`).join("")}
+        </div>
+        <div class="planner-profit-band">
+          <span><small>Gross profit</small><strong>${plannerMoney(product.gross_profit)}</strong></span>
+          <span><small>Gross margin</small><strong>${plannerPercent(product.gross_profit_percent)}</strong></span>
+          <span><small>Planning price</small><strong>${plannerMoney(product.planning_price)}</strong></span>
+        </div>
+        <div class="planner-metric-grid">
+          <span><small>Inventory</small><b>${analyticsNumber(product.inventory_remaining)}</b></span>
+          <span><small>Sizes</small><b>${escapeHtml(product.available_sizes.join(", ") || "Sold out")}</b></span>
+          <span><small>Views</small><b>${analyticsNumber(product.total_views)}</b></span>
+          <span><small>Clicks</small><b>${analyticsNumber(product.marketplace_clicks)}</b></span>
+          <span><small>Sales</small><b>${analyticsNumber(product.total_sales)}</b></span>
+          <span><small>Conversion</small><b>${plannerPercent(product.conversion_rate)}</b></span>
+          <span><small>Last sale</small><b>${escapeHtml(plannerTimingLabel(product.days_since_last_sale, "No sales"))}</b></span>
+          <span><small>Inventory age</small><b>${analyticsNumber(product.days_in_inventory)}d</b></span>
+          <span><small>Searches</small><b>${analyticsNumber(product.search_frequency)}</b></span>
+          <span><small>Requests</small><b>${analyticsNumber(product.request_count)}</b></span>
+        </div>
+        ${product.risks?.length ? `<div class="planner-risk-chips">${product.risks.map(risk => `<span class="${escapeHtml(risk)}">${escapeHtml(plannerRiskLabel(risk))}</span>`).join("")}</div>` : ""}
+        <div class="planner-reorder-band">
+          <div><small>Recommendation</small><strong>Order ${analyticsNumber(product.recommended_quantity)}</strong><span>${plannerMoney(product.expected_profit)} expected profit</span></div>
+          <label><span>Order qty</span><input type="number" min="1" max="99" step="1" data-planner-quantity value="${purchaseQuantity}"></label>
+          <label><span>Supplier</span><select data-planner-purchase-supplier ${product.supplier_options?.length ? "" : "disabled"}>
+            ${product.supplier_options?.length ? product.supplier_options.map(option => `<option value="${escapeHtml(option.id)}" ${option.id === selectedSupplier ? "selected" : ""}>${escapeHtml(option.name)} · ${plannerMoney(option.cost)}</option>`).join("") : '<option value="">No priced supplier</option>'}
+          </select></label>
+        </div>
+        <details class="planner-product-settings">
+          <summary>Adjust cost classification</summary>
+          <div>
+            <label><span>Jersey type</span><select data-planner-type>
+              <option value="fan" ${product.jersey_type === "fan" ? "selected" : ""}>Fan Version</option>
+              <option value="retro_short" ${product.jersey_type === "retro_short" ? "selected" : ""}>Retro Short Sleeve</option>
+              <option value="retro_long" ${product.jersey_type === "retro_long" ? "selected" : ""}>Retro Long Sleeve</option>
+            </select></label>
+            <label><span>Customization</span><select data-planner-customization>
+              <option value="base" ${product.customization === "base" ? "selected" : ""}>Base</option>
+              <option value="nameset_patches" ${product.customization === "nameset_patches" ? "selected" : ""}>Name + Number + Patches</option>
+            </select></label>
+            <button class="shop-button secondary-admin" type="button" data-save-planner-product>Save</button>
+          </div>
+        </details>
+      </article>`;
+  }).join("") : '<p class="analytics-empty">No jerseys match these planner filters.</p>';
+}
+
+function plannerSelectedRows() {
+  if (!plannerData) return [];
+  return [...plannerPurchase.entries()].map(([productId, purchase]) => {
+    const product = plannerData.products.find(item => item.id === productId);
+    if (!product) return null;
+    const supplier = product.supplier_options.find(option => option.id === purchase.supplier_id)
+      || product.recommended_supplier;
+    const quantity = Math.max(1, Number(purchase.quantity || 1));
+    const cost = Number(supplier?.cost || 0);
+    const revenue = quantity * Number(product.planning_price || 0);
+    const supplierTotal = quantity * cost;
+    return {
+      product,
+      supplier,
+      quantity,
+      unit_cost: cost,
+      supplier_total: supplierTotal,
+      estimated_revenue: revenue,
+      expected_profit: revenue - supplierTotal
+    };
+  }).filter(Boolean);
+}
+
+function renderPlannerPurchaseSummary() {
+  if (!plannerPurchaseSummary) return;
+  const rows = plannerSelectedRows();
+  if (!rows.length) {
+    plannerPurchaseSummary.innerHTML = `
+      <div><span class="section-kicker">Purchase List</span><h3>Nothing selected yet</h3><p>Select jerseys below to build a supplier order.</p></div>`;
+    if (exportPurchase) exportPurchase.disabled = true;
+    return;
+  }
+  const units = rows.reduce((sum, row) => sum + row.quantity, 0);
+  const cost = rows.reduce((sum, row) => sum + row.supplier_total, 0);
+  const revenue = rows.reduce((sum, row) => sum + row.estimated_revenue, 0);
+  const profit = revenue - cost;
+  const margin = revenue > 0 ? profit / revenue * 100 : 0;
+  plannerPurchaseSummary.innerHTML = `
+    <div><span class="section-kicker">Purchase List</span><h3>${analyticsNumber(rows.length)} jerseys selected</h3><p>${analyticsNumber(units)} total units across ${analyticsNumber(new Set(rows.map(row => row.supplier?.id)).size)} supplier${new Set(rows.map(row => row.supplier?.id)).size === 1 ? "" : "s"}.</p></div>
+    <div class="planner-purchase-totals">
+      <span><small>Supplier total</small><strong>${plannerMoney(cost)}</strong></span>
+      <span><small>Estimated revenue</small><strong>${plannerMoney(revenue)}</strong></span>
+      <span><small>Expected profit</small><strong>${plannerMoney(profit)}</strong></span>
+      <span><small>Profit margin</small><strong>${plannerPercent(margin)}</strong></span>
+      <span><small>Units</small><strong>${analyticsNumber(units)}</strong></span>
+    </div>`;
+  if (exportPurchase) exportPurchase.disabled = false;
+}
+
+function renderInventoryPlanner() {
+  renderPlannerSuppliers();
+  renderPlannerSummary();
+  renderPlannerReorders();
+  renderPlannerRisks();
+  renderPlannerProfit();
+  renderPlannerProducts();
+  renderPlannerPurchaseSummary();
+}
+
+async function loadInventoryPlanner() {
+  if (!plannerStatus || plannerLoading) return;
+  plannerLoading = true;
+  plannerStatus.textContent = "Calculating demand, supplier costs, and reorder recommendations...";
+  plannerStatus.className = "form-status";
+  if (refreshPlanner) refreshPlanner.disabled = true;
+  try {
+    plannerData = await api("/api/admin/inventory-planner");
+    for (const productId of [...plannerPurchase.keys()]) {
+      if (!plannerData.products.some(product => product.id === productId)) plannerPurchase.delete(productId);
+    }
+    renderInventoryPlanner();
+    plannerLoaded = true;
+    plannerStatus.textContent = `Planner updated for ${analyticsNumber(plannerData.products.length)} jerseys.`;
+    plannerStatus.classList.add("success");
+  } catch (error) {
+    plannerStatus.textContent = error.message;
+    plannerStatus.classList.add("error");
+  } finally {
+    plannerLoading = false;
+    if (refreshPlanner) refreshPlanner.disabled = false;
+  }
+}
+
+async function savePlannerSupplierSettings() {
+  if (!plannerData || !plannerSuppliers || !savePlannerSuppliers) return;
+  const cards = [...plannerSuppliers.querySelectorAll("[data-planner-supplier]")];
+  const suppliers = cards.map((card, index) => ({
+    id: card.dataset.plannerSupplier || `supplier-${index + 1}`,
+    name: card.querySelector("[data-supplier-name]")?.value.trim() || `Supplier ${index + 1}`,
+    enabled: Boolean(card.querySelector("[data-supplier-enabled]")?.checked),
+    costs: Object.fromEntries([...card.querySelectorAll("[data-supplier-rule]")].map(input => [
+      input.dataset.supplierRule,
+      input.value.trim() === "" ? null : input.value
+    ]))
+  }));
+  savePlannerSuppliers.disabled = true;
+  const original = savePlannerSuppliers.textContent;
+  savePlannerSuppliers.textContent = "Saving...";
+  try {
+    await api("/api/admin/inventory-planner", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "save_suppliers", suppliers })
+    });
+    plannerStatus.textContent = "Supplier pricing saved. Recalculating the planner...";
+    plannerStatus.className = "form-status success";
+    plannerLoaded = false;
+    await loadInventoryPlanner();
+  } catch (error) {
+    plannerStatus.textContent = error.message;
+    plannerStatus.className = "form-status error";
+  } finally {
+    savePlannerSuppliers.disabled = false;
+    savePlannerSuppliers.textContent = original;
+  }
+}
+
+async function savePlannerProductSettings(card) {
+  const productId = card?.dataset.plannerProduct;
+  const button = card?.querySelector("[data-save-planner-product]");
+  if (!productId || !button) return;
+  button.disabled = true;
+  button.textContent = "Saving...";
+  try {
+    await api("/api/admin/inventory-planner", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "save_override",
+        product_id: productId,
+        jersey_type: card.querySelector("[data-planner-type]")?.value,
+        customization: card.querySelector("[data-planner-customization]")?.value,
+        preferred_supplier_id: card.querySelector("[data-planner-purchase-supplier]")?.value || ""
+      })
+    });
+    plannerStatus.textContent = "Jersey cost classification saved.";
+    plannerStatus.className = "form-status success";
+    plannerLoaded = false;
+    await loadInventoryPlanner();
+  } catch (error) {
+    plannerStatus.textContent = error.message;
+    plannerStatus.className = "form-status error";
+  } finally {
+    button.disabled = false;
+    button.textContent = "Save";
+  }
+}
+
+function addInventoryPlannerSupplier() {
+  if (!plannerData) return;
+  const nextNumber = plannerData.suppliers.length + 1;
+  plannerData.suppliers.push({
+    id: `supplier-${Date.now()}`,
+    name: `Supplier ${nextNumber}`,
+    enabled: false,
+    sort_order: nextNumber * 10,
+    costs: {}
+  });
+  renderPlannerSuppliers();
+  plannerSuppliers.querySelector("[data-planner-supplier]:last-child [data-supplier-name]")?.focus();
+}
+
+function exportPlannerPurchaseCsv() {
+  const rows = plannerSelectedRows();
+  if (!rows.length) return;
+  const csvRows = [
+    ["Product ID", "Jersey", "Supplier", "Quantity", "Unit Cost", "Supplier Total", "Estimated Revenue", "Expected Profit", "Profit Margin"],
+    ...rows.map(row => [
+      row.product.id,
+      row.product.name,
+      row.supplier?.name || "",
+      row.quantity,
+      row.unit_cost.toFixed(2),
+      row.supplier_total.toFixed(2),
+      row.estimated_revenue.toFixed(2),
+      row.expected_profit.toFixed(2),
+      row.estimated_revenue > 0 ? `${(row.expected_profit / row.estimated_revenue * 100).toFixed(1)}%` : "0%"
+    ])
+  ];
+  const csv = csvRows.map(row => row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(",")).join("\r\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `jerseysfrmjb-purchase-plan-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 previewRestock?.addEventListener("click", previewBulkRestock);
 applyRestock?.addEventListener("click", applyBulkRestock);
 undoRestock?.addEventListener("click", undoLastRestock);
@@ -4034,6 +4485,54 @@ adminTabs.forEach(button => {
   button.addEventListener("click", () => setAdminTab(button.dataset.adminTab || "dashboard"));
 });
 adminMobileTab?.addEventListener("change", () => setAdminTab(adminMobileTab.value || currentAdminTab));
+refreshPlanner?.addEventListener("click", () => {
+  plannerLoaded = false;
+  loadInventoryPlanner();
+});
+savePlannerSuppliers?.addEventListener("click", savePlannerSupplierSettings);
+addPlannerSupplier?.addEventListener("click", addInventoryPlannerSupplier);
+exportPurchase?.addEventListener("click", exportPlannerPurchaseCsv);
+plannerSearch?.addEventListener("input", renderPlannerProducts);
+plannerRiskFilter?.addEventListener("change", renderPlannerProducts);
+plannerSort?.addEventListener("change", renderPlannerProducts);
+plannerProducts?.addEventListener("change", event => {
+  const card = event.target.closest("[data-planner-product]");
+  if (!card || !plannerData) return;
+  const productId = card.dataset.plannerProduct;
+  const product = plannerData.products.find(item => item.id === productId);
+  if (!product) return;
+  if (event.target.matches("[data-planner-select]")) {
+    if (event.target.checked) {
+      plannerPurchase.set(productId, {
+        quantity: Math.max(1, Number(card.querySelector("[data-planner-quantity]")?.value || product.recommended_quantity || 1)),
+        supplier_id: card.querySelector("[data-planner-purchase-supplier]")?.value || product.recommended_supplier?.id || ""
+      });
+    } else {
+      plannerPurchase.delete(productId);
+    }
+    card.classList.toggle("selected", event.target.checked);
+  }
+  if (event.target.matches("[data-planner-quantity], [data-planner-purchase-supplier]") && plannerPurchase.has(productId)) {
+    plannerPurchase.set(productId, {
+      quantity: Math.max(1, Number(card.querySelector("[data-planner-quantity]")?.value || 1)),
+      supplier_id: card.querySelector("[data-planner-purchase-supplier]")?.value || ""
+    });
+  }
+  renderPlannerPurchaseSummary();
+});
+plannerProducts?.addEventListener("input", event => {
+  if (!event.target.matches("[data-planner-quantity]")) return;
+  const card = event.target.closest("[data-planner-product]");
+  if (!card || !plannerPurchase.has(card.dataset.plannerProduct)) return;
+  const current = plannerPurchase.get(card.dataset.plannerProduct);
+  current.quantity = Math.max(1, Number(event.target.value || 1));
+  plannerPurchase.set(card.dataset.plannerProduct, current);
+  renderPlannerPurchaseSummary();
+});
+plannerProducts?.addEventListener("click", event => {
+  const save = event.target.closest("[data-save-planner-product]");
+  if (save) savePlannerProductSettings(save.closest("[data-planner-product]"));
+});
 refreshSales?.addEventListener("click", loadSales);
 refreshAnalytics?.addEventListener("click", loadAnalytics);
 analyticsRange?.addEventListener("change", () => {

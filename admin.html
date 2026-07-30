@@ -6,8 +6,8 @@
   <title>Inventory Admin | JerseysFrmJB</title>
   <meta name="robots" content="noindex,nofollow">
   <link rel="icon" href="assets/jerseysfrmjb-logo.jpg" type="image/jpeg">
-  <link rel="stylesheet" href="styles.css?v=requests-help-1">
-  <script src="admin.js?v=requests-help-1" defer></script>
+  <link rel="stylesheet" href="styles.css?v=inventory-planner-1">
+  <script src="admin.js?v=inventory-planner-1" defer></script>
 </head>
 <body class="admin-body">
   <main class="admin-shell">
@@ -34,6 +34,7 @@
       <nav class="admin-section-tabs" aria-label="Admin sections">
         <button class="active" type="button" data-admin-tab="dashboard">Dashboard</button>
         <button type="button" data-admin-tab="analytics">Analytics</button>
+        <button type="button" data-admin-tab="planner">Inventory Planner</button>
         <button type="button" data-admin-tab="operations">Operations</button>
         <button type="button" data-admin-tab="inventory">Inventory</button>
         <button type="button" data-admin-tab="bulk">Bulk Restock</button>
@@ -49,6 +50,7 @@
         <select data-admin-mobile-tab aria-label="Admin section">
           <option value="dashboard">Dashboard</option>
           <option value="analytics">Analytics</option>
+          <option value="planner">Inventory Planner</option>
           <option value="operations">Operations</option>
           <option value="inventory">Inventory</option>
           <option value="bulk">Bulk Restock</option>
@@ -91,6 +93,96 @@
         </header>
         <p class="form-status" data-analytics-status role="status">Open Analytics to load the dashboard.</p>
         <div class="analytics-dashboard" data-analytics-dashboard></div>
+      </section>
+
+      <section class="inventory-planner-panel" data-admin-section="planner" aria-label="Inventory purchase planner" hidden>
+        <header class="inventory-planner-head">
+          <div>
+            <span class="section-kicker">Demand, Cost &amp; Profit</span>
+            <h2>Inventory Planner</h2>
+            <p>Use real shopper interest, marketplace clicks, sales, stock, and supplier pricing to plan the next purchase.</p>
+          </div>
+          <div class="inventory-planner-actions">
+            <button class="shop-button secondary-admin" type="button" data-refresh-planner>Refresh</button>
+            <button class="shop-button secondary-admin" type="button" data-export-purchase disabled>Export Purchase CSV</button>
+          </div>
+        </header>
+        <p class="form-status" data-planner-status role="status">Open Inventory Planner to load recommendations.</p>
+
+        <div data-inventory-planner>
+          <section class="planner-settings-card">
+            <details>
+              <summary>
+                <span>
+                  <small>Admin Settings</small>
+                  <strong>Supplier Pricing</strong>
+                </span>
+                <span>Edit costs and compare suppliers</span>
+              </summary>
+              <div class="planner-settings-intro">
+                <p>Retro jerseys default to nameset and patches. Product-level type and customization can be changed on any jersey card.</p>
+                <button class="shop-button secondary-admin" type="button" data-add-planner-supplier>Add Supplier</button>
+              </div>
+              <div class="planner-supplier-grid" data-planner-suppliers></div>
+              <button class="shop-button" type="button" data-save-planner-suppliers>Save Supplier Settings</button>
+            </details>
+          </section>
+
+          <div class="planner-summary-grid" data-planner-summary></div>
+
+          <section class="planner-purchase-summary" data-planner-purchase-summary>
+            <div>
+              <span class="section-kicker">Purchase List</span>
+              <h3>Nothing selected yet</h3>
+              <p>Select jerseys below to build a supplier order.</p>
+            </div>
+          </section>
+
+          <div class="planner-insight-grid">
+            <section class="planner-panel-card">
+              <header><div><span class="section-kicker">Reorder</span><h3>Top Suggestions</h3></div></header>
+              <div data-planner-reorders></div>
+            </section>
+            <section class="planner-panel-card">
+              <header><div><span class="section-kicker">Inventory Risk</span><h3>Needs Attention</h3></div></header>
+              <div data-planner-risks></div>
+            </section>
+          </div>
+
+          <section class="planner-panel-card planner-profit-panel">
+            <header><div><span class="section-kicker">Profit Analysis</span><h3>Profit Leaders &amp; Averages</h3></div></header>
+            <div data-planner-profit></div>
+          </section>
+
+          <section class="planner-products-section">
+            <header class="planner-products-head">
+              <div>
+                <span class="section-kicker">All Jerseys</span>
+                <h3>Product Planning Cards</h3>
+              </div>
+              <div class="planner-filters">
+                <input type="search" data-planner-search placeholder="Search jersey, player, team, or country">
+                <select data-planner-risk-filter aria-label="Filter planner products">
+                  <option value="all">All inventory</option>
+                  <option value="reorder">Reorder suggested</option>
+                  <option value="sold_out">Sold out</option>
+                  <option value="one_unit">One unit left</option>
+                  <option value="one_size">One size left</option>
+                  <option value="selling_quickly">Selling quickly</option>
+                  <option value="not_selling">Not selling</option>
+                </select>
+                <select data-planner-sort aria-label="Sort planner products">
+                  <option value="demand">Highest demand</option>
+                  <option value="reorder">Largest reorder</option>
+                  <option value="profit">Highest profit</option>
+                  <option value="inventory">Lowest inventory</option>
+                  <option value="name">Jersey name</option>
+                </select>
+              </div>
+            </header>
+            <div class="planner-product-grid" data-planner-products></div>
+          </section>
+        </div>
       </section>
 
       <section class="admin-operations-panel" data-admin-section="operations" aria-label="Operations and protection" hidden>
