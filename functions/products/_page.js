@@ -453,7 +453,7 @@ function relatedProductsMarkup(products = []) {
           return `
             <article>
               <a class="product-related-image" href="${escapeHtml(product.canonicalUrl)}"><img src="${escapeHtml(product.images.front.src)}" alt="${escapeHtml(product.images.front.alt)}" title="${escapeHtml(product.images.front.alt)}" width="1280" height="1280" loading="lazy" decoding="async"></a>
-              <div><span>${escapeHtml(product.category.label)}</span><h3><a href="${escapeHtml(product.canonicalUrl)}">${escapeHtml(product.title)}</a></h3>${prices ? `<p>${escapeHtml(prices)}</p>` : ""}</div>
+              <div><span>${escapeHtml(product.category.label)}</span><h3><a href="${escapeHtml(product.canonicalUrl)}">${escapeHtml(product.title)}</a></h3><a class="product-details-button" href="${escapeHtml(product.canonicalUrl)}" aria-label="View jersey details for ${escapeHtml(product.title)}">View Jersey Details <span aria-hidden="true">&rarr;</span></a>${prices ? `<p>${escapeHtml(prices)}</p>` : ""}</div>
             </article>`;
         }).join("")}
       </div>

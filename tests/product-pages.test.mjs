@@ -11,6 +11,8 @@ import { onRequestGet as getProductPage } from "../functions/products/[slug].js"
 
 const workspace = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const inventory = JSON.parse(await readFile(path.join(workspace, "data", "inventory.json"), "utf8"));
+const storefrontSource = await readFile(path.join(workspace, "storefront.js"), "utf8");
+const seoSource = await readFile(path.join(workspace, "functions", "_seo.js"), "utf8");
 
 function productRow(item, overrides = {}) {
   return {
@@ -136,6 +138,9 @@ assert.match(inStockHtml, new RegExp(`data-product-id="${inStockModel.id}"`));
 assert.match(inStockHtml, /\/meta-pixel\.js\?v=1/);
 assert.match(inStockHtml, /Buy on Depop/);
 assert.match(inStockHtml, /Buy on eBay/);
+assert.match(storefrontSource, /class="product-details-button"/);
+assert.match(storefrontSource, /View Jersey Details/);
+assert.match(seoSource, /class="product-details-button"/);
 assert.match(inStockHtml, />Front<\/figcaption>/);
 assert.match(inStockHtml, />Back<\/figcaption>/);
 assert.match(inStockHtml, />Player<\/dt>/);

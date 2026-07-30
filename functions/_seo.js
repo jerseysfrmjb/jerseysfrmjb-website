@@ -359,6 +359,7 @@ function productCard(product) {
       <div class="seo-product-card-copy">
         <span>${escapeHtml(product.category.label)}</span>
         <h2><a href="${escapeHtml(product.canonicalUrl)}">${escapeHtml(product.title)}</a></h2>
+        <a class="product-details-button" href="${escapeHtml(product.canonicalUrl)}" aria-label="View jersey details for ${escapeHtml(product.title)}">View Jersey Details <span aria-hidden="true">&rarr;</span></a>
         <p>${product.available ? `Available sizes: ${escapeHtml(sizes)}` : "Sold out"}</p>
         ${prices ? `<strong>${escapeHtml(prices)}</strong>` : ""}
       </div>

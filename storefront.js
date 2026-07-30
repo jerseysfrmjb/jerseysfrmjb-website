@@ -496,6 +496,7 @@ function renderProductCard(item) {
       <p class="notice category-notice">${escapeHtml(categoryLabel(item.category))}</p>
       ${available ? "" : '<p class="notice sold">Out of Stock</p>'}
       <h2><a class="product-title-link" href="${escapeHtml(productDetailsUrl(item.id))}">${escapeHtml(item.name)}</a></h2>
+      <a class="product-details-button" href="${escapeHtml(productDetailsUrl(item.id))}" aria-label="View jersey details for ${escapeHtml(item.name)}">View Jersey Details <span aria-hidden="true">&rarr;</span></a>
       <p data-card-size>${escapeHtml(sizes)}</p>
       ${renderPlatformAvailability(item, available)}
     </article>`;
@@ -511,6 +512,7 @@ function renderFeaturedCard(item, index) {
       <div class="featured-copy">
         <span>FEATURED JERSEY ${String(index + 1).padStart(2, "0")}</span>
         <h3><a class="product-title-link" href="${escapeHtml(productDetailsUrl(item.id))}">${escapeHtml(item.name)}</a></h3>
+        <a class="product-details-button" href="${escapeHtml(productDetailsUrl(item.id))}" aria-label="View jersey details for ${escapeHtml(item.name)}">View Jersey Details <span aria-hidden="true">&rarr;</span></a>
         <div class="featured-meta"><p>${escapeHtml(displaySize(item))}</p></div>
         ${renderPlatformAvailability(item, available)}
       </div>
