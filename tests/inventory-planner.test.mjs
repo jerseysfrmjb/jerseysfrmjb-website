@@ -44,6 +44,8 @@ assert.match(api, /request_count/);
 assert.match(api, /days_since_last_sale/);
 assert.match(api, /days_in_inventory/);
 assert.match(styles, /\.planner-product-grid/);
+assert.match(styles, /\.planner-order-table[\s\S]*grid-template-columns:\s*repeat\(12/);
+assert.doesNotMatch(styles, /\.planner-order-table-wrap\s*\{[^}]*overflow-x:\s*auto/);
 assert.match(styles, /@media \(max-width: 720px\)/);
 assert.match(styles, /@media \(prefers-color-scheme: dark\)/);
 
