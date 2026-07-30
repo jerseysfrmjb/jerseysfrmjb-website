@@ -660,10 +660,13 @@ export function renderProductPage(model) {
     </article>
     <section class="product-page-support">
       <div>
-        <span>Need measurements?</span>
-        <h2>Check the size guide before buying.</h2>
+        <span>Questions or requests?</span>
+        <h2>Get sizing help or request this jersey.</h2>
       </div>
-      <a href="/size-guide">Open Size Guide</a>
+      <div class="product-page-support-actions">
+        <a href="/size-guide">Open Size Guide</a>
+        <button type="button" data-open-help data-help-request-type="jersey_request">Request This Jersey</button>
+      </div>
     </section>
     ${relatedProductsMarkup(model.relatedProducts)}
     <section class="seo-faq product-faq" aria-labelledby="product-faq-heading">

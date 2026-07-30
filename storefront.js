@@ -894,59 +894,83 @@ function createHelpWidget() {
   widget.className = "help-widget";
   widget.innerHTML = `
     <button class="help-widget-button" type="button" aria-expanded="false">
-      <span>Need Help?</span>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4 5 6l-3 4 3 2 2-2v10h10V10l2 2 3-2-3-4-3-2c-.8 1.2-2.2 2-4 2S8.8 5.2 8 4Z"></path></svg>
+      <span>Request a Jersey</span>
     </button>
     <div class="help-widget-overlay" data-help-overlay hidden></div>
-    <section class="help-widget-panel" aria-label="Message JerseysFrmJB" hidden>
+    <section class="help-widget-panel" aria-label="JerseysFrmJB requests and help" hidden>
       <div class="help-widget-head">
         <div>
-          <span>Quick Message</span>
-          <h2>Need Help?</h2>
+          <span>Requests &amp; Help</span>
+          <h2>How can we help?</h2>
         </div>
         <button class="help-widget-close" type="button" aria-label="Close message form">&times;</button>
       </div>
-      <p class="help-widget-copy">Send your jersey request or question here. Replies are sent through Instagram, so please follow @jerseysfrmjb and enter the username we should message.</p>
-      <a class="help-instagram-link" href="${instagramUrl}" target="_blank" rel="noopener">Follow @jerseysfrmjb on Instagram</a>
+      <p class="help-widget-copy">Looking for a jersey, restock, size, or order help? Choose what you need and send a quick request.</p>
+      <div class="help-instagram-note">
+        <span aria-hidden="true">IG</span>
+        <div><strong>Replies are sent on Instagram</strong><small>Follow @jerseysfrmjb so we can message you.</small></div>
+        <a href="${instagramUrl}" target="_blank" rel="noopener">Follow</a>
+      </div>
       <form class="help-widget-form" data-help-form>
         <input type="text" name="website" autocomplete="off" tabindex="-1" aria-hidden="true">
         <input type="hidden" name="product_id">
         <input type="hidden" name="product_name">
-        <label>What can I help with?
-          <select name="request_type">
-            <option value="jersey_request">Request a jersey</option>
-            <option value="restock_request">Restock request</option>
-            <option value="size_question">Sizing question</option>
-            <option value="order_help">Order help</option>
-            <option value="other">Other</option>
-          </select>
-        </label>
+        <input type="hidden" name="request_type" value="">
         <input type="hidden" name="contact_preference" value="instagram">
-        <label>Instagram username <small>(where the reply will be sent)</small>
-          <input name="instagram_username" type="text" placeholder="@username" autocomplete="username" required>
-        </label>
-        <label>Jersey or request
-          <input name="jersey_request" type="text" placeholder="Example: Messi Argentina Home" required>
-        </label>
-        <label>Size <small>(optional)</small>
-          <input name="size" type="text" placeholder="Example: M">
-        </label>
-        <label>Preferred marketplace <small>(optional)</small>
-          <select name="marketplace_preference">
-            <option value="">No preference</option>
-            <option value="eBay">eBay</option>
-            <option value="Depop">Depop</option>
-            <option value="Other">Other</option>
-          </select>
-        </label>
-        <label>Message
-          <textarea name="message" rows="4" placeholder="What do you need help with?" required></textarea>
-        </label>
-        <button class="help-submit" type="submit">Send Message</button>
-        <p class="help-widget-status" data-help-status role="status"></p>
+        <aside class="help-product-context" data-help-product-context hidden>
+          <img src="" alt="" data-help-product-image>
+          <div><small>Selected jersey</small><strong data-help-product-name></strong></div>
+          <button type="button" data-help-clear-product aria-label="Remove selected jersey">&times;</button>
+        </aside>
+        <fieldset class="help-request-chooser">
+          <legend>What do you need?</legend>
+          <div class="help-request-choices">
+            <button type="button" data-help-request-type="jersey_request" aria-pressed="false"><span aria-hidden="true">+</span><strong>Request a Jersey</strong><small>Ask for a player, team, or season</small></button>
+            <button type="button" data-help-request-type="restock_request" aria-pressed="false"><span aria-hidden="true">&#8635;</span><strong>Restock Request</strong><small>Tell us what should come back</small></button>
+            <button type="button" data-help-request-type="size_question" aria-pressed="false"><span aria-hidden="true">&#8596;</span><strong>Sizing Help</strong><small>Get help choosing your size</small></button>
+            <button type="button" data-help-request-type="order_help" aria-pressed="false"><span aria-hidden="true">#</span><strong>Order Help</strong><small>Ask about an existing purchase</small></button>
+          </div>
+        </fieldset>
+        <div class="help-request-details" data-help-details hidden>
+          <label>Instagram username <small>(where the reply will be sent)</small>
+            <input name="instagram_username" type="text" placeholder="@username" autocomplete="username" required>
+          </label>
+          <label data-help-jersey-field><span data-help-jersey-label>Jersey or request</span>
+            <input name="jersey_request" type="text" placeholder="Example: Messi Argentina Home" required>
+          </label>
+          <label data-help-size-field>Size <small>(optional)</small>
+            <input name="size" type="text" placeholder="Example: M">
+          </label>
+          <label data-help-marketplace-field>Preferred marketplace <small>(optional)</small>
+            <select name="marketplace_preference">
+              <option value="">No preference</option>
+              <option value="eBay">eBay</option>
+              <option value="Depop">Depop</option>
+              <option value="Other">Other</option>
+            </select>
+          </label>
+          <label>Message
+            <textarea name="message" rows="4" placeholder="Tell us what you are looking for." required></textarea>
+          </label>
+          <button class="help-submit" type="submit">Send Request</button>
+          <p class="help-widget-status" data-help-status role="status"></p>
+        </div>
       </form>
       <div class="help-widget-success" data-help-success hidden>
+        <span class="help-success-icon" aria-hidden="true">&#10003;</span>
+        <h3>Request received</h3>
         <p data-help-success-message>Thanks! Your request has been received.</p>
-        <a class="help-instagram-link" href="${instagramUrl}" target="_blank" rel="noopener">Open Instagram</a>
+        <dl class="help-success-summary">
+          <div><dt>Request</dt><dd data-help-success-id></dd></div>
+          <div><dt>Type</dt><dd data-help-success-type></dd></div>
+          <div><dt>Jersey / order</dt><dd data-help-success-jersey></dd></div>
+          <div><dt>Instagram</dt><dd data-help-success-instagram></dd></div>
+        </dl>
+        <div class="help-success-actions">
+          <a class="help-instagram-link" href="${instagramUrl}" target="_blank" rel="noopener">Open Instagram</a>
+          <button type="button" data-help-send-another>Send Another Request</button>
+        </div>
       </div>
     </section>
   `;
@@ -962,17 +986,132 @@ function createHelpWidget() {
   const success = widget.querySelector("[data-help-success]");
   const submit = widget.querySelector(".help-submit");
   const successMessage = widget.querySelector("[data-help-success-message]");
+  const successId = widget.querySelector("[data-help-success-id]");
+  const successType = widget.querySelector("[data-help-success-type]");
+  const successJersey = widget.querySelector("[data-help-success-jersey]");
+  const successInstagram = widget.querySelector("[data-help-success-instagram]");
+  const sendAnother = widget.querySelector("[data-help-send-another]");
+  const requestTypeInput = form.elements.request_type;
+  const requestTypeButtons = [...widget.querySelectorAll("[data-help-request-type]")];
+  const requestDetails = widget.querySelector("[data-help-details]");
+  const jerseyLabel = widget.querySelector("[data-help-jersey-label]");
+  const sizeField = widget.querySelector("[data-help-size-field]");
+  const marketplaceField = widget.querySelector("[data-help-marketplace-field]");
+  const productContext = widget.querySelector("[data-help-product-context]");
+  const productImage = widget.querySelector("[data-help-product-image]");
+  const productName = widget.querySelector("[data-help-product-name]");
+  const clearProduct = widget.querySelector("[data-help-clear-product]");
   const defaultSubmitText = submit.textContent;
   let sent = false;
   let submitting = false;
   let touchStartY = 0;
   const pageProducts = [...document.querySelectorAll("[data-meta-product]")];
-  if (pageProducts.length === 1) {
-    const product = pageProducts[0];
-    form.elements.product_id.value = product.dataset.productId || "";
-    form.elements.product_name.value = product.dataset.productName || "";
-    form.elements.jersey_request.value = product.dataset.productName || "";
+  const pageProduct = pageProducts.length === 1 ? pageProducts[0] : null;
+  const requestTypes = {
+    jersey_request: {
+      label: "Jersey you’re looking for",
+      placeholder: "Example: Messi Argentina Home",
+      message: "Tell us the player, team, season, or version you want.",
+      size: true,
+      marketplace: true
+    },
+    restock_request: {
+      label: "Jersey to restock",
+      placeholder: "Choose the selected jersey or enter another",
+      message: "Tell us which size you need and any other details.",
+      size: true,
+      marketplace: true
+    },
+    size_question: {
+      label: "Jersey you need sizing help with",
+      placeholder: "Choose the selected jersey or enter its name",
+      message: "Share your usual size or the fit you prefer.",
+      size: true,
+      marketplace: false
+    },
+    order_help: {
+      label: "Order or jersey",
+      placeholder: "Example: eBay order or jersey name",
+      message: "Tell us where you ordered and what you need help with. Do not include payment details.",
+      size: false,
+      marketplace: false
+    }
+  };
+
+  function pageProductImage(product) {
+    if (!product) return null;
+    return product.querySelector("img")
+      || product.closest(".product-landing-card")?.querySelector(".product-detail-gallery img")
+      || product.closest("article")?.querySelector("img");
   }
+
+  function applyProductContext(product = pageProduct) {
+    const id = product?.dataset.productId || "";
+    const name = product?.dataset.productName || "";
+    const image = pageProductImage(product);
+    form.elements.product_id.value = id;
+    form.elements.product_name.value = name;
+    if (name) form.elements.jersey_request.value = name;
+    productContext.hidden = !name;
+    productName.textContent = name;
+    if (image?.src) {
+      productImage.src = image.currentSrc || image.src;
+      productImage.alt = name ? `${name} product photo` : "Selected jersey";
+      productImage.hidden = false;
+    } else {
+      productImage.removeAttribute("src");
+      productImage.alt = "";
+      productImage.hidden = true;
+    }
+  }
+
+  function clearProductContext() {
+    form.elements.product_id.value = "";
+    form.elements.product_name.value = "";
+    form.elements.jersey_request.value = "";
+    productContext.hidden = true;
+    productImage.removeAttribute("src");
+    productImage.alt = "";
+  }
+
+  function chooseRequestType(type, focusDetails = true) {
+    const config = requestTypes[type];
+    if (!config) return;
+    requestTypeInput.value = type;
+    requestTypeButtons.forEach(button => {
+      const selected = button.dataset.helpRequestType === type;
+      button.classList.toggle("active", selected);
+      button.setAttribute("aria-pressed", String(selected));
+    });
+    jerseyLabel.textContent = config.label;
+    form.elements.jersey_request.placeholder = config.placeholder;
+    form.elements.message.placeholder = config.message;
+    sizeField.hidden = !config.size;
+    marketplaceField.hidden = !config.marketplace;
+    if (!config.size) form.elements.size.value = "";
+    if (!config.marketplace) form.elements.marketplace_preference.value = "";
+    requestDetails.hidden = false;
+    if (focusDetails) {
+      window.setTimeout(() => form.elements.instagram_username.focus(), 80);
+    }
+  }
+
+  function resetRequestFlow() {
+    sent = false;
+    form.reset();
+    form.hidden = false;
+    success.hidden = true;
+    requestDetails.hidden = true;
+    requestTypeButtons.forEach(button => {
+      button.classList.remove("active");
+      button.setAttribute("aria-pressed", "false");
+    });
+    status.textContent = "";
+    status.className = "help-widget-status";
+    applyProductContext();
+  }
+
+  applyProductContext();
 
   function setOpen(open) {
     panel.hidden = !open;
@@ -981,7 +1120,11 @@ function createHelpWidget() {
     widget.classList.toggle("open", open);
     document.body.classList.toggle("help-modal-open", open);
     if (open) {
-      window.setTimeout(() => form.querySelector("input[name='instagram_username']")?.focus(), 80);
+      window.setTimeout(() => {
+        if (sent) sendAnother?.focus();
+        else if (requestDetails.hidden) requestTypeButtons[0]?.focus();
+        else form.elements.instagram_username?.focus();
+      }, 80);
     }
   }
 
@@ -990,7 +1133,19 @@ function createHelpWidget() {
     button.addEventListener("click", event => {
       event.preventDefault();
       setOpen(true);
+      const label = String(button.textContent || "").toLowerCase();
+      const requestedType = button.dataset.helpRequestType
+        || (label.includes("jersey") || label.includes("request") ? "jersey_request" : "");
+      if (requestedType) chooseRequestType(requestedType, true);
     });
+  });
+  requestTypeButtons.forEach(button => {
+    button.addEventListener("click", () => chooseRequestType(button.dataset.helpRequestType));
+  });
+  clearProduct?.addEventListener("click", clearProductContext);
+  sendAnother?.addEventListener("click", () => {
+    resetRequestFlow();
+    requestTypeButtons[0]?.focus();
   });
   close.addEventListener("click", () => setOpen(false));
   overlay.addEventListener("click", () => setOpen(false));
@@ -1014,6 +1169,12 @@ function createHelpWidget() {
   form.addEventListener("submit", async event => {
     event.preventDefault();
     if (sent || submitting) return;
+    if (!requestTypes[requestTypeInput.value]) {
+      status.textContent = "Choose what you need help with first.";
+      status.className = "help-widget-status error";
+      requestTypeButtons[0]?.focus();
+      return;
+    }
 
     status.textContent = "Sending...";
     status.className = "help-widget-status";
@@ -1039,6 +1200,10 @@ function createHelpWidget() {
       successMessage.textContent = data.request_id
         ? `Thanks! Request #${data.request_id} has been received. I’ll reply to your Instagram account.`
         : "Thanks! Your request has been received. I’ll reply to your Instagram account.";
+      successId.textContent = data.request_id ? `#${data.request_id}` : "Submitted";
+      successType.textContent = requestTypeButtons.find(button => button.dataset.helpRequestType === body.request_type)?.querySelector("strong")?.textContent || "Customer request";
+      successJersey.textContent = body.jersey_request || "Not specified";
+      successInstagram.textContent = `@${String(body.instagram_username || "").replace(/^@+/, "")}`;
     } catch (error) {
       status.textContent = error.message || "Message could not send right now. Please try again.";
       status.classList.add("error");

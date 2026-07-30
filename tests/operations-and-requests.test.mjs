@@ -17,7 +17,8 @@ const [
   schema,
   migration,
   workflow,
-  backupScript
+  backupScript,
+  productPage
 ] = await Promise.all([
   read("admin.html"),
   read("admin.js"),
@@ -29,7 +30,8 @@ const [
   read("schema.sql"),
   read("migrations/0011_operations_requests_attribution.sql"),
   read(".github/workflows/weekly-d1-backup.yml"),
-  read("scripts/export-d1-backup.mjs")
+  read("scripts/export-d1-backup.mjs"),
+  read("functions/products/_page.js")
 ]);
 
 assert.match(adminHtml, /data-admin-tab="operations"/);
@@ -71,6 +73,15 @@ assert.doesNotMatch(storefront, /<option value="email">Email<\/option>/);
 assert.doesNotMatch(storefront, /<option value="Facebook">Facebook<\/option>/);
 assert.doesNotMatch(storefront, /<option value="Website">Website<\/option>/);
 assert.match(storefront, /data-help-success-message/);
+assert.match(storefront, /Requests &amp; Help/);
+assert.match(storefront, /data-help-request-type="jersey_request"/);
+assert.match(storefront, /data-help-request-type="restock_request"/);
+assert.match(storefront, /data-help-request-type="size_question"/);
+assert.match(storefront, /data-help-request-type="order_help"/);
+assert.match(storefront, /data-help-product-context/);
+assert.match(storefront, /Replies are sent on Instagram/);
+assert.match(adminHtml, /Customer Requests/);
+assert.match(productPage, /data-help-request-type="jersey_request"/);
 assert.match(messagesApi, /const contact_preference = "instagram"/);
 assert.match(messagesApi, /new Set\(\["", "eBay", "Depop", "Other"\]\)/);
 assert.match(messagesApi, /request_id/);

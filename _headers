@@ -6,6 +6,8 @@
   Cache-Control: no-store, no-cache, must-revalidate
 /storefront.js
   Cache-Control: no-store, no-cache, must-revalidate
+/styles.css
+  Cache-Control: no-cache, must-revalidate
 /meta-pixel.js
   Cache-Control: no-store, no-cache, must-revalidate
 /analytics.js
