@@ -53,6 +53,7 @@ assert.match(workflow, /schedule:/);
 assert.match(workflow, /upload-artifact@v4/);
 assert.match(workflow, /CLOUDFLARE_D1_DATABASE_ID/);
 assert.match(backupScript, /\/export/);
+assert.match(backupScript, /result\?\.result\?\.signed_url/);
 assert.match(backupScript, /inventory\.quantity/);
 
 assert.match(storefront, /name="request_type"/);

@@ -41,8 +41,9 @@ let completed;
 for (let attempt = 0; attempt < 30; attempt += 1) {
   const result = await cloudflare("/export", { current_bookmark: started.at_bookmark });
   if (result?.status === "error") throw new Error(result.error || "D1 export failed.");
-  if (result?.signed_url) {
-    completed = result;
+  const signedUrl = result?.signed_url || result?.result?.signed_url;
+  if (signedUrl) {
+    completed = { ...result, signed_url: signedUrl };
     break;
   }
   await wait(5000);
