@@ -39,7 +39,7 @@ async function sendDiscordNotification(env, data) {
     },
     embeds: [
       {
-        title: "New Need Help Message",
+        title: "New Customer Request",
         color: 8130609,
         ...(profileUrl ? { url: profileUrl } : {}),
         timestamp: data.submitted_at,

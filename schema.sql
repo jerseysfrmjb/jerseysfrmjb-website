@@ -70,9 +70,9 @@ INSERT OR IGNORE INTO site_settings (key, value) VALUES ('hide_sold_out_featured
 INSERT OR IGNORE INTO site_settings (key, value) VALUES ('inventory_updated_at', CURRENT_TIMESTAMP);
 
 INSERT OR IGNORE INTO site_settings (key, value) VALUES ('homepage_banner_message', 'Small Drop, Big Drop Coming Soon
-A small World Cup drop is available now. A bigger drop is coming soon. Fill out the contact form to request a jersey or DM @jerseysfrmjb with questions.');
+A small World Cup drop is available now. A bigger drop is coming soon. DM @jerseysfrmjb for quick questions, or use Message or Request for a detailed jersey request.');
 
-INSERT OR IGNORE INTO site_settings (key, value) VALUES ('homepage_ticker_message', '🔥 SMALL DROP AVAILABLE NOW • BIG DROP COMING SOON • TAP NEED HELP TO REQUEST ❤️');
+INSERT OR IGNORE INTO site_settings (key, value) VALUES ('homepage_ticker_message', '🔥 SMALL DROP AVAILABLE NOW • BIG DROP COMING SOON • DM @JERSEYSFRMJB OR TAP MESSAGE OR REQUEST ❤️');
 
 INSERT OR IGNORE INTO site_settings (key, value) VALUES ('homepage_stat_message', 'Small Drop Almost Sold Out');
 

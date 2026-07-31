@@ -1085,6 +1085,28 @@ async function applyOneTimeProductCorrections(env, key, corrections) {
     ON CONFLICT(key) DO UPDATE SET value = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP`).run();
 }
 
+async function applyOneTimeSettingTextCorrections(env, key, corrections) {
+  const existing = await env.DB.prepare("SELECT value FROM site_settings WHERE key = ?").bind(key).first();
+  if (existing?.value === "applied") return;
+
+  for (const correction of corrections) {
+    const row = await env.DB.prepare("SELECT value FROM site_settings WHERE key = ?").bind(correction.setting).first();
+    if (!row) continue;
+
+    let value = String(row.value || "");
+    for (const [from, to] of correction.replacements) value = value.replaceAll(from, to);
+    if (value !== row.value) {
+      await env.DB.prepare(
+        "UPDATE site_settings SET value = ?, updated_at = CURRENT_TIMESTAMP WHERE key = ?"
+      ).bind(value, correction.setting).run();
+    }
+  }
+
+  await env.DB.prepare(`INSERT INTO site_settings (key, value, updated_at)
+    VALUES (?, 'applied', CURRENT_TIMESTAMP)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP`).bind(key).run();
+}
+
 export async function ensureProductPlatformPrices(env) {
   if (!env.DB) throw new Error("D1 binding missing");
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS product_platform_prices (
@@ -1167,10 +1189,29 @@ export async function ensureInventory(env) {
   await env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_bulk_restock_runs_created ON bulk_restock_runs(created_at DESC)`).run();
 
   await env.DB.prepare("INSERT OR IGNORE INTO site_settings (key, value) VALUES (?, ?)").bind("hide_sold_out_featured", "false").run();
-  await env.DB.prepare("INSERT OR IGNORE INTO site_settings (key, value) VALUES (?, ?)").bind("homepage_banner_message", "Small Drop, Big Drop Coming Soon\nA small World Cup drop is available now. A bigger drop is coming soon. Fill out the contact form to request a jersey or DM @jerseysfrmjb with questions.").run();
-  await env.DB.prepare("INSERT OR IGNORE INTO site_settings (key, value) VALUES (?, ?)").bind("homepage_ticker_message", "🔥 SMALL DROP AVAILABLE NOW • BIG DROP COMING SOON • TAP NEED HELP TO REQUEST ❤️").run();
+  await env.DB.prepare("INSERT OR IGNORE INTO site_settings (key, value) VALUES (?, ?)").bind("homepage_banner_message", "Small Drop, Big Drop Coming Soon\nA small World Cup drop is available now. A bigger drop is coming soon. DM @jerseysfrmjb for quick questions, or use Message or Request for a detailed jersey request.").run();
+  await env.DB.prepare("INSERT OR IGNORE INTO site_settings (key, value) VALUES (?, ?)").bind("homepage_ticker_message", "🔥 SMALL DROP AVAILABLE NOW • BIG DROP COMING SOON • DM @JERSEYSFRMJB OR TAP MESSAGE OR REQUEST ❤️").run();
   await env.DB.prepare("INSERT OR IGNORE INTO site_settings (key, value) VALUES (?, ?)").bind("homepage_stat_message", "Small Drop Almost Sold Out").run();
   await env.DB.prepare("INSERT OR IGNORE INTO site_settings (key, value) VALUES (?, CURRENT_TIMESTAMP)").bind("inventory_updated_at").run();
+
+  await applyOneTimeSettingTextCorrections(env, "enable_instagram_contact_2026_07_31", [
+    {
+      setting: "homepage_banner_message",
+      replacements: [
+        ["Fill out the contact form to request a jersey or DM @jerseysfrmjb with questions.", "DM @jerseysfrmjb for quick questions, or use Message or Request for a detailed jersey request."],
+        ["Tap Need Help", "Tap Message or Request"],
+        ["TAP NEED HELP", "TAP MESSAGE OR REQUEST"]
+      ]
+    },
+    {
+      setting: "homepage_ticker_message",
+      replacements: [
+        ["TAP NEED HELP TO REQUEST A JERSEY", "DM @JERSEYSFRMJB OR TAP MESSAGE OR REQUEST"],
+        ["TAP NEED HELP TO REQUEST", "DM @JERSEYSFRMJB OR TAP MESSAGE OR REQUEST"],
+        ["TAP NEED HELP", "TAP MESSAGE OR REQUEST"]
+      ]
+    }
+  ]);
 
   const insert = env.DB.prepare(
     `INSERT OR IGNORE INTO inventory (id, category, name, size, sizes_json, price, quantity, featured, featured_order, new_arrival, date_added, sort_order, photos, links)

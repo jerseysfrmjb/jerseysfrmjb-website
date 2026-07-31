@@ -551,7 +551,7 @@ function footerMarkup() {
           <h3>Help</h3>
           <a href="/size-guide">Size Guide</a>
           <a href="/privacy">Privacy</a>
-          <button class="footer-help-link" type="button" data-open-help>Contact</button>
+          <a href="https://www.instagram.com/jerseysfrmjb/" target="_blank" rel="noopener">Message on Instagram</a>
           <button class="footer-help-link" type="button" data-open-help>Jersey Requests</button>
         </section>
         <section>
@@ -609,7 +609,7 @@ export function renderProductPage(model) {
   <link rel="stylesheet" href="/design-preview.css?v=mobile-grid-2">
   <script src="/meta-pixel.js?v=1" defer></script>
   <script src="/analytics.js?v=operations-1" defer></script>
-  <script src="/storefront.js?v=operations-1" defer></script>
+  <script src="/storefront.js?v=instagram-contact-1" defer></script>
 </head>
 <body class="product-page-body">
   ${headerMarkup()}
@@ -695,7 +695,7 @@ export function renderProductNotFound(siteOrigin = DEFAULT_SITE_ORIGIN) {
   <link rel="stylesheet" href="/design-preview.css?v=mobile-grid-2">
   <script src="/meta-pixel.js?v=1" defer></script>
   <script src="/analytics.js?v=operations-1" defer></script>
-  <script src="/storefront.js?v=operations-1" defer></script>
+  <script src="/storefront.js?v=instagram-contact-1" defer></script>
 </head>
 <body class="product-page-body">
   ${headerMarkup()}

@@ -190,18 +190,18 @@ const platformPriceStates = new Map();
 
 const bannerPresets = {
   live: {
-    banner: "World Cup Jerseys Available Now!\nA few World Cup jerseys are now available in Small & Large. DM @jerseysfrmjb for questions or requests.",
+    banner: "World Cup Jerseys Available Now!\nA few World Cup jerseys are now available in Small & Large. DM @jerseysfrmjb directly for questions, or use Message or Request for a detailed jersey request.",
     ticker: "ðŸ”¥ WORLD CUP JERSEYS AVAILABLE NOW â€¢ SMALL & LARGE SIZES IN STOCK â€¢ DM @JERSEYSFRMJB FOR REQUESTS â¤ï¸",
     stat: "Small & Large Available"
   },
   almost: {
-    banner: "Small Drop Almost Sold Out\nThanks for all the support! Only a few jerseys remain from the small drop. Fill out the contact form to request a jersey.",
-    ticker: "ðŸš¨ SMALL DROP ALMOST SOLD OUT â€¢ BIG DROP COMING SOON â€¢ TAP NEED HELP TO REQUEST â¤ï¸",
+    banner: "Small Drop Almost Sold Out\nThanks for all the support! Only a few jerseys remain from the small drop. DM @jerseysfrmjb directly, or use Message or Request for a detailed jersey request.",
+    ticker: "ðŸš¨ SMALL DROP ALMOST SOLD OUT â€¢ BIG DROP COMING SOON â€¢ DM @JERSEYSFRMJB OR TAP MESSAGE OR REQUEST â¤ï¸",
     stat: "Small Drop Almost Sold Out"
   },
   soon: {
-    banner: "Next Drop Coming Soon\nMore jerseys are coming soon. Fill out the contact form to request a jersey.",
-    ticker: "ðŸ”¥ NEXT DROP COMING SOON â€¢ TAP NEED HELP TO REQUEST A JERSEY â¤ï¸",
+    banner: "Next Drop Coming Soon\nMore jerseys are coming soon. DM @jerseysfrmjb directly, or use Message or Request to request a jersey.",
+    ticker: "ðŸ”¥ NEXT DROP COMING SOON â€¢ DM @JERSEYSFRMJB OR TAP MESSAGE OR REQUEST â¤ï¸",
     stat: "More Jerseys Coming Soon"
   }
 };

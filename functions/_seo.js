@@ -483,7 +483,7 @@ function footerMarkup() {
       <div class="footer-brand"><img src="/assets/jerseysfrmjb-logo.jpg" alt="JerseysFrmJB logo" width="120" height="120" loading="lazy"><a class="footer-main" href="/">JerseysFrmJB</a><p>200+ Jerseys Sold</p><p>Based in Maryland</p></div>
       <nav class="footer-links" aria-label="Footer navigation">
         <section><h3>Shop</h3><a href="/shop-all">Shop All</a><a href="/worldcup-jerseys">World Cup Jerseys</a><a href="/club-jerseys">Club Jerseys</a><a href="/retro-jerseys">Retro Jerseys</a></section>
-        <section><h3>Help</h3><a href="/size-guide">Size Guide</a><a href="/privacy">Privacy</a><a href="/#contact-form">Contact</a></section>
+        <section><h3>Help</h3><a href="/size-guide">Size Guide</a><a href="/privacy">Privacy</a><a href="https://www.instagram.com/jerseysfrmjb/" target="_blank" rel="noopener">Message on Instagram</a></section>
         <section><h3>Marketplaces</h3><a href="https://www.ebay.com/usr/jerseysfrmjb" target="_blank" rel="noopener">eBay</a><a href="https://www.depop.com/jerseysfrmjb/" target="_blank" rel="noopener">Depop</a></section>
       </nav>
     </div></footer>`;
@@ -516,7 +516,7 @@ export function renderSeoCollectionPage(products, kind, options = {}) {
   <script type="application/ld+json">${jsonForHtml(schema)}</script>
   <script type="application/ld+json">${jsonForHtml(faqSchema(faqs))}</script>
   <link rel="stylesheet" href="/styles.css?v=operations-1"><link rel="stylesheet" href="/design-preview.css?v=mobile-grid-2">
-  <script src="/meta-pixel.js?v=1" defer></script><script src="/analytics.js?v=operations-1" defer></script><script src="/storefront.js?v=operations-1" defer></script>
+  <script src="/meta-pixel.js?v=1" defer></script><script src="/analytics.js?v=operations-1" defer></script><script src="/storefront.js?v=instagram-contact-1" defer></script>
 </head>
 <body class="seo-collection-body">
   ${headerMarkup()}

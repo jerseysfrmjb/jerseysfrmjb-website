@@ -191,14 +191,38 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  margin: 0;
   border-radius: 999px;
-  background: #fff;
-  color: #7d1738;
+  background: #7d1738;
+  color: #fff;
   padding: 8px 10px;
   font: 900 8px/1 Arial, sans-serif;
   letter-spacing: .06em;
   text-decoration: none;
   text-transform: uppercase;
+}
+
+.help-widget .help-request-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 23px 15px;
+  color: #7d6f6b;
+  font: 800 9px/1 Arial, sans-serif;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.help-widget .help-request-divider::before,
+.help-widget .help-request-divider::after {
+  height: 1px;
+  flex: 1;
+  background: #e4d9d3;
+  content: "";
+}
+
+.help-widget .help-request-divider span {
+  flex: 0 0 auto;
 }
 
 .help-widget .help-widget-form {
@@ -602,6 +626,10 @@
 
   .help-widget .help-instagram-note {
     flex: 0 0 auto;
+    margin: 0 18px 13px;
+  }
+
+  .help-widget .help-request-divider {
     margin: 0 18px 13px;
   }
 

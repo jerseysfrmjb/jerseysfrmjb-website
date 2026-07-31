@@ -893,7 +893,7 @@ function createHelpWidget() {
   if (!document.querySelector('link[data-help-widget-style]')) {
     const widgetStyle = document.createElement("link");
     widgetStyle.rel = "stylesheet";
-    widgetStyle.href = "/help-widget.css?v=desktop-fix-1";
+    widgetStyle.href = "/help-widget.css?v=instagram-contact-1";
     widgetStyle.dataset.helpWidgetStyle = "";
     document.head.appendChild(widgetStyle);
   }
@@ -902,23 +902,24 @@ function createHelpWidget() {
   widget.innerHTML = `
     <button class="help-widget-button" type="button" aria-expanded="false">
       <span class="help-widget-button-icon" aria-hidden="true">+</span>
-      <span>Requests &amp; Help</span>
+      <span>Message or Request</span>
     </button>
     <div class="help-widget-overlay" data-help-overlay hidden></div>
     <section class="help-widget-panel" aria-label="JerseysFrmJB requests and help" hidden>
       <div class="help-widget-head">
         <div>
-          <span>Requests &amp; Help</span>
-          <h2>How can we help?</h2>
+          <span>Instagram &amp; Requests</span>
+          <h2>Message us or send a request.</h2>
         </div>
         <button class="help-widget-close" type="button" aria-label="Close message form">&times;</button>
       </div>
-      <p class="help-widget-copy">Looking for a jersey, restock, size, or order help? Choose what you need and send a quick request.</p>
+      <p class="help-widget-copy">For quick questions, sizing, or order help, message @jerseysfrmjb directly. For a specific jersey or restock request, use the form below and we&rsquo;ll reply on Instagram.</p>
       <div class="help-instagram-note">
         <span aria-hidden="true">IG</span>
-        <div><strong>Replies are sent on Instagram</strong><small>Follow @jerseysfrmjb so we can message you.</small></div>
-        <a href="${instagramUrl}" target="_blank" rel="noopener">Follow</a>
+        <div><strong>DM @jerseysfrmjb directly</strong><small>The fastest way to ask a quick question.</small></div>
+        <a class="help-instagram-link" href="${instagramUrl}" target="_blank" rel="noopener">Open Instagram</a>
       </div>
+      <div class="help-request-divider"><span>Or send a structured request</span></div>
       <form class="help-widget-form" data-help-form>
         <input type="text" name="website" autocomplete="off" tabindex="-1" aria-hidden="true">
         <input type="hidden" name="product_id">
