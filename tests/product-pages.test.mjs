@@ -13,6 +13,7 @@ const workspace = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..
 const inventory = JSON.parse(await readFile(path.join(workspace, "data", "inventory.json"), "utf8"));
 const storefrontSource = await readFile(path.join(workspace, "storefront.js"), "utf8");
 const seoSource = await readFile(path.join(workspace, "functions", "_seo.js"), "utf8");
+const inventorySeedSource = await readFile(path.join(workspace, "functions", "api", "_inventorySeed.js"), "utf8");
 
 function productRow(item, overrides = {}) {
   return {
@@ -84,6 +85,23 @@ const oneLinkItem = inventory.items.find(item =>
 assert.ok(inStockItem, "in-stock fixture exists");
 assert.ok(soldOutItem, "sold-out fixture exists");
 assert.ok(oneLinkItem, "one-link fixture exists");
+
+for (const id of [
+  "club-barcelona-raphinha-home-2526",
+  "club-barcelona-yamal-home-2526",
+  "club-real-madrid-mbappe-home-2526",
+  "club-real-madrid-bellingham-home-2526"
+]) {
+  const product = inventory.items.find(item => item.id === id);
+  assert.ok(product, `${id} fixture exists`);
+  assert.match(product.name, /26\/27/);
+  assert.doesNotMatch(product.name, /25\/26/);
+  for (const photo of product.photos || []) {
+    assert.match(photo.alt, /26\/27/);
+    assert.doesNotMatch(photo.alt, /25\/26/);
+  }
+}
+assert.match(inventorySeedSource, /correct_club_seasons_2026_07_30/);
 
 const inStockRow = productRow(inStockItem);
 const soldOutRow = productRow(soldOutItem, {

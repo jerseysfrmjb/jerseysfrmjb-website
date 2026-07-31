@@ -590,18 +590,18 @@ export const seedInventory = {
       "photos": [
         {
           "src": "assets/inventory/club-barcelona-raphinha-home-2526-back.jpg",
-          "alt": "Raphinha Barcelona 25/26 home jersey back"
+          "alt": "Raphinha Barcelona 26/27 home jersey back"
         },
         {
           "src": "assets/inventory/club-barcelona-raphinha-home-2526-front.jpg",
-          "alt": "Raphinha Barcelona 25/26 home jersey front"
+          "alt": "Raphinha Barcelona 26/27 home jersey front"
         }
       ],
       "size": "Medium",
       "sizes": {},
       "price": 40,
       "category": "club",
-      "name": "Raphinha #11 | Barcelona 25/26 Home Kit",
+      "name": "Raphinha #11 | Barcelona 26/27 Home Kit",
       "quantity": 0,
       "links": {
         "depop": "https://www.depop.com/jerseysfrmjb/",
@@ -618,18 +618,18 @@ export const seedInventory = {
       "photos": [
         {
           "src": "assets/inventory/club-barcelona-yamal-home-2526-back.jpg",
-          "alt": "Lamine Yamal Barcelona 25/26 home jersey back"
+          "alt": "Lamine Yamal Barcelona 26/27 home jersey back"
         },
         {
           "src": "assets/inventory/club-barcelona-yamal-home-2526-front.jpg",
-          "alt": "Lamine Yamal Barcelona 25/26 home jersey front"
+          "alt": "Lamine Yamal Barcelona 26/27 home jersey front"
         }
       ],
       "size": "Medium",
       "sizes": {},
       "price": 40,
       "category": "club",
-      "name": "Lamine Yamal #10 | Barcelona 25/26 Home Kit",
+      "name": "Lamine Yamal #10 | Barcelona 26/27 Home Kit",
       "quantity": 0,
       "links": {
         "depop": "https://www.depop.com/jerseysfrmjb/",
@@ -646,18 +646,18 @@ export const seedInventory = {
       "photos": [
         {
           "src": "assets/inventory/club-real-madrid-mbappe-home-2526-back.jpg",
-          "alt": "Kylian Mbappe Real Madrid 25/26 home jersey back"
+          "alt": "Kylian Mbappe Real Madrid 26/27 home jersey back"
         },
         {
           "src": "assets/inventory/club-real-madrid-mbappe-home-2526-front.jpg",
-          "alt": "Kylian Mbappe Real Madrid 25/26 home jersey front"
+          "alt": "Kylian Mbappe Real Madrid 26/27 home jersey front"
         }
       ],
       "size": "Medium",
       "sizes": {},
       "price": 40,
       "category": "club",
-      "name": "Kylian Mbappe #10 | Real Madrid 25/26 Home Kit",
+      "name": "Kylian Mbappe #10 | Real Madrid 26/27 Home Kit",
       "quantity": 0,
       "links": {
         "depop": "https://www.depop.com/jerseysfrmjb/",
@@ -674,18 +674,18 @@ export const seedInventory = {
       "photos": [
         {
           "src": "assets/inventory/club-real-madrid-bellingham-home-2526-back.jpg",
-          "alt": "Jude Bellingham Real Madrid 25/26 home jersey back"
+          "alt": "Jude Bellingham Real Madrid 26/27 home jersey back"
         },
         {
           "src": "assets/inventory/club-real-madrid-bellingham-home-2526-front.jpg",
-          "alt": "Jude Bellingham Real Madrid 25/26 home jersey front"
+          "alt": "Jude Bellingham Real Madrid 26/27 home jersey front"
         }
       ],
       "size": "Medium",
       "sizes": {},
       "price": 40,
       "category": "club",
-      "name": "Jude Bellingham #5 | Real Madrid 25/26 Home Kit",
+      "name": "Jude Bellingham #5 | Real Madrid 26/27 Home Kit",
       "quantity": 0,
       "links": {
         "depop": "https://www.depop.com/jerseysfrmjb/",
@@ -1052,6 +1052,39 @@ async function applyOneTimeRestock(env, key, lines) {
     ON CONFLICT(key) DO UPDATE SET value = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP`).run();
 }
 
+async function applyOneTimeProductCorrections(env, key, corrections) {
+  const existing = await env.DB.prepare("SELECT value FROM site_settings WHERE key = ?").bind(key).first();
+  if (existing?.value === "applied") return;
+
+  for (const correction of corrections) {
+    const row = await env.DB.prepare("SELECT photos FROM inventory WHERE id = ?").bind(correction.id).first();
+    if (!row) continue;
+
+    let photos = [];
+    try {
+      const parsedPhotos = JSON.parse(row.photos || "[]");
+      photos = Array.isArray(parsedPhotos) ? parsedPhotos : [];
+    } catch (error) {
+      photos = [];
+    }
+    const correctedPhotos = photos.map(photo => ({
+      ...photo,
+      alt: String(photo.alt || "").replaceAll(correction.from, correction.to)
+    }));
+
+    await env.DB.prepare(
+      "UPDATE inventory SET name = ?, photos = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+    ).bind(correction.name, JSON.stringify(correctedPhotos), correction.id).run();
+  }
+
+  await env.DB.prepare(`INSERT INTO site_settings (key, value, updated_at)
+    VALUES (?, 'applied', CURRENT_TIMESTAMP)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP`).bind(key).run();
+  await env.DB.prepare(`INSERT INTO site_settings (key, value, updated_at)
+    VALUES ('inventory_updated_at', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ON CONFLICT(key) DO UPDATE SET value = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP`).run();
+}
+
 export async function ensureProductPlatformPrices(env) {
   if (!env.DB) throw new Error("D1 binding missing");
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS product_platform_prices (
@@ -1162,6 +1195,33 @@ export async function ensureInventory(env) {
   ));
 
   if (statements.length) await env.DB.batch(statements);
+
+  await applyOneTimeProductCorrections(env, "correct_club_seasons_2026_07_30", [
+    {
+      id: "club-barcelona-raphinha-home-2526",
+      name: "Raphinha #11 | Barcelona 26/27 Home Kit",
+      from: "25/26",
+      to: "26/27"
+    },
+    {
+      id: "club-barcelona-yamal-home-2526",
+      name: "Lamine Yamal #10 | Barcelona 26/27 Home Kit",
+      from: "25/26",
+      to: "26/27"
+    },
+    {
+      id: "club-real-madrid-mbappe-home-2526",
+      name: "Kylian Mbappe #10 | Real Madrid 26/27 Home Kit",
+      from: "25/26",
+      to: "26/27"
+    },
+    {
+      id: "club-real-madrid-bellingham-home-2526",
+      name: "Jude Bellingham #5 | Real Madrid 26/27 Home Kit",
+      from: "25/26",
+      to: "26/27"
+    }
+  ]);
 
   await applyOneTimeRestock(env, "restock_2026_07_22_order_31", [
     { id: "world-argentina-messi-home", size: "M", quantity: 2 },
