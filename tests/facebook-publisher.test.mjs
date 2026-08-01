@@ -8,6 +8,7 @@ import { onRequestGet as getFacebookHistory } from "../functions/api/admin/faceb
 const workspace = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const adminHtml = await readFile(path.join(workspace, "admin.html"), "utf8");
 const adminSource = await readFile(path.join(workspace, "admin.js"), "utf8");
+const captionSource = await readFile(path.join(workspace, "facebook-caption.js"), "utf8");
 const apiSource = await readFile(path.join(workspace, "functions", "api", "admin", "facebook-posts.js"), "utf8");
 const schema = await readFile(path.join(workspace, "schema.sql"), "utf8");
 const migration = await readFile(path.join(workspace, "migrations", "0009_facebook_post_history.sql"), "utf8");
@@ -22,15 +23,21 @@ assert.match(adminHtml, /business\.facebook\.com\/latest\/home/);
 assert.match(adminHtml, /This never posts to Marketplace/);
 assert.match(adminHtml, /data-facebook-connect/);
 assert.match(adminHtml, /data-publish-facebook-post/);
+assert.match(adminHtml, /facebook-caption\.js/);
 
 assert.match(adminSource, /FACEBOOK_MAX_PRODUCTS = 5/);
-assert.match(adminSource, /\/products\/\$\{encodeURIComponent/);
-assert.match(adminSource, /utm_source", "facebook"/);
-assert.match(adminSource, /utm_campaign", campaign/);
-assert.match(adminSource, /utm_content", String\(product\.id\)/);
+assert.match(adminSource, /window\.JBFacebookCaptions\.generateFacebookCaption/);
+assert.match(captionSource, /\/products\/\$\{encodeURIComponent/);
+assert.match(captionSource, /utm_source", "facebook"/);
+assert.match(captionSource, /utm_campaign", normalizeCampaign\(campaign\)/);
+assert.match(captionSource, /utm_content", String\(product\.id/);
 assert.match(adminHtml, /data-facebook-campaign/);
-assert.match(adminSource, /eBay:/);
-assert.match(adminSource, /Depop:/);
+assert.match(captionSource, /Available through eBay and Depop/);
+assert.doesNotMatch(captionSource, /eBay:\s*https|Depop:\s*https/);
+assert.match(captionSource, /new_arrivals/);
+assert.match(captionSource, /restock/);
+assert.match(captionSource, /featured_jerseys/);
+assert.match(captionSource, /general_inventory/);
 assert.match(adminSource, /saveFacebookDraft/);
 assert.match(adminSource, /markFacebookPostAsPosted/);
 assert.match(adminSource, /publishFacebookPost/);
@@ -66,7 +73,7 @@ assert.equal(unauthorized.status, 401, "Facebook post history follows admin auth
 
 console.log("Facebook publisher tests passed:");
 console.log("- admin-only Facebook Page generator is present");
-console.log("- posts use exact product links, marketplace links, and tracked Facebook URLs");
+console.log("- campaign-aware captions use exact product links and tracked Facebook URLs");
 console.log("- saved history and unique hashes prevent duplicate posts");
 console.log("- direct Page connection and publishing controls are present");
 console.log("- no Instagram or Marketplace publishing automation was added");

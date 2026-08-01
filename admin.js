@@ -157,6 +157,7 @@ let facebookPosts = [];
 let selectedFacebookProductIds = new Set();
 let currentFacebookPost = null;
 let facebookCaptionGenerated = false;
+let facebookCaptionVariation = 0;
 let adminFilter = "all";
 let restockPresets = [];
 let lastBulkRestock = null;
@@ -2003,78 +2004,12 @@ function facebookAvailableSizes(product) {
     .map(([size]) => facebookSizeLabel(size));
 }
 
-function facebookProductLink(product, campaign = facebookCampaign?.value || "new_arrivals") {
-  const url = new URL(`/products/${encodeURIComponent(String(product.id))}`, FACEBOOK_SITE_ORIGIN);
-  url.searchParams.set("utm_source", "facebook");
-  url.searchParams.set("utm_medium", "organic_social");
-  url.searchParams.set("utm_campaign", campaign);
-  url.searchParams.set("utm_content", String(product.id));
-  return url.toString();
-}
-
-function safeMarketplaceLink(value = "") {
-  try {
-    const url = new URL(String(value || "").trim());
-    return url.protocol === "https:" ? url.toString() : "";
-  } catch {
-    return "";
-  }
-}
-
-function facebookHashtag(value = "") {
-  const token = String(value || "")
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/gi, "");
-  return token ? `#${token}` : "";
-}
-
-function facebookPostHashtags(products) {
-  const tags = ["#JerseysFrmJB", "#FootballJerseys", "#SoccerJerseys", "#NewArrival"];
-  for (const product of products) {
-    const [playerPart = "", teamPart = ""] = String(product.name || "").split("|");
-    const player = playerPart.replace(/#\d+.*/g, "").trim();
-    const team = teamPart
-      .replace(/\b(?:(?:19|20)?\d{2})(?:\/\d{2,4})?\b.*$/i, "")
-      .replace(/\b(?:World Cup|Home|Away|Third|Jersey|Kit)\b/gi, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-    const playerTag = facebookHashtag(player);
-    const teamTag = facebookHashtag(team ? `${team} Jersey` : "");
-    if (playerTag) tags.push(playerTag);
-    if (teamTag) tags.push(teamTag);
-  }
-  return [...new Set(tags)].slice(0, 9).join(" ");
-}
-
-function facebookDefaultCaption(products) {
-  if (!products.length) return "";
-  const heading = products.length === 1
-    ? "New arrival at JerseysFrmJB \u26bd\ufe0f"
-    : "New jerseys are available at JerseysFrmJB \u26bd\ufe0f";
-  const sections = products.map(product => {
-    const sizes = facebookAvailableSizes(product);
-    const links = itemLinks(product);
-    const details = [
-      product.name,
-      sizes.length ? `Available sizes: ${sizes.join(", ")}` : "Sold out",
-      `View jersey: ${facebookProductLink(product)}`
-    ];
-    const ebay = safeMarketplaceLink(links.ebay);
-    const depop = safeMarketplaceLink(links.depop);
-    if (ebay) details.push(`eBay: ${ebay}`);
-    if (depop) details.push(`Depop: ${depop}`);
-    return details.join("\n");
+function facebookDefaultCaption(products, campaign = facebookCampaign?.value || "new_arrivals", variation = 0) {
+  return window.JBFacebookCaptions.generateFacebookCaption(products, {
+    campaign,
+    variation,
+    siteOrigin: FACEBOOK_SITE_ORIGIN
   });
-  return [
-    heading,
-    "",
-    ...sections.flatMap((section, index) => index ? ["", section] : [section]),
-    "",
-    "Message @jerseysfrmjb with questions or jersey requests.",
-    "",
-    facebookPostHashtags(products)
-  ].join("\n");
 }
 
 function facebookSelectedPhotos() {
@@ -2182,7 +2117,14 @@ function generateFacebookPost() {
   }
   currentFacebookPost = null;
   facebookCaptionGenerated = true;
-  if (facebookCaption) facebookCaption.value = facebookDefaultCaption(products);
+  if (facebookCaption) {
+    facebookCaption.value = facebookDefaultCaption(
+      products,
+      facebookCampaign?.value || "new_arrivals",
+      facebookCaptionVariation
+    );
+  }
+  facebookCaptionVariation += 1;
   renderFacebookPhotos();
   updateFacebookActions();
   setFacebookStatus("Post generated. Review the caption and photos, then save the draft.", "success");
