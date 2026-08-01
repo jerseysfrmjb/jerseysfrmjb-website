@@ -7,7 +7,10 @@ import {
   facebookOauthUrl,
   listManagedPages
 } from "../functions/api/admin/facebook/_shared.js";
-import { onRequestPost as publishFacebookPost } from "../functions/api/admin/facebook/publish.js";
+import {
+  onRequestPost as publishFacebookPost,
+  prioritizedPhotoUrls
+} from "../functions/api/admin/facebook/publish.js";
 
 const workspace = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sharedSource = await readFile(
@@ -87,16 +90,39 @@ try {
 
 assert.match(sharedSource, /AES-GCM/);
 assert.match(sharedSource, /appsecret_proof/);
+assert.match(sharedSource, /AbortController/);
+assert.match(sharedSource, /Facebook did not respond in time/);
 assert.match(sharedSource, /user_access_token_encrypted/);
 assert.match(callbackSource, /__Host-jb_facebook_state/);
 assert.match(callbackSource, /readCookie/);
 assert.doesNotMatch(callbackSource, /isAuthorized/);
 assert.match(publishSource, /published:\s*"false"/);
 assert.match(publishSource, /attached_media\[/);
+assert.match(publishSource, /MAX_PHOTOS = 5/);
+assert.match(publishSource, /failedUploads\.length/);
 assert.match(publishSource, /facebook_post_id/);
 assert.match(publishSource, /permalink_url/);
 assert.match(schema, /CREATE TABLE IF NOT EXISTS facebook_connections/);
 assert.doesNotMatch(sharedSource, /FACEBOOK_APP_SECRET\s*=\s*["'][^"']+["']/);
+
+const prioritized = prioritizedPhotoUrls({
+  FACEBOOK_REDIRECT_URI: "https://jerseysfrmjb.com/api/admin/facebook/callback"
+}, [
+  { product_id: "one", src: "/assets/one-front.jpg" },
+  { product_id: "one", src: "/assets/one-back.jpg" },
+  { product_id: "two", src: "/assets/two-front.jpg" },
+  { product_id: "two", src: "/assets/two-back.jpg" },
+  { product_id: "three", src: "/assets/three-front.jpg" },
+  { product_id: "four", src: "/assets/four-front.jpg" },
+  { product_id: "external", src: "https://example.com/not-allowed.jpg" }
+]);
+assert.deepEqual(prioritized, [
+  "https://jerseysfrmjb.com/assets/one-front.jpg",
+  "https://jerseysfrmjb.com/assets/two-front.jpg",
+  "https://jerseysfrmjb.com/assets/three-front.jpg",
+  "https://jerseysfrmjb.com/assets/four-front.jpg",
+  "https://jerseysfrmjb.com/assets/one-back.jpg"
+], "publishing prioritizes one local photo per product and stays within five images");
 
 const unauthorized = await publishFacebookPost({
   request: new Request("https://jerseysfrmjb.com/api/admin/facebook/publish", {
@@ -118,5 +144,6 @@ console.log("- OAuth uses the supplied App ID, exact callback, state, and Page s
 console.log("- Business Login configuration mode is supported");
 console.log("- selected Business Login Pages use the direct Page-token fallback");
 console.log("- tokens are encrypted and Graph calls use appsecret_proof");
-console.log("- multi-photo posts upload unpublished photos before publishing");
+console.log("- bounded multi-photo posts prioritize products and tolerate partial photo failures");
+console.log("- Meta requests time out before the site gateway can return an HTML 502");
 console.log("- publishing endpoints reject unauthenticated requests");

@@ -4,6 +4,7 @@ const DEFAULT_APP_ID = "1028637966593790";
 const DEFAULT_PAGE_ID = "1196832170185323";
 const DEFAULT_GRAPH_VERSION = "v25.0";
 const DEFAULT_REDIRECT_URI = "https://jerseysfrmjb.com/api/admin/facebook/callback";
+const DEFAULT_GRAPH_TIMEOUT_MS = 10000;
 const FACEBOOK_SCOPES = ["pages_show_list", "pages_read_engagement", "pages_manage_posts"];
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
@@ -156,17 +157,35 @@ async function readFacebookResponse(response) {
   return data;
 }
 
+async function facebookFetch(url, options = {}, timeoutMs = DEFAULT_GRAPH_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), Math.max(1000, Number(timeoutMs) || DEFAULT_GRAPH_TIMEOUT_MS));
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (error) {
+    if (controller.signal.aborted) {
+      const timeoutError = new Error("Facebook did not respond in time. Try publishing again.");
+      timeoutError.code = "FACEBOOK_TIMEOUT";
+      throw timeoutError;
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function graphRequest(env, path, options = {}, accessToken = "") {
   const url = new URL(`https://graph.facebook.com/${graphVersion(env)}${path}`);
   if (accessToken) url.searchParams.set("appsecret_proof", await appSecretProof(env, accessToken));
-  const headers = { Accept: "application/json", ...(options.headers || {}) };
+  const { timeoutMs = DEFAULT_GRAPH_TIMEOUT_MS, ...requestOptions } = options;
+  const headers = { Accept: "application/json", ...(requestOptions.headers || {}) };
   if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
-  let body = options.body;
+  let body = requestOptions.body;
   if (body instanceof URLSearchParams) {
     headers["Content-Type"] = "application/x-www-form-urlencoded;charset=UTF-8";
     body = body.toString();
   }
-  const response = await fetch(url, { ...options, headers, body });
+  const response = await facebookFetch(url, { ...requestOptions, headers, body }, timeoutMs);
   return readFacebookResponse(response);
 }
 

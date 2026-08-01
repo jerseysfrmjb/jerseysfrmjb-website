@@ -2299,7 +2299,9 @@ async function publishFacebookPost() {
     currentFacebookPost = data.post;
     updateFacebookPostInHistory(data.post);
     setFacebookStatus(
-      `Published successfully to ${facebookConnection.page?.name || "Facebook"}.`,
+      data.warning
+        ? `${data.warning} The post is live on ${facebookConnection.page?.name || "Facebook"}.`
+        : `Published successfully to ${facebookConnection.page?.name || "Facebook"}.`,
       "success"
     );
   } catch (error) {

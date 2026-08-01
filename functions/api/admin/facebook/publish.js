@@ -10,7 +10,11 @@ import {
   siteOrigin
 } from "./_shared.js";
 
-const MAX_PHOTOS = 10;
+const MAX_PHOTOS = 5;
+const PHOTO_TIMEOUT_MS = 8000;
+const PUBLISH_TIMEOUT_MS = 10000;
+const LOOKUP_TIMEOUT_MS = 4000;
+const CLEANUP_TIMEOUT_MS = 2500;
 
 function absolutePhotoUrl(env, photo) {
   const source = String(photo?.src || photo || "").trim();
@@ -28,6 +32,7 @@ function absolutePhotoUrl(env, photo) {
 async function uploadPhoto(env, pageId, imageUrl) {
   const data = await facebookPageApi(env, `/${encodeURIComponent(pageId)}/photos`, {
     method: "POST",
+    timeoutMs: PHOTO_TIMEOUT_MS,
     body: new URLSearchParams({
       url: imageUrl,
       published: "false"
@@ -40,8 +45,29 @@ async function uploadPhoto(env, pageId, imageUrl) {
 
 async function cleanupPhotos(env, photoIds) {
   await Promise.allSettled(photoIds.map(id =>
-    facebookPageApi(env, `/${encodeURIComponent(id)}`, { method: "DELETE" })
+    facebookPageApi(env, `/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      timeoutMs: CLEANUP_TIMEOUT_MS
+    })
   ));
+}
+
+export function prioritizedPhotoUrls(env, photos = []) {
+  const firstByProduct = [];
+  const extraPhotos = [];
+  const seenProducts = new Set();
+  for (const photo of photos) {
+    const imageUrl = absolutePhotoUrl(env, photo);
+    if (!imageUrl) continue;
+    const productId = String(photo?.product_id || "");
+    if (productId && !seenProducts.has(productId)) {
+      seenProducts.add(productId);
+      firstByProduct.push(imageUrl);
+    } else {
+      extraPhotos.push(imageUrl);
+    }
+  }
+  return [...firstByProduct, ...extraPhotos].slice(0, MAX_PHOTOS);
 }
 
 export async function onRequestPost(context) {
@@ -67,10 +93,7 @@ export async function onRequestPost(context) {
     const connection = await getFacebookConnection(env);
     if (!connection?.page_id) return json({ error: "Connect and choose a Facebook Page before publishing." }, 409);
 
-    const photoUrls = (post.photo_urls || [])
-      .map(photo => absolutePhotoUrl(env, photo))
-      .filter(Boolean)
-      .slice(0, MAX_PHOTOS);
+    const photoUrls = prioritizedPhotoUrls(env, post.photo_urls || []);
     if (!photoUrls.length) {
       return json({ error: "This post does not have a valid website product photo." }, 400);
     }
@@ -87,11 +110,12 @@ export async function onRequestPost(context) {
     uploadedPhotoIds = uploadResults
       .filter(result => result.status === "fulfilled")
       .map(result => result.value);
-    const failedUpload = uploadResults.find(result => result.status === "rejected");
-    if (failedUpload) {
-      throw failedUpload.reason instanceof Error
+    const failedUploads = uploadResults.filter(result => result.status === "rejected");
+    if (!uploadedPhotoIds.length) {
+      const failedUpload = failedUploads[0];
+      throw failedUpload?.reason instanceof Error
         ? failedUpload.reason
-        : new Error("One or more Facebook photos could not be uploaded.");
+        : new Error("Facebook could not upload the selected product photos.");
     }
 
     const form = new URLSearchParams({ message: String(post.caption).trim() });
@@ -100,6 +124,7 @@ export async function onRequestPost(context) {
     });
     const published = await facebookPageApi(env, `/${encodeURIComponent(connection.page_id)}/feed`, {
       method: "POST",
+      timeoutMs: PUBLISH_TIMEOUT_MS,
       body: form
     });
     const remotePostId = String(published.id || "");
@@ -110,7 +135,7 @@ export async function onRequestPost(context) {
       const details = await facebookPageApi(
         env,
         `/${encodeURIComponent(remotePostId)}?fields=permalink_url`,
-        { method: "GET" }
+        { method: "GET", timeoutMs: LOOKUP_TIMEOUT_MS }
       );
       facebookPostUrl = String(details.permalink_url || "");
     } catch {
@@ -129,7 +154,13 @@ export async function onRequestPost(context) {
       .bind(remotePostId, facebookPostUrl, postId)
       .run();
 
-    return json({ ok: true, post: await historyRecord(env, postId) });
+    return json({
+      ok: true,
+      post: await historyRecord(env, postId),
+      warning: failedUploads.length
+        ? `Published with ${uploadedPhotoIds.length} of ${photoUrls.length} selected photos because Facebook could not process every image in time.`
+        : ""
+    });
   } catch (error) {
     if (uploadedPhotoIds.length) await cleanupPhotos(env, uploadedPhotoIds);
     const message = String(error?.message || "Unknown Facebook publishing error").slice(0, 500);
