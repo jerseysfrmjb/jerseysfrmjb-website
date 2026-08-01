@@ -2601,6 +2601,163 @@
   margin: 0;
 }
 
+.pinterest-description-tools,
+.pinterest-action-buttons,
+.pinterest-queue-head,
+.pinterest-queue-card-head,
+.pinterest-queue-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+}
+
+.pinterest-description-tools {
+  justify-content: space-between;
+  margin-top: -7px;
+}
+
+.pinterest-description-tools .shop-button,
+.pinterest-queue-head .shop-button,
+.pinterest-queue-card-actions .shop-button {
+  min-width: 0;
+  margin: 0;
+  padding: 9px 12px;
+  font-size: 9px;
+}
+
+.pinterest-description-tools span {
+  color: #756b66;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.pinterest-duplicate-option {
+  display: flex !important;
+  grid-template-columns: none !important;
+  align-items: center;
+  gap: 9px !important;
+  padding: 12px 14px;
+  border: 1px solid #ded4ce;
+  border-radius: 10px;
+  background: #faf7f5;
+  color: #514947 !important;
+  font-size: 11px !important;
+  letter-spacing: normal !important;
+  text-transform: none !important;
+}
+
+.pinterest-duplicate-option input {
+  width: 17px;
+  min-height: 17px;
+  margin: 0;
+  accent-color: #8b1538;
+}
+
+.pinterest-action-buttons {
+  align-items: stretch;
+}
+
+.pinterest-queue-section {
+  display: grid;
+  gap: 13px;
+  padding: clamp(16px, 2.5vw, 23px);
+  border: 1px solid #ded4ce;
+  border-radius: 13px;
+  background: #faf8f6;
+}
+
+.pinterest-queue-head {
+  justify-content: space-between;
+}
+
+.pinterest-queue-head h3 {
+  margin: 5px 0 0;
+  color: #211b1b;
+  font: 900 22px/1.1 Georgia, serif;
+}
+
+.pinterest-queue-head h3 span {
+  display: inline-grid;
+  min-width: 25px;
+  min-height: 25px;
+  margin-left: 5px;
+  place-items: center;
+  border-radius: 999px;
+  background: #efe3e7;
+  color: #7d1738;
+  font: 900 11px/1 Arial, sans-serif;
+}
+
+.pinterest-queue-list {
+  display: grid;
+  gap: 10px;
+}
+
+.pinterest-queue-card {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) auto;
+  gap: 13px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid #ddd3ce;
+  border-radius: 11px;
+  background: #fff;
+}
+
+.pinterest-queue-card > img {
+  width: 76px;
+  height: 76px;
+  border-radius: 8px;
+  object-fit: contain;
+  background: #191515;
+}
+
+.pinterest-queue-card h4 {
+  margin: 4px 0;
+  color: #211b1b;
+  font: 900 15px/1.2 Georgia, serif;
+}
+
+.pinterest-queue-card p,
+.pinterest-queue-card small {
+  margin: 0;
+  color: #675d58;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.pinterest-queue-status {
+  display: inline-flex;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #efe8e5;
+  color: #635955;
+  font: 900 8px/1 Arial, sans-serif;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.pinterest-queue-status.published {
+  background: #e5f5e9;
+  color: #17662b;
+}
+
+.pinterest-queue-status.failed {
+  background: #fff0f0;
+  color: #a01e30;
+}
+
+.pinterest-queue-status.pending {
+  background: #fff3dc;
+  color: #845100;
+}
+
+.pinterest-queue-card-actions {
+  justify-content: flex-end;
+  max-width: 220px;
+}
+
 @media (max-width: 780px) {
   .admin-pinterest-panel .admin-messages-head {
     align-items: flex-start;
@@ -2648,6 +2805,26 @@
   .pinterest-publish-actions .shop-button {
     width: 100%;
     min-width: 0;
+  }
+
+  .pinterest-action-buttons,
+  .pinterest-action-buttons .shop-button {
+    width: 100%;
+  }
+
+  .pinterest-queue-card {
+    grid-template-columns: 58px minmax(0, 1fr);
+  }
+
+  .pinterest-queue-card > img {
+    width: 58px;
+    height: 58px;
+  }
+
+  .pinterest-queue-card-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+    max-width: none;
   }
 }
 .google-inventory article.catalog-product-target {

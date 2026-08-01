@@ -8,7 +8,8 @@
   <link rel="icon" href="assets/jerseysfrmjb-logo.jpg" type="image/jpeg">
   <link rel="stylesheet" href="styles.css?v=inventory-planner-3">
   <script src="facebook-caption.js?v=1" defer></script>
-  <script src="admin.js?v=facebook-captions-1" defer></script>
+  <script src="pinterest-content.js?v=1" defer></script>
+  <script src="admin.js?v=pinterest-queue-1" defer></script>
 </head>
 <body class="admin-body">
   <main class="admin-shell">
@@ -442,9 +443,9 @@
         <p class="form-status" data-pinterest-status role="status"></p>
 
         <div class="pinterest-publisher" data-pinterest-publisher hidden>
-          <aside class="pinterest-trial-note">
-            <strong>Trial mode</strong>
-            <span>Pins created during Trial access are test Pins visible only to you. Use a successful test Pin for the Standard-access demo.</span>
+          <aside class="pinterest-trial-note" data-pinterest-mode-note>
+            <strong data-pinterest-mode-label>Checking access</strong>
+            <span data-pinterest-mode-copy>Pinterest publishing access is being checked.</span>
           </aside>
 
           <form class="pinterest-publish-form" data-pinterest-form>
@@ -480,9 +481,18 @@
               <textarea rows="5" maxlength="800" data-pinterest-description required></textarea>
               <small><span data-pinterest-description-count>0</span>/800</small>
             </label>
+            <div class="pinterest-description-tools">
+              <button class="shop-button secondary-admin" type="button" data-pinterest-rotate>Try Another Description</button>
+              <span data-pinterest-variation-label>Variation 1 of 4</span>
+            </div>
             <label>
-              Destination page
+              Permanent product page
               <input type="url" data-pinterest-link readonly>
+            </label>
+
+            <label class="pinterest-duplicate-option">
+              <input type="checkbox" data-pinterest-allow-duplicate>
+              <span>Allow another Pin with this same product, image, and board</span>
             </label>
 
             <div class="pinterest-publish-layout">
@@ -490,11 +500,27 @@
                 <div class="pinterest-preview-placeholder">Choose a product to preview the Pin.</div>
               </article>
               <div class="pinterest-publish-actions">
-                <p>Only an in-stock inventory image and its matching category page can be published.</p>
-                <button class="shop-button" type="submit" data-pinterest-publish disabled>Publish Test Pin</button>
+                <p>Only an available inventory image and its exact permanent product page can be queued. Customer photos are excluded.</p>
+                <div class="pinterest-action-buttons">
+                  <button class="shop-button secondary-admin" type="button" data-pinterest-queue-add disabled>Add to Queue</button>
+                  <button class="shop-button" type="submit" data-pinterest-publish disabled>Publish Test Pin</button>
+                </div>
               </div>
             </div>
           </form>
+
+          <section class="pinterest-queue-section" aria-label="Pinterest publishing queue">
+            <div class="pinterest-queue-head">
+              <div>
+                <span class="section-kicker">Publishing Queue</span>
+                <h3>Saved Pins <span data-pinterest-queue-count>0</span></h3>
+              </div>
+              <button class="shop-button secondary-admin" type="button" data-refresh-pinterest-queue>Refresh Queue</button>
+            </div>
+            <div class="pinterest-queue-list" data-pinterest-queue-list>
+              <p class="empty-featured">No Pins are queued yet.</p>
+            </div>
+          </section>
         </div>
       </section>
       <section class="admin-featured-panel" data-admin-section="homepage" aria-label="Featured jersey controls" hidden>

@@ -3,16 +3,36 @@ import { pinterestApi, requirePinterestAdmin } from "./_shared.js";
 
 const TRIAL_BOARDS = [
   {
-    name: "JerseysFrmJB Trial - World Cup Jerseys",
-    description: "International football jerseys and World Cup-inspired finds from JerseysFrmJB."
+    name: "JerseysFrmJB Trial - New Arrivals",
+    description: "The newest football jersey arrivals available to view through JerseysFrmJB."
   },
   {
-    name: "JerseysFrmJB Trial - Retro Football Jerseys",
+    name: "JerseysFrmJB Trial - Barcelona Jerseys",
+    description: "Barcelona football jerseys, player shirts, and current club finds from JerseysFrmJB."
+  },
+  {
+    name: "JerseysFrmJB Trial - Real Madrid Jerseys",
+    description: "Real Madrid football jerseys, player shirts, and current club finds from JerseysFrmJB."
+  },
+  {
+    name: "JerseysFrmJB Trial - Premier League Jerseys",
+    description: "Premier League club football jerseys available to view through JerseysFrmJB."
+  },
+  {
+    name: "JerseysFrmJB Trial - La Liga Jerseys",
+    description: "La Liga club football jerseys available to view through JerseysFrmJB."
+  },
+  {
+    name: "JerseysFrmJB Trial - Retro Jerseys",
     description: "Classic football shirts, iconic players, and retro jersey finds from JerseysFrmJB."
   },
   {
-    name: "JerseysFrmJB Trial - Club Football Jerseys",
-    description: "Current club football jerseys and player shirts from JerseysFrmJB."
+    name: "JerseysFrmJB Trial - International Team Jerseys",
+    description: "International team and country football jerseys available through JerseysFrmJB."
+  },
+  {
+    name: "JerseysFrmJB Trial - World Cup 2026 Jerseys",
+    description: "World Cup 2026 national team jerseys and player shirts from JerseysFrmJB."
   }
 ];
 

@@ -31,6 +31,20 @@ export function pinterestEnvironment(env) {
     : "sandbox";
 }
 
+export function pinterestStandardAccessApproved(env) {
+  return /^(?:1|true|yes)$/i.test(String(env.PINTEREST_STANDARD_ACCESS_APPROVED || "").trim());
+}
+
+export function pinterestPublishingMode(env) {
+  const environment = pinterestEnvironment(env);
+  return {
+    environment,
+    access_mode: environment === "sandbox" ? "trial" : "standard",
+    standard_access_approved: pinterestStandardAccessApproved(env),
+    can_publish: environment === "sandbox" || pinterestStandardAccessApproved(env)
+  };
+}
+
 function pinterestApiBase(env) {
   return PINTEREST_APIS[pinterestEnvironment(env)];
 }

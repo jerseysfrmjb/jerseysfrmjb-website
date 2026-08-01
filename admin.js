@@ -42,6 +42,15 @@ const pinterestTitleCount = document.querySelector("[data-pinterest-title-count]
 const pinterestDescriptionCount = document.querySelector("[data-pinterest-description-count]");
 const pinterestPreview = document.querySelector("[data-pinterest-preview]");
 const pinterestPublish = document.querySelector("[data-pinterest-publish]");
+const pinterestModeLabel = document.querySelector("[data-pinterest-mode-label]");
+const pinterestModeCopy = document.querySelector("[data-pinterest-mode-copy]");
+const pinterestRotate = document.querySelector("[data-pinterest-rotate]");
+const pinterestVariationLabel = document.querySelector("[data-pinterest-variation-label]");
+const pinterestAllowDuplicate = document.querySelector("[data-pinterest-allow-duplicate]");
+const pinterestQueueAdd = document.querySelector("[data-pinterest-queue-add]");
+const pinterestQueueList = document.querySelector("[data-pinterest-queue-list]");
+const pinterestQueueCount = document.querySelector("[data-pinterest-queue-count]");
+const refreshPinterestQueue = document.querySelector("[data-refresh-pinterest-queue]");
 const facebookBadge = document.querySelector("[data-facebook-badge]");
 const facebookConnectionName = document.querySelector("[data-facebook-connection-name]");
 const facebookConnectionDetail = document.querySelector("[data-facebook-connection-detail]");
@@ -147,6 +156,9 @@ let pinterestConnection = null;
 let pinterestBoards = [];
 let pinterestLoaded = false;
 let pinterestPublishing = false;
+let pinterestQueueLoading = false;
+let pinterestQueue = [];
+let pinterestDescriptionVariation = 0;
 let facebookConnection = null;
 let facebookConnectionLoaded = false;
 let facebookConnectionLoading = false;
@@ -2380,12 +2392,6 @@ async function deleteFacebookDraft(post) {
   }
 }
 
-const PINTEREST_CATEGORY_PAGES = {
-  world: "/worldcup-jerseys",
-  club: "/club-jerseys",
-  retro: "/retro-jerseys"
-};
-
 function pinterestAvailableProducts() {
   return inventory
     .filter(item => Number(item.quantity || 0) > 0 && Array.isArray(item.photos) && item.photos.some(photo => photo?.src))
@@ -2393,16 +2399,17 @@ function pinterestAvailableProducts() {
 }
 
 function pinterestProductLink(item) {
-  const path = PINTEREST_CATEGORY_PAGES[item?.category] || "/shop-all";
-  return new URL(path, "https://jerseysfrmjb.com").toString();
+  return window.JBPinterestContent?.permanentProductUrl(item)
+    || new URL(`/products/${encodeURIComponent(String(item?.id || ""))}`, "https://jerseysfrmjb.com").toString();
 }
 
-function pinterestDefaultDescription(item) {
-  const sizes = Object.entries(item?.sizes || {})
-    .filter(([, quantity]) => Number(quantity) > 0)
-    .map(([size]) => size);
-  const sizeText = sizes.length ? ` Available sizes: ${sizes.join(", ")}.` : "";
-  return `${item.name}.${sizeText} Browse current football jersey inventory from JerseysFrmJB.`;
+function pinterestGeneratedContent(item, variation = pinterestDescriptionVariation) {
+  return window.JBPinterestContent?.generatePinContent(item, variation) || {
+    title: String(item?.name || "Jersey").slice(0, 100),
+    description: `${item?.name || "Jersey"} available to view through JerseysFrmJB.`.slice(0, 800),
+    link: pinterestProductLink(item),
+    boardSuggestions: []
+  };
 }
 
 function selectedPinterestProduct() {
@@ -2415,15 +2422,17 @@ function selectedPinterestPhotoIndex() {
 
 function selectSuggestedPinterestBoard(product, force = false) {
   if (!pinterestBoard || !product || (!force && pinterestBoard.value)) return;
-  const boardPattern = product.category === "world"
-    ? /\bworld\s*cup\b/i
-    : product.category === "retro"
-      ? /\bretro\b/i
-      : product.category === "club"
-        ? /\bclub\b/i
-        : null;
-  if (!boardPattern) return;
-  const match = pinterestBoards.find(board => boardPattern.test(board.name));
+  const normalize = value => String(value || "")
+    .replace(/^JerseysFrmJB\s+Trial\s*-\s*/i, "")
+    .replace(/\bfootball\b/gi, "")
+    .replace(/[^a-z0-9]+/gi, " ")
+    .trim()
+    .toLowerCase();
+  const suggestions = pinterestGeneratedContent(product).boardSuggestions || [];
+  const match = suggestions.map(normalize).reduce((found, suggestion) => found || pinterestBoards.find(board => {
+    const boardName = normalize(board.name);
+    return boardName === suggestion || boardName.includes(suggestion) || suggestion.includes(boardName);
+  }), null);
   if (match) pinterestBoard.value = match.id;
 }
 
@@ -2445,14 +2454,13 @@ function renderPinterestPreview() {
     <div>
       <span>Inventory product</span>
       <h3>${escapeHtml(pinterestTitle?.value || product.name)}</h3>
-      <p>${escapeHtml(pinterestDescription?.value || pinterestDefaultDescription(product))}</p>
+      <p>${escapeHtml(pinterestDescription?.value || pinterestGeneratedContent(product).description)}</p>
       <small>${escapeHtml(pinterestProductLink(product))}</small>
     </div>`;
 }
 
 function updatePinterestPublishState() {
-  if (!pinterestPublish) return;
-  pinterestPublish.disabled = Boolean(
+  const incomplete = Boolean(
     pinterestPublishing
     || !pinterestConnection?.connected
     || !pinterestProduct?.value
@@ -2460,6 +2468,8 @@ function updatePinterestPublishState() {
     || !pinterestTitle?.value.trim()
     || !pinterestDescription?.value.trim()
   );
+  if (pinterestQueueAdd) pinterestQueueAdd.disabled = incomplete;
+  if (pinterestPublish) pinterestPublish.disabled = incomplete || !pinterestConnection?.can_publish;
 }
 
 function renderPinterestProductOptions() {
@@ -2486,6 +2496,7 @@ function renderPinterestProductEditor(resetText = false) {
     return;
   }
 
+  if (resetText) pinterestDescriptionVariation = 0;
   const photos = (product.photos || []).filter(photo => photo?.src);
   if (pinterestImages) {
     pinterestImages.innerHTML = photos.map((photo, index) => `
@@ -2495,9 +2506,12 @@ function renderPinterestProductEditor(resetText = false) {
         <span>${index === 0 ? "Primary photo" : `Photo ${index + 1}`}</span>
       </label>`).join("");
   }
-  if (resetText || !pinterestTitle?.value) pinterestTitle.value = product.name.slice(0, 100);
-  if (resetText || !pinterestDescription?.value) pinterestDescription.value = pinterestDefaultDescription(product).slice(0, 800);
-  if (pinterestLink) pinterestLink.value = pinterestProductLink(product);
+  const generated = pinterestGeneratedContent(product);
+  if (resetText || !pinterestTitle?.value) pinterestTitle.value = generated.title.slice(0, 100);
+  if (resetText || !pinterestDescription?.value) pinterestDescription.value = generated.description.slice(0, 800);
+  if (pinterestLink) pinterestLink.value = generated.link;
+  if (pinterestVariationLabel) pinterestVariationLabel.textContent = `Variation ${pinterestDescriptionVariation + 1} of 4`;
+  if (pinterestAllowDuplicate && resetText) pinterestAllowDuplicate.checked = false;
   selectSuggestedPinterestBoard(product, resetText);
   updatePinterestCounts();
   renderPinterestPreview();
@@ -2516,6 +2530,18 @@ function renderPinterestConnection() {
   if (pinterestConnect) pinterestConnect.textContent = reconnectRequired ? "Reconnect Pinterest" : "Connect Pinterest";
   if (disconnectPinterestButton) disconnectPinterestButton.hidden = !hasConnection;
   if (pinterestPublisher) pinterestPublisher.hidden = !connected;
+  const accessMode = pinterestConnection?.access_mode === "standard" ? "Standard" : "Trial";
+  if (pinterestModeLabel) pinterestModeLabel.textContent = `${accessMode} mode`;
+  if (pinterestModeCopy) pinterestModeCopy.textContent = pinterestConnection?.status_message || (
+    accessMode === "Trial"
+      ? "Test Pins are sent only to the Pinterest API Sandbox and remain separate from production."
+      : "Standard Access approval is required before production Pins can be published."
+  );
+  if (pinterestPublish) {
+    pinterestPublish.textContent = pinterestConnection?.can_publish
+      ? accessMode === "Trial" ? "Publish Test Pin" : "Publish Pin"
+      : "Standard Approval Pending";
+  }
   if (!connected && pinterestBoard) {
     pinterestBoard.innerHTML = '<option value="">Connect Pinterest to load boards</option>';
   }
@@ -2538,11 +2564,12 @@ async function loadPinterestBoards() {
       pinterestBoard.innerHTML = '<option value="">No Pinterest boards found</option>';
       if (createPinterestBoardsButton) createPinterestBoardsButton.hidden = pinterestConnection?.environment !== "sandbox";
       if (pinterestStatusLine) {
-        pinterestStatusLine.textContent = "The API Sandbox has separate boards. Create the three Trial boards to publish your test Pin.";
+        pinterestStatusLine.textContent = "The API Sandbox has separate boards. Create the suggested Trial boards to publish test Pins.";
         pinterestStatusLine.className = "form-status";
       }
     } else if (createPinterestBoardsButton) {
-      createPinterestBoardsButton.hidden = true;
+      createPinterestBoardsButton.hidden = pinterestConnection?.environment !== "sandbox";
+      createPinterestBoardsButton.textContent = "Sync Trial Boards";
     }
     selectSuggestedPinterestBoard(selectedPinterestProduct());
   } catch (error) {
@@ -2564,7 +2591,7 @@ async function createPinterestTrialBoards() {
     createPinterestBoardsButton.textContent = "Creating...";
   }
   if (pinterestStatusLine) {
-    pinterestStatusLine.textContent = "Creating World Cup, Retro, and Club Trial boards...";
+    pinterestStatusLine.textContent = "Creating any missing suggested Trial boards...";
     pinterestStatusLine.className = "form-status";
   }
   try {
@@ -2575,12 +2602,12 @@ async function createPinterestTrialBoards() {
       `<option value="${escapeHtml(board.id)}">${escapeHtml(board.name)}${board.privacy && board.privacy !== "PUBLIC" ? ` (${escapeHtml(board.privacy.toLowerCase())})` : ""}</option>`
     ).join("");
     selectSuggestedPinterestBoard(selectedPinterestProduct());
-    if (createPinterestBoardsButton) createPinterestBoardsButton.hidden = Boolean(pinterestBoards.length);
+    if (createPinterestBoardsButton) createPinterestBoardsButton.hidden = pinterestConnection?.environment !== "sandbox";
     updatePinterestPublishState();
     if (pinterestStatusLine) {
       pinterestStatusLine.textContent = data.created
-        ? `${data.created} Trial boards created. Choose a product to continue.`
-        : "The Trial boards already exist.";
+        ? `${data.created} missing Trial boards created. Choose a product to continue.`
+        : "All suggested Trial boards already exist.";
       pinterestStatusLine.className = "form-status success";
     }
   } catch (error) {
@@ -2591,7 +2618,163 @@ async function createPinterestTrialBoards() {
   } finally {
     if (createPinterestBoardsButton) {
       createPinterestBoardsButton.disabled = false;
-      createPinterestBoardsButton.textContent = "Create Trial Boards";
+      createPinterestBoardsButton.textContent = "Sync Trial Boards";
+    }
+  }
+}
+
+function pinterestQueuePayload() {
+  const product = selectedPinterestProduct();
+  const board = pinterestBoards.find(item => String(item.id) === String(pinterestBoard?.value || ""));
+  if (!product || !board) return null;
+  return {
+    product_id: product.id,
+    board_id: board.id,
+    board_name: board.name,
+    photo_index: selectedPinterestPhotoIndex(),
+    title: pinterestTitle?.value.trim() || "",
+    description: pinterestDescription?.value.trim() || "",
+    allow_duplicate: Boolean(pinterestAllowDuplicate?.checked)
+  };
+}
+
+function renderPinterestQueue() {
+  if (pinterestQueueCount) pinterestQueueCount.textContent = String(pinterestQueue.length);
+  if (!pinterestQueueList) return;
+  if (!pinterestQueue.length) {
+    pinterestQueueList.innerHTML = '<p class="empty-featured">No Pins are queued yet.</p>';
+    return;
+  }
+  pinterestQueueList.innerHTML = pinterestQueue.map(pin => {
+    const actionLabel = pin.status === "failed" ? "Retry" : "Publish";
+    const publishAction = pin.status !== "published"
+      ? `<button class="shop-button secondary-admin" type="button" data-pinterest-queue-publish="${pin.id}" ${pinterestConnection?.can_publish ? "" : "disabled"}>${actionLabel}</button>`
+      : "";
+    const openAction = pin.pinterest_url
+      ? `<a class="shop-button secondary-admin" href="${escapeHtml(pin.pinterest_url)}" target="_blank" rel="noopener">Open Pin</a>`
+      : "";
+    const deleteAction = pin.status !== "published"
+      ? `<button class="shop-button secondary-admin danger-admin" type="button" data-pinterest-queue-delete="${pin.id}">Remove</button>`
+      : "";
+    return `<article class="pinterest-queue-card">
+      <img src="${escapeHtml(pin.image_url)}" alt="${escapeHtml(pin.product_name)} Pinterest image">
+      <div>
+        <div class="pinterest-queue-card-head">
+          <span class="pinterest-queue-status ${escapeHtml(pin.status)}">${escapeHtml(pin.status)}</span>
+          <small>${escapeHtml(pin.environment === "standard" ? "Standard" : "Trial")} · ${escapeHtml(pin.board_name)}</small>
+        </div>
+        <h4>${escapeHtml(pin.title)}</h4>
+        <p>${escapeHtml(pin.product_name)}</p>
+        <small>${pin.publish_error ? escapeHtml(pin.publish_error) : `Saved ${escapeHtml(formatMessageDate(pin.created_at))}`}</small>
+      </div>
+      <div class="pinterest-queue-card-actions">${publishAction}${openAction}${deleteAction}</div>
+    </article>`;
+  }).join("");
+}
+
+async function loadPinterestQueue() {
+  if (pinterestQueueLoading) return;
+  pinterestQueueLoading = true;
+  if (refreshPinterestQueue) refreshPinterestQueue.disabled = true;
+  try {
+    const data = await api("/api/admin/pinterest/queue");
+    pinterestQueue = Array.isArray(data.queue) ? data.queue : [];
+    renderPinterestQueue();
+  } catch (error) {
+    if (pinterestQueueList) pinterestQueueList.innerHTML = `<p class="form-status error">${escapeHtml(error.message)}</p>`;
+  } finally {
+    pinterestQueueLoading = false;
+    if (refreshPinterestQueue) refreshPinterestQueue.disabled = false;
+  }
+}
+
+async function addPinterestQueueItem({ quiet = false } = {}) {
+  const payload = pinterestQueuePayload();
+  if (!payload) throw new Error("Choose an inventory product and Pinterest board.");
+  if (pinterestQueueAdd) pinterestQueueAdd.disabled = true;
+  try {
+    const data = await api("/api/admin/pinterest/queue", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+    pinterestQueue = [data.pin, ...pinterestQueue.filter(item => Number(item.id) !== Number(data.pin.id))];
+    renderPinterestQueue();
+    if (!quiet && pinterestStatusLine) {
+      pinterestStatusLine.textContent = "Pin added to the publishing queue. Nothing was published yet.";
+      pinterestStatusLine.className = "form-status success";
+    }
+    return data.pin;
+  } catch (error) {
+    if (error.duplicate) {
+      pinterestQueue = [error.duplicate, ...pinterestQueue.filter(item => Number(item.id) !== Number(error.duplicate.id))];
+      renderPinterestQueue();
+      if (!quiet && pinterestStatusLine) {
+        pinterestStatusLine.textContent = error.message;
+        pinterestStatusLine.className = "form-status error";
+      }
+      return error.duplicate;
+    }
+    throw error;
+  } finally {
+    updatePinterestPublishState();
+  }
+}
+
+async function publishPinterestQueueItem(id) {
+  if (pinterestPublishing) return;
+  if (!pinterestConnection?.can_publish) {
+    if (pinterestStatusLine) {
+      pinterestStatusLine.textContent = pinterestConnection?.status_message || "Standard Access approval is still pending. The Pin remains safely queued.";
+      pinterestStatusLine.className = "form-status error";
+    }
+    return;
+  }
+  pinterestPublishing = true;
+  updatePinterestPublishState();
+  renderPinterestQueue();
+  if (pinterestStatusLine) {
+    pinterestStatusLine.textContent = pinterestConnection.access_mode === "trial" ? "Publishing a Sandbox test Pin..." : "Publishing the queued Pin...";
+    pinterestStatusLine.className = "form-status";
+  }
+  try {
+    const data = await api("/api/admin/pinterest/publish", {
+      method: "POST",
+      body: JSON.stringify({ queue_id: id })
+    });
+    const published = data.queue_item || data.pin;
+    pinterestQueue = pinterestQueue.map(item => Number(item.id) === Number(id) ? published : item);
+    renderPinterestQueue();
+    const link = published?.pinterest_url || "";
+    if (pinterestStatusLine) {
+      pinterestStatusLine.innerHTML = link
+        ? `${published.environment === "trial" ? "Test Pin" : "Pin"} published. <a href="${escapeHtml(link)}" target="_blank" rel="noopener">Open it on Pinterest</a>.`
+        : "Pinterest confirmed the Pin was published.";
+      pinterestStatusLine.className = "form-status success";
+    }
+  } catch (error) {
+    await loadPinterestQueue();
+    if (pinterestStatusLine) {
+      pinterestStatusLine.textContent = error.message;
+      pinterestStatusLine.className = "form-status error";
+    }
+  } finally {
+    pinterestPublishing = false;
+    renderPinterestConnection();
+    renderPinterestQueue();
+    updatePinterestPublishState();
+  }
+}
+
+async function removePinterestQueueItem(id) {
+  if (!confirm("Remove this unpublished Pin from the queue?")) return;
+  try {
+    await api(`/api/admin/pinterest/queue?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+    pinterestQueue = pinterestQueue.filter(item => Number(item.id) !== Number(id));
+    renderPinterestQueue();
+  } catch (error) {
+    if (pinterestStatusLine) {
+      pinterestStatusLine.textContent = error.message;
+      pinterestStatusLine.className = "form-status error";
     }
   }
 }
@@ -2609,11 +2792,11 @@ async function loadPinterestStatus() {
     pinterestLoaded = true;
     renderPinterestConnection();
     if (pinterestConnection.connected) {
-      await loadPinterestBoards();
+      await Promise.all([loadPinterestBoards(), loadPinterestQueue()]);
       if (pinterestStatusLine && pinterestBoards.length) {
         const callbackMessage = pinterestCallback === "connected"
-          ? "Pinterest connected successfully. Choose a product and board to publish a test Pin."
-          : "Pinterest is connected.";
+          ? `Pinterest connected successfully. ${pinterestConnection.status_message}`
+          : pinterestConnection.status_message || "Pinterest is connected.";
         pinterestStatusLine.textContent = callbackMessage;
         pinterestStatusLine.className = "form-status success";
       }
@@ -2665,46 +2848,17 @@ async function disconnectPinterest() {
 async function publishPinterestPin(event) {
   event.preventDefault();
   if (pinterestPublishing) return;
-  const product = selectedPinterestProduct();
-  if (!product || !pinterestBoard?.value) {
-    if (pinterestStatusLine) pinterestStatusLine.textContent = "Choose an inventory product and Pinterest board.";
-    return;
-  }
-
-  pinterestPublishing = true;
-  if (pinterestPublish) pinterestPublish.textContent = "Publishing...";
-  updatePinterestPublishState();
-  if (pinterestStatusLine) {
-    pinterestStatusLine.textContent = "Publishing the test Pin...";
-    pinterestStatusLine.className = "form-status";
-  }
   try {
-    const data = await api("/api/admin/pinterest/publish", {
-      method: "POST",
-      body: JSON.stringify({
-        product_id: product.id,
-        board_id: pinterestBoard.value,
-        photo_index: selectedPinterestPhotoIndex(),
-        title: pinterestTitle.value.trim(),
-        description: pinterestDescription.value.trim()
-      })
-    });
-    if (pinterestStatusLine) {
-      const link = data.pin?.pinterest_url || "";
-      pinterestStatusLine.innerHTML = link
-        ? `Test Pin published. <a href="${escapeHtml(link)}" target="_blank" rel="noopener">Open it on Pinterest</a>.`
-        : "Test Pin published successfully.";
-      pinterestStatusLine.className = "form-status success";
+    const queued = await addPinterestQueueItem({ quiet: true });
+    if (queued.status === "published" && !pinterestAllowDuplicate?.checked) {
+      throw new Error("That exact product image was already published to this board. Enable manual duplicates to create another Pin.");
     }
+    await publishPinterestQueueItem(queued.id);
   } catch (error) {
     if (pinterestStatusLine) {
       pinterestStatusLine.textContent = error.message;
       pinterestStatusLine.className = "form-status error";
     }
-  } finally {
-    pinterestPublishing = false;
-    if (pinterestPublish) pinterestPublish.textContent = "Publish Test Pin";
-    updatePinterestPublishState();
   }
 }
 
@@ -3801,6 +3955,35 @@ pinterestProduct?.addEventListener("change", () => renderPinterestProductEditor(
 pinterestBoard?.addEventListener("change", updatePinterestPublishState);
 pinterestImages?.addEventListener("change", event => {
   if (event.target.matches("[data-pinterest-photo]")) renderPinterestPreview();
+});
+pinterestRotate?.addEventListener("click", () => {
+  const product = selectedPinterestProduct();
+  if (!product) return;
+  pinterestDescriptionVariation = (pinterestDescriptionVariation + 1) % 4;
+  const generated = pinterestGeneratedContent(product);
+  if (pinterestTitle) pinterestTitle.value = generated.title.slice(0, 100);
+  if (pinterestDescription) pinterestDescription.value = generated.description.slice(0, 800);
+  if (pinterestVariationLabel) pinterestVariationLabel.textContent = `Variation ${pinterestDescriptionVariation + 1} of 4`;
+  updatePinterestCounts();
+  renderPinterestPreview();
+  updatePinterestPublishState();
+});
+pinterestQueueAdd?.addEventListener("click", async () => {
+  try {
+    await addPinterestQueueItem();
+  } catch (error) {
+    if (pinterestStatusLine) {
+      pinterestStatusLine.textContent = error.message;
+      pinterestStatusLine.className = "form-status error";
+    }
+  }
+});
+refreshPinterestQueue?.addEventListener("click", loadPinterestQueue);
+pinterestQueueList?.addEventListener("click", event => {
+  const publishButton = event.target.closest("[data-pinterest-queue-publish]");
+  const deleteButton = event.target.closest("[data-pinterest-queue-delete]");
+  if (publishButton) publishPinterestQueueItem(publishButton.dataset.pinterestQueuePublish);
+  if (deleteButton) removePinterestQueueItem(deleteButton.dataset.pinterestQueueDelete);
 });
 pinterestTitle?.addEventListener("input", () => {
   updatePinterestCounts();
