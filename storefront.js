@@ -1,4 +1,4 @@
-const STOREFRONT_STYLE_VERSION = "restock-card-2";
+const STOREFRONT_STYLE_VERSION = "product-actions-1";
 
 document.querySelectorAll('link[rel="stylesheet"][href*="styles.css"]').forEach(stylesheet => {
   const url = new URL(stylesheet.href, window.location.href);
@@ -606,6 +606,102 @@ function initSliders(root = document) {
   });
 }
 
+function initProductLightbox() {
+  const gallery = document.querySelector("[data-product-gallery]");
+  const triggers = gallery ? [...gallery.querySelectorAll("[data-product-gallery-open]")] : [];
+  if (!gallery || !triggers.length || gallery.dataset.lightboxReady) return;
+  gallery.dataset.lightboxReady = "true";
+
+  const photos = triggers.map(trigger => {
+    const image = trigger.querySelector("img");
+    const caption = trigger.closest("figure")?.querySelector("figcaption")?.textContent?.trim() || "Jersey photo";
+    return {
+      src: image?.currentSrc || image?.src || "",
+      alt: image?.alt || caption,
+      caption
+    };
+  }).filter(photo => photo.src);
+  if (!photos.length) return;
+
+  const lightbox = document.createElement("div");
+  lightbox.className = "product-lightbox";
+  lightbox.dataset.productLightbox = "";
+  lightbox.hidden = true;
+  lightbox.innerHTML = `
+    <section class="product-lightbox-dialog" role="dialog" aria-modal="true" aria-label="Jersey photo gallery">
+      <button class="product-lightbox-close" type="button" aria-label="Close full-screen gallery">&times;</button>
+      <button class="product-lightbox-nav product-lightbox-prev" type="button" aria-label="Previous jersey photo">&lsaquo;</button>
+      <figure>
+        <img data-product-lightbox-image src="" alt="">
+        <figcaption><span data-product-lightbox-caption></span><small data-product-lightbox-count></small></figcaption>
+      </figure>
+      <button class="product-lightbox-nav product-lightbox-next" type="button" aria-label="Next jersey photo">&rsaquo;</button>
+    </section>
+  `;
+  document.body.appendChild(lightbox);
+
+  const dialog = lightbox.querySelector(".product-lightbox-dialog");
+  const image = lightbox.querySelector("[data-product-lightbox-image]");
+  const caption = lightbox.querySelector("[data-product-lightbox-caption]");
+  const count = lightbox.querySelector("[data-product-lightbox-count]");
+  const close = lightbox.querySelector(".product-lightbox-close");
+  const previous = lightbox.querySelector(".product-lightbox-prev");
+  const next = lightbox.querySelector(".product-lightbox-next");
+  let current = 0;
+  let lastTrigger = null;
+  let touchStartX = 0;
+
+  function show(index) {
+    current = (index + photos.length) % photos.length;
+    const photo = photos[current];
+    image.src = photo.src;
+    image.alt = photo.alt;
+    caption.textContent = photo.caption;
+    count.textContent = `${current + 1} / ${photos.length}`;
+  }
+
+  function setOpen(open, index = current, trigger = null) {
+    if (open) {
+      lastTrigger = trigger;
+      show(index);
+      lightbox.hidden = false;
+      document.body.classList.add("product-lightbox-open");
+      close.focus();
+      return;
+    }
+    lightbox.hidden = true;
+    document.body.classList.remove("product-lightbox-open");
+    lastTrigger?.focus();
+  }
+
+  triggers.forEach((trigger, index) => {
+    trigger.addEventListener("click", () => setOpen(true, Number(trigger.dataset.galleryIndex ?? index), trigger));
+  });
+  previous.addEventListener("click", () => show(current - 1));
+  next.addEventListener("click", () => show(current + 1));
+  close.addEventListener("click", () => setOpen(false));
+  lightbox.addEventListener("click", event => {
+    if (event.target === lightbox) setOpen(false);
+  });
+  dialog.addEventListener("touchstart", event => {
+    touchStartX = event.changedTouches[0]?.clientX || 0;
+  }, { passive: true });
+  dialog.addEventListener("touchend", event => {
+    const distance = (event.changedTouches[0]?.clientX || 0) - touchStartX;
+    if (Math.abs(distance) < 45) return;
+    show(distance > 0 ? current - 1 : current + 1);
+  }, { passive: true });
+  document.addEventListener("keydown", event => {
+    if (lightbox.hidden) return;
+    if (event.key === "Escape") setOpen(false);
+    if (event.key === "ArrowLeft") show(current - 1);
+    if (event.key === "ArrowRight") show(current + 1);
+  });
+
+  previous.hidden = photos.length < 2;
+  next.hidden = photos.length < 2;
+}
+
 function setupFilters(filterGroup, cards) {
   if (!filterGroup) return;
   const container = filterGroup.closest(".inventory-page");
@@ -873,6 +969,7 @@ async function renderMarketplaceFeedback() {
   ]);
 }
 
+initProductLightbox();
 renderInventoryGrids();
 renderFeaturedGrid();
 renderHomepageStats();
@@ -948,7 +1045,7 @@ function createHelpWidget() {
   if (!document.querySelector('link[data-help-widget-style]')) {
     const widgetStyle = document.createElement("link");
     widgetStyle.rel = "stylesheet";
-    widgetStyle.href = "/help-widget.css?v=instagram-contact-1";
+    widgetStyle.href = "/help-widget.css?v=product-actions-1";
     widgetStyle.dataset.helpWidgetStyle = "";
     document.head.appendChild(widgetStyle);
   }

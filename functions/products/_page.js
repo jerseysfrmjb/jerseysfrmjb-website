@@ -372,11 +372,14 @@ function structuredProduct(model) {
   return schema;
 }
 
-function imageMarkup(image, label, loading = "lazy") {
+function imageMarkup(image, label, loading = "lazy", index = 0) {
   if (!image) return "";
   return `
     <figure class="product-detail-photo">
-      <img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.alt)}" title="${escapeHtml(image.alt)}" width="1280" height="1280" loading="${escapeHtml(loading)}" decoding="async"${loading === "eager" ? ' fetchpriority="high"' : ""}>
+      <button class="product-gallery-trigger" type="button" data-product-gallery-open data-gallery-index="${index}" aria-label="Open full-screen ${escapeHtml(label.toLowerCase())} photo">
+        <img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.alt)}" title="${escapeHtml(image.alt)}" width="1280" height="1280" loading="${escapeHtml(loading)}" decoding="async"${loading === "eager" ? ' fetchpriority="high"' : ""}>
+        <span class="product-gallery-zoom" aria-hidden="true">Expand</span>
+      </button>
       <figcaption>${escapeHtml(label)}</figcaption>
     </figure>`;
 }
@@ -530,6 +533,33 @@ function marketplaceMarkup(model) {
     </section>`;
 }
 
+function mobileActionMarkup(model) {
+  if (!model.available) {
+    return `
+      <aside class="product-mobile-action-bar" aria-label="Restock this jersey">
+        <div class="product-mobile-action-intro"><span>Currently sold out</span><strong>Want this jersey?</strong></div>
+        <button class="product-mobile-request-button" type="button" data-open-help data-help-request-type="restock_request">Request a Restock</button>
+      </aside>`;
+  }
+
+  const activeMarketplaces = model.marketplaces.filter(marketplace => marketplace.link);
+  if (!activeMarketplaces.length) {
+    return `
+      <aside class="product-mobile-action-bar" aria-label="Ask about this jersey">
+        <div class="product-mobile-action-intro"><span>Need help?</span><strong>Ask about this jersey</strong></div>
+        <button class="product-mobile-request-button" type="button" data-open-help data-help-request-type="jersey_request">Send a Request</button>
+      </aside>`;
+  }
+
+  return `
+    <aside class="product-mobile-action-bar" aria-label="Marketplace purchase options">
+      <div class="product-mobile-action-intro"><span>Secure marketplace checkout</span><strong>${activeMarketplaces.length === 1 ? `Available on ${escapeHtml(activeMarketplaces[0].name)}` : "Choose a marketplace"}</strong></div>
+      <nav aria-label="Buy this jersey">
+        ${activeMarketplaces.map(marketplace => `<a class="platform-buy-button product-mobile-marketplace-button" href="${escapeHtml(marketplace.link)}" target="_blank" rel="noopener" data-analytics-product-id="${escapeHtml(model.id)}" data-analytics-product-name="${escapeHtml(model.title)}" data-analytics-marketplace="${escapeHtml(marketplace.name)}"><span>Buy on ${escapeHtml(marketplace.name)}</span>${marketplace.price === null ? "" : `<b>$${escapeHtml(marketplace.priceDisplay)}</b>`}</a>`).join("")}
+      </nav>
+    </aside>`;
+}
+
 function headerMarkup() {
   return `
   <header class="site-header">
@@ -634,13 +664,13 @@ export function renderProductPage(model) {
   <script type="application/ld+json">${jsonForHtml(schema)}</script>
   <script type="application/ld+json">${jsonForHtml(breadcrumbs)}</script>
   <script type="application/ld+json">${jsonForHtml(faqSchema(faqs))}</script>
-  <link rel="stylesheet" href="/styles.css?v=restock-card-2">
+  <link rel="stylesheet" href="/styles.css?v=product-actions-1">
   <link rel="stylesheet" href="/design-preview.css?v=mobile-grid-2">
   <script src="/meta-pixel.js?v=1" defer></script>
   <script src="/analytics.js?v=operations-1" defer></script>
   <script src="/storefront.js?v=instagram-contact-1" defer></script>
 </head>
-<body class="product-page-body">
+<body class="product-page-body has-mobile-product-actions">
   ${headerMarkup()}
   <main class="product-page-main">
     <nav class="product-breadcrumbs" aria-label="Breadcrumb">
@@ -651,9 +681,9 @@ export function renderProductPage(model) {
       <span aria-current="page">${escapeHtml(model.title)}</span>
     </nav>
     <article class="product-landing-card">
-      <section class="product-detail-gallery" aria-label="${escapeHtml(model.title)} photos">
-        ${imageMarkup(model.images.front, "Front", "eager")}
-        ${imageMarkup(model.images.back, "Back")}
+      <section class="product-detail-gallery" data-product-gallery aria-label="${escapeHtml(model.title)} photos">
+        ${imageMarkup(model.images.front, "Front", "eager", 0)}
+        ${imageMarkup(model.images.back, "Back", "lazy", 1)}
       </section>
       <section
         class="product-detail-copy"
@@ -704,6 +734,7 @@ export function renderProductPage(model) {
       ${faqs.map(faq => `<details><summary>${escapeHtml(faq.question)}</summary><p>${escapeHtml(faq.answer)}</p></details>`).join("")}
     </section>
   </main>
+  ${mobileActionMarkup(model)}
   ${footerMarkup()}
 </body>
 </html>`;
@@ -720,7 +751,7 @@ export function renderProductNotFound(siteOrigin = DEFAULT_SITE_ORIGIN) {
   <meta name="description" content="This jersey could not be found in the current JerseysFrmJB inventory.">
   <meta name="robots" content="noindex,follow">
   <link rel="canonical" href="${escapeHtml(`${origin}/shop-all`)}">
-  <link rel="stylesheet" href="/styles.css?v=restock-card-2">
+  <link rel="stylesheet" href="/styles.css?v=product-actions-1">
   <link rel="stylesheet" href="/design-preview.css?v=mobile-grid-2">
   <script src="/meta-pixel.js?v=1" defer></script>
   <script src="/analytics.js?v=operations-1" defer></script>

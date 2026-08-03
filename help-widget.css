@@ -590,6 +590,10 @@
     bottom: 12px;
   }
 
+  .product-page-body.has-mobile-product-actions .help-widget:not(.open) {
+    bottom: calc(94px + env(safe-area-inset-bottom));
+  }
+
   .help-widget .help-widget-button {
     height: 45px;
     padding: 7px 15px 7px 8px;

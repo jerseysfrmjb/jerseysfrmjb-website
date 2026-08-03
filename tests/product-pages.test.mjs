@@ -194,6 +194,13 @@ assert.match(inStockHtml, /<meta name="twitter:card" content="summary_large_imag
 assert.match(inStockHtml, /<meta name="twitter:image" content="https:\/\/jerseysfrmjb\.com\//);
 assert.match(inStockHtml, /data-meta-product="true"/);
 assert.match(inStockHtml, new RegExp(`data-product-id="${inStockModel.id}"`));
+assert.match(inStockHtml, /class="product-page-body has-mobile-product-actions"/);
+assert.match(inStockHtml, /data-product-gallery/);
+assert.equal((inStockHtml.match(/data-product-gallery-open/g) || []).length, 2);
+assert.match(inStockHtml, /data-gallery-index="0"/);
+assert.match(inStockHtml, /data-gallery-index="1"/);
+assert.match(inStockHtml, /class="product-mobile-action-bar" aria-label="Marketplace purchase options"/);
+assert.equal((inStockHtml.match(/product-mobile-marketplace-button/g) || []).length, 2);
 assert.match(inStockHtml, /\/meta-pixel\.js\?v=1/);
 assert.match(inStockHtml, /Buy on Depop/);
 assert.match(inStockHtml, /Buy on eBay/);
@@ -266,6 +273,9 @@ assert.match(soldOutHtml, /Expected marketplace price/);
 assert.match(soldOutHtml, /<b>Depop<\/b> \$50/);
 assert.match(soldOutHtml, /<b>eBay<\/b> \$55/);
 assert.match(soldOutHtml, /data-help-request-type="restock_request"><span>Request This Jersey<\/span>/);
+assert.match(soldOutHtml, /class="product-mobile-action-bar" aria-label="Restock this jersey"/);
+assert.match(soldOutHtml, /class="product-mobile-request-button"[^>]*data-help-request-type="restock_request"/);
+assert.doesNotMatch(soldOutHtml, /product-mobile-marketplace-button/);
 assert.doesNotMatch(soldOutHtml, /Total stock|Stock quantity|\d+\s+(?:available|remaining)|quantity/i);
 assert.doesNotMatch(soldOutHtml, /class="platform-buy-button product-marketplace-button"/);
 assert.ok(soldOutSchema.offers.every(offer => offer.availability === "https://schema.org/OutOfStock"));
@@ -274,6 +284,11 @@ assert.equal(
   (oneLinkHtml.match(/class="platform-buy-button product-marketplace-button"/g) || []).length,
   1,
   "only one active marketplace button renders when only one listing link exists"
+);
+assert.equal(
+  (oneLinkHtml.match(/product-mobile-marketplace-button/g) || []).length,
+  1,
+  "mobile purchase bar also renders only the active marketplace"
 );
 assert.match(oneLinkHtml, /Buy on Depop/);
 assert.doesNotMatch(oneLinkHtml, /Buy on eBay/);
@@ -314,6 +329,11 @@ const invalidSlugResponse = await getProductPage({
   params: { slug: "../invalid" }
 });
 assert.equal(invalidSlugResponse.status, 404);
+
+assert.match(storefrontSource, /function initProductLightbox\(\)/);
+assert.match(storefrontSource, /event\.key === "ArrowLeft"/);
+assert.match(storefrontSource, /event\.key === "ArrowRight"/);
+assert.match(storefrontSource, /Math\.abs\(distance\) < 45/);
 
 console.log("Product landing page tests passed:");
 console.log(`- in stock with two marketplace links: ${inStockRow.id}`);
