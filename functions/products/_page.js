@@ -472,14 +472,20 @@ function relatedProductsMarkup(products = []) {
 
 function marketplaceMarkup(model) {
   if (!model.available) {
+    const expectedPrices = model.marketplaces.flatMap(marketplace => marketplace.price === null
+      ? []
+      : [`<span><b>${escapeHtml(marketplace.name)}</b> $${escapeHtml(marketplace.priceDisplay)}</span>`]
+    ).join("");
     return `
       <section class="product-marketplaces product-request-card product-page-request" aria-labelledby="marketplace-heading">
-        <div class="product-section-heading">
-          <span>Restock request</span>
-          <h2 id="marketplace-heading">Want this jersey?</h2>
+        <div class="product-request-icon" aria-hidden="true">&#8635;</div>
+        <div class="product-request-copy">
+          <span class="product-request-eyebrow">Restock requests open</span>
+          <strong id="marketplace-heading">Want this jersey?</strong>
+          <p>Tell us the size you need and we will use your request to plan the next restock.</p>
         </div>
-        <p>Request a restock and tell us which size you need.</p>
-        <button type="button" data-open-help data-help-request-type="restock_request">Request This Jersey</button>
+        ${expectedPrices ? `<div class="product-request-prices"><small>Expected marketplace price</small><div>${expectedPrices}</div></div>` : ""}
+        <button type="button" data-open-help data-help-request-type="restock_request"><span>Request This Jersey</span><span aria-hidden="true">&rarr;</span></button>
       </section>`;
   }
 

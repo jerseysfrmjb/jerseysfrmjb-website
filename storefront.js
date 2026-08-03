@@ -331,17 +331,28 @@ function synchronizedMarketplacePrices(item = {}) {
 }
 
 function renderPlatformAvailability(item = {}, available = true) {
+  const synchronizedPrices = synchronizedMarketplacePrices(item);
   if (!available) {
+    const expectedPrices = ["Depop", "eBay"].flatMap(platform => {
+      const price = synchronizedPrices[platform];
+      return price === null || price === undefined
+        ? []
+        : [`<span><b>${escapeHtml(platform)}</b> $${escapeHtml(formatPriceValue(price))}</span>`];
+    }).join("");
     return `
       <section class="product-request-card" aria-label="Request this sold-out jersey">
-        <span>Want this jersey?</span>
-        <p>Request a restock and tell us the size you need.</p>
-        <button type="button" data-open-help data-help-request-type="restock_request">Request This Jersey</button>
+        <div class="product-request-icon" aria-hidden="true">&#8635;</div>
+        <div class="product-request-copy">
+          <span class="product-request-eyebrow">Restock requests open</span>
+          <strong>Want this jersey?</strong>
+          <p>Tell us the size you need and we will use your request to plan the next restock.</p>
+        </div>
+        ${expectedPrices ? `<div class="product-request-prices"><small>Expected marketplace price</small><div>${expectedPrices}</div></div>` : ""}
+        <button type="button" data-open-help data-help-request-type="restock_request"><span>Request This Jersey</span><span aria-hidden="true">&rarr;</span></button>
       </section>`;
   }
 
   const savedPrices = item.platform_prices || {};
-  const synchronizedPrices = synchronizedMarketplacePrices(item);
   const links = item.links || {};
   const offers = PUBLIC_MARKETPLACES.flatMap(platform => {
     const value = synchronizedPrices[platform.name] ?? savedPrices[platform.name];
