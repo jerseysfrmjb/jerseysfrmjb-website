@@ -634,7 +634,7 @@ export function renderProductPage(model) {
   <script type="application/ld+json">${jsonForHtml(schema)}</script>
   <script type="application/ld+json">${jsonForHtml(breadcrumbs)}</script>
   <script type="application/ld+json">${jsonForHtml(faqSchema(faqs))}</script>
-  <link rel="stylesheet" href="/styles.css?v=operations-1">
+  <link rel="stylesheet" href="/styles.css?v=restock-card-2">
   <link rel="stylesheet" href="/design-preview.css?v=mobile-grid-2">
   <script src="/meta-pixel.js?v=1" defer></script>
   <script src="/analytics.js?v=operations-1" defer></script>
@@ -720,7 +720,7 @@ export function renderProductNotFound(siteOrigin = DEFAULT_SITE_ORIGIN) {
   <meta name="description" content="This jersey could not be found in the current JerseysFrmJB inventory.">
   <meta name="robots" content="noindex,follow">
   <link rel="canonical" href="${escapeHtml(`${origin}/shop-all`)}">
-  <link rel="stylesheet" href="/styles.css?v=operations-1">
+  <link rel="stylesheet" href="/styles.css?v=restock-card-2">
   <link rel="stylesheet" href="/design-preview.css?v=mobile-grid-2">
   <script src="/meta-pixel.js?v=1" defer></script>
   <script src="/analytics.js?v=operations-1" defer></script>

@@ -84,6 +84,8 @@ assert.match(storefront, /data-help-product-context/);
 assert.match(storefront, /DM @jerseysfrmjb directly/);
 assert.match(storefront, /Or send a structured request/);
 assert.match(storefront, /help-widget\.css\?v=instagram-contact-1/);
+assert.match(storefront, /STOREFRONT_STYLE_VERSION = "restock-card-2"/);
+assert.match(storefront, /url\.searchParams\.set\("v", STOREFRONT_STYLE_VERSION\)/);
 assert.doesNotMatch(storefront, /<svg[^>]*help-widget-button/);
 assert.match(helpWidgetStyles, /\.help-widget \.help-widget-button/);
 assert.match(helpWidgetStyles, /\.help-widget \.help-request-choices > button/);

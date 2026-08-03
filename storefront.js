@@ -1,3 +1,12 @@
+const STOREFRONT_STYLE_VERSION = "restock-card-2";
+
+document.querySelectorAll('link[rel="stylesheet"][href*="styles.css"]').forEach(stylesheet => {
+  const url = new URL(stylesheet.href, window.location.href);
+  if (url.searchParams.get("v") === STOREFRONT_STYLE_VERSION) return;
+  url.searchParams.set("v", STOREFRONT_STYLE_VERSION);
+  stylesheet.href = url.toString();
+});
+
 const toggle = document.querySelector(".menu-toggle");
 const drawer = document.querySelector(".drawer");
 const backdrop = document.querySelector(".drawer-backdrop");
