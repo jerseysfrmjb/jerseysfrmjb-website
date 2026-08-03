@@ -30,14 +30,12 @@ const MARKETPLACES = [
   {
     name: "Depop",
     key: "depop",
-    priceKey: "depop_price",
     icon: "\u{1F6CD}",
     hosts: ["depop.com"]
   },
   {
     name: "eBay",
     key: "ebay",
-    priceKey: "ebay_price",
     icon: "\u{1F6D2}",
     hosts: ["ebay.com"]
   }
@@ -206,6 +204,17 @@ function selectedMetaPrice(row) {
   ].map(numericPrice).find(value => value !== null) ?? null;
 }
 
+function synchronizedMarketplacePrices(row) {
+  const savedDepop = numericPrice(row.depop_price);
+  const savedEbay = numericPrice(row.ebay_price);
+  const fallback = numericPrice(row.base_price);
+  const depop = savedDepop ?? (savedEbay === null ? fallback : Math.max(0, savedEbay - 5));
+  return {
+    Depop: depop,
+    eBay: depop === null ? savedEbay : depop + 5
+  };
+}
+
 function productDescription(row, identity, category, availableSizes, available) {
   const details = [
     row.name,
@@ -240,8 +249,9 @@ export function buildProductPageModel(row = {}, options = {}) {
   const category = categoryDetails(row.category);
   const images = productImages(row, siteOrigin, identity, season);
   const links = parseJson(row.links, row.links || {});
+  const synchronizedPrices = synchronizedMarketplacePrices(row);
   const marketplaces = MARKETPLACES.flatMap(marketplace => {
-    const price = numericPrice(row[marketplace.priceKey]);
+    const price = synchronizedPrices[marketplace.name];
     const link = marketplaceUrl(links?.[marketplace.key], marketplace.hosts);
     if (price === null && !link) return [];
     return [{
@@ -461,6 +471,18 @@ function relatedProductsMarkup(products = []) {
 }
 
 function marketplaceMarkup(model) {
+  if (!model.available) {
+    return `
+      <section class="product-marketplaces product-request-card product-page-request" aria-labelledby="marketplace-heading">
+        <div class="product-section-heading">
+          <span>Restock request</span>
+          <h2 id="marketplace-heading">Want this jersey?</h2>
+        </div>
+        <p>Request a restock and tell us which size you need.</p>
+        <button type="button" data-open-help data-help-request-type="restock_request">Request This Jersey</button>
+      </section>`;
+  }
+
   if (!model.marketplaces.length) {
     return `
       <section class="product-marketplaces" aria-labelledby="marketplace-heading">
@@ -469,6 +491,7 @@ function marketplaceMarkup(model) {
           <h2 id="marketplace-heading">Listings coming soon</h2>
         </div>
         <p class="product-marketplace-empty">No active Depop or eBay listing is linked yet.</p>
+        <button class="product-marketplace-help" type="button" data-open-help data-help-request-type="jersey_request">Ask About This Jersey</button>
       </section>`;
   }
 
@@ -655,7 +678,7 @@ export function renderProductPage(model) {
           ${model.available ? `<ul>${stockMarkup}</ul>` : ""}
         </section>
         ${marketplaceMarkup(model)}
-        <p class="product-checkout-note">Purchases are completed securely on the selected marketplace. JerseysFrmJB does not process checkout on this page.</p>
+        ${model.available && model.marketplaces.length ? '<p class="product-checkout-note">Purchases are completed securely on the selected marketplace. JerseysFrmJB does not process checkout on this page.</p>' : ""}
       </section>
     </article>
     <section class="product-page-support">
@@ -665,7 +688,7 @@ export function renderProductPage(model) {
       </div>
       <div class="product-page-support-actions">
         <a href="/size-guide">Open Size Guide</a>
-        <button type="button" data-open-help data-help-request-type="jersey_request">Request This Jersey</button>
+        <button type="button" data-open-help data-help-request-type="${model.available ? "jersey_request" : "restock_request"}">${model.available ? "Request This Jersey" : "Request a Restock"}</button>
       </div>
     </section>
     ${relatedProductsMarkup(model.relatedProducts)}

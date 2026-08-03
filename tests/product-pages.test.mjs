@@ -123,6 +123,22 @@ const soldOutModel = buildProductPageModel(soldOutRow, {
 const oneLinkModel = buildProductPageModel(oneLinkRow, {
   siteOrigin: "https://jerseysfrmjb.com"
 });
+const basePriceModel = buildProductPageModel(productRow(oneLinkItem, {
+  id: `${oneLinkItem.id}-base-price`,
+  base_price: 40,
+  depop_price: null,
+  ebay_price: null
+}), {
+  siteOrigin: "https://jerseysfrmjb.com"
+});
+const ebayOnlyPriceModel = buildProductPageModel(productRow(oneLinkItem, {
+  id: `${oneLinkItem.id}-ebay-price`,
+  base_price: 40,
+  depop_price: null,
+  ebay_price: 50
+}), {
+  siteOrigin: "https://jerseysfrmjb.com"
+});
 
 assert.ok(inStockModel.available);
 assert.equal("quantity" in inStockModel, false);
@@ -132,6 +148,10 @@ assert.equal(inStockModel.canonicalUrl, `https://jerseysfrmjb.com/products/${inS
 assert.equal(inStockModel.images.front.src.startsWith("https://jerseysfrmjb.com/"), true);
 assert.equal(inStockModel.images.back.src.startsWith("https://jerseysfrmjb.com/"), true);
 assert.equal(inStockModel.marketplaces.filter(marketplace => marketplace.link).length, 2);
+assert.deepEqual(
+  inStockModel.marketplaces.map(marketplace => [marketplace.name, marketplace.priceDisplay]),
+  [["Depop", "50.00"], ["eBay", "55.00"]]
+);
 
 assert.equal(soldOutModel.available, false);
 assert.equal("quantity" in soldOutModel, false);
@@ -140,6 +160,14 @@ assert.equal(soldOutModel.availabilityUrl, "https://schema.org/OutOfStock");
 
 assert.equal(oneLinkModel.marketplaces.filter(marketplace => marketplace.link).length, 1);
 assert.equal(oneLinkModel.marketplaces.find(marketplace => marketplace.name === "eBay").link, "");
+assert.deepEqual(
+  basePriceModel.marketplaces.map(marketplace => [marketplace.name, marketplace.priceDisplay]),
+  [["Depop", "40.00"], ["eBay", "45.00"]]
+);
+assert.deepEqual(
+  ebayOnlyPriceModel.marketplaces.map(marketplace => [marketplace.name, marketplace.priceDisplay]),
+  [["Depop", "45.00"], ["eBay", "50.00"]]
+);
 
 const inStockHtml = renderProductPage(inStockModel);
 const soldOutHtml = renderProductPage(soldOutModel);
@@ -156,6 +184,7 @@ assert.match(inStockHtml, new RegExp(`data-product-id="${inStockModel.id}"`));
 assert.match(inStockHtml, /\/meta-pixel\.js\?v=1/);
 assert.match(inStockHtml, /Buy on Depop/);
 assert.match(inStockHtml, /Buy on eBay/);
+assert.doesNotMatch(inStockHtml, /Jersey Price|Marketplace prices may vary|Website price/i);
 assert.match(storefrontSource, /class="product-details-button"/);
 assert.match(storefrontSource, /View Jersey Details/);
 assert.match(seoSource, /class="product-details-button"/);
@@ -202,6 +231,10 @@ assert.deepEqual(
   inStockSchema.offers.map(offer => offer.name).sort(),
   ["Buy on Depop", "Buy on eBay"].sort()
 );
+assert.deepEqual(
+  inStockSchema.offers.map(offer => Number(offer.price)).sort((a, b) => a - b),
+  [50, 55]
+);
 for (const offer of inStockSchema.offers) {
   assert.equal(offer.priceCurrency, "USD");
   assert.equal(offer.availability, "https://schema.org/InStock");
@@ -214,6 +247,9 @@ assert.ok(inStockSchemas.some(item => item["@type"] === "FAQPage"));
 const soldOutSchema = structuredData(soldOutHtml);
 assert.match(soldOutHtml, /Sold out/);
 assert.doesNotMatch(soldOutHtml, />Available sizes:<\/h2>/);
+assert.doesNotMatch(soldOutHtml, /<h2 id="marketplace-heading">Available on<\/h2>/);
+assert.match(soldOutHtml, /Restock request/);
+assert.match(soldOutHtml, /data-help-request-type="restock_request">Request This Jersey/);
 assert.doesNotMatch(soldOutHtml, /Total stock|Stock quantity|\d+\s+(?:available|remaining)|quantity/i);
 assert.doesNotMatch(soldOutHtml, /class="platform-buy-button product-marketplace-button"/);
 assert.ok(soldOutSchema.offers.every(offer => offer.availability === "https://schema.org/OutOfStock"));

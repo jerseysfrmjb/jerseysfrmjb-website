@@ -297,8 +297,8 @@ function categoryLabel(category = "") {
 }
 
 const PUBLIC_MARKETPLACES = [
-  { name: "Depop", linkKey: "depop", icon: "\u{1F6CD}" },
-  { name: "eBay", linkKey: "ebay", icon: "\u{1F6D2}" },
+  { name: "Depop", linkKey: "depop", icon: "\u{1F6CD}", defaultUrl: "https://www.depop.com/jerseysfrmjb/" },
+  { name: "eBay", linkKey: "ebay", icon: "\u{1F6D2}", defaultUrl: "https://www.ebay.com/usr/jerseysfrmjb" },
   { name: "Facebook", linkKey: "facebook", icon: "\u{1F465}" },
   { name: "Local", linkKey: "local", icon: "\u{1F4CD}" },
   { name: "Other", linkKey: "other", icon: "\u{1F517}" }
@@ -312,18 +312,53 @@ function formatPriceValue(value) {
   return Number.isFinite(number) ? number.toFixed(2).replace(/\.00$/, "") : String(value);
 }
 
-function renderPlatformAvailability(item = {}, available = true) {
+function numericPublicPrice(value) {
+  if (value === null || value === undefined || String(value).trim() === "") return null;
+  const amount = Number(value);
+  return Number.isFinite(amount) && amount >= 0 ? amount : null;
+}
+
+function synchronizedMarketplacePrices(item = {}) {
   const savedPrices = item.platform_prices || {};
+  const savedDepop = numericPublicPrice(savedPrices.Depop);
+  const savedEbay = numericPublicPrice(savedPrices.eBay);
+  const fallback = numericPublicPrice(item.base_price ?? item.price);
+  const depop = savedDepop ?? (savedEbay === null ? fallback : Math.max(0, savedEbay - 5));
+  return {
+    Depop: depop,
+    eBay: depop === null ? savedEbay : depop + 5
+  };
+}
+
+function renderPlatformAvailability(item = {}, available = true) {
+  if (!available) {
+    return `
+      <section class="product-request-card" aria-label="Request this sold-out jersey">
+        <span>Want this jersey?</span>
+        <p>Request a restock and tell us the size you need.</p>
+        <button type="button" data-open-help data-help-request-type="restock_request">Request This Jersey</button>
+      </section>`;
+  }
+
+  const savedPrices = item.platform_prices || {};
+  const synchronizedPrices = synchronizedMarketplacePrices(item);
   const links = item.links || {};
   const offers = PUBLIC_MARKETPLACES.flatMap(platform => {
-    const value = savedPrices[platform.name];
+    const value = synchronizedPrices[platform.name] ?? savedPrices[platform.name];
     if (value === null || value === undefined || String(value).trim() === "") return [];
     const amount = Number(value);
     if (!Number.isFinite(amount) || amount < 0) return [];
     return [{ ...platform, price: formatPriceValue(amount) }];
   });
 
-  if (!offers.length) return "";
+  if (!offers.length) {
+    return `
+      <section class="platform-availability platform-availability-empty" aria-label="Purchase options">
+        <h4>Purchase Options</h4>
+        <p>Marketplace listing coming soon.</p>
+        <button type="button" data-open-help data-help-request-type="jersey_request">Ask About This Jersey</button>
+      </section>`;
+  }
 
   return `
     <section class="platform-availability" aria-label="Available marketplaces">
@@ -331,7 +366,7 @@ function renderPlatformAvailability(item = {}, available = true) {
       <div class="platform-offers">
         ${offers.map(offer => {
           const action = available
-            ? `<a class="platform-buy-button" href="${escapeHtml(links[offer.linkKey] || links.depop || DEFAULT_PURCHASE_URL)}" target="_blank" rel="noopener" data-analytics-product-id="${escapeHtml(item.id || "")}" data-analytics-product-name="${escapeHtml(item.name || "")}" data-analytics-marketplace="${escapeHtml(offer.name)}">Buy on ${escapeHtml(offer.name)}</a>`
+            ? `<a class="platform-buy-button" href="${escapeHtml(links[offer.linkKey] || offer.defaultUrl || links.depop || DEFAULT_PURCHASE_URL)}" target="_blank" rel="noopener" data-analytics-product-id="${escapeHtml(item.id || "")}" data-analytics-product-name="${escapeHtml(item.name || "")}" data-analytics-marketplace="${escapeHtml(offer.name)}">Buy on ${escapeHtml(offer.name)}</a>`
             : `<span class="platform-buy-button disabled" aria-disabled="true">Sold Out</span>`;
           return `
             <div class="platform-offer">
@@ -485,7 +520,7 @@ function renderSlides(item) {
 
 function renderProductCard(item) {
   const available = isAvailable(item);
-  const sizes = displaySize(item);
+  const sizes = available ? displaySize(item) : "Sold out";
 
   return `
     <article id="product-${escapeHtml(item.id)}" ${metaProductAttributes(item, available)} data-stock="${available ? "available" : "sold-out"}" data-category="${escapeHtml(item.category || "")}" data-search="${escapeHtml(searchText(item))}" data-size="${escapeHtml(filterSizeTokens(item).join("|"))}" data-size-display="${escapeHtml(sizes)}" data-id="${escapeHtml(item.id)}">
@@ -513,7 +548,7 @@ function renderFeaturedCard(item, index) {
         <span>FEATURED JERSEY ${String(index + 1).padStart(2, "0")}</span>
         <h3><a class="product-title-link" href="${escapeHtml(productDetailsUrl(item.id))}">${escapeHtml(item.name)}</a></h3>
         <a class="product-details-button" href="${escapeHtml(productDetailsUrl(item.id))}" aria-label="View jersey details for ${escapeHtml(item.name)}">View Jersey Details <span aria-hidden="true">&rarr;</span></a>
-        <div class="featured-meta"><p>${escapeHtml(displaySize(item))}</p></div>
+        <div class="featured-meta"><p>${escapeHtml(available ? displaySize(item) : "Sold out")}</p></div>
         ${renderPlatformAvailability(item, available)}
       </div>
     </article>`;
@@ -1137,15 +1172,17 @@ function createHelpWidget() {
   }
 
   toggle.addEventListener("click", () => setOpen(panel.hidden));
-  document.querySelectorAll("[data-open-help]").forEach(button => {
-    button.addEventListener("click", event => {
-      event.preventDefault();
-      setOpen(true);
-      const label = String(button.textContent || "").toLowerCase();
-      const requestedType = button.dataset.helpRequestType
-        || (label.includes("jersey") || label.includes("request") ? "jersey_request" : "");
-      if (requestedType) chooseRequestType(requestedType, true);
-    });
+  document.addEventListener("click", event => {
+    const button = event.target.closest?.("[data-open-help]");
+    if (!button) return;
+    event.preventDefault();
+    const selectedProduct = button.closest("[data-meta-product]") || pageProduct;
+    if (selectedProduct) applyProductContext(selectedProduct);
+    setOpen(true);
+    const label = String(button.textContent || "").toLowerCase();
+    const requestedType = button.dataset.helpRequestType
+      || (label.includes("jersey") || label.includes("request") ? "jersey_request" : "");
+    if (requestedType) chooseRequestType(requestedType, true);
   });
   requestTypeButtons.forEach(button => {
     button.addEventListener("click", () => chooseRequestType(button.dataset.helpRequestType));
