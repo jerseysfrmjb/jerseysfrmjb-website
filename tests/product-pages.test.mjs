@@ -139,6 +139,13 @@ const ebayOnlyPriceModel = buildProductPageModel(productRow(oneLinkItem, {
 }), {
   siteOrigin: "https://jerseysfrmjb.com"
 });
+const explicitMarketplacePriceModel = buildProductPageModel(productRow(oneLinkItem, {
+  id: `${oneLinkItem.id}-explicit-marketplace-prices`,
+  depop_price: 50,
+  ebay_price: 62
+}), {
+  siteOrigin: "https://jerseysfrmjb.com"
+});
 
 assert.ok(inStockModel.available);
 assert.equal("quantity" in inStockModel, false);
@@ -168,6 +175,12 @@ assert.deepEqual(
   ebayOnlyPriceModel.marketplaces.map(marketplace => [marketplace.name, marketplace.priceDisplay]),
   [["Depop", "45.00"], ["eBay", "50.00"]]
 );
+assert.deepEqual(
+  explicitMarketplacePriceModel.marketplaces.map(marketplace => [marketplace.name, marketplace.priceDisplay]),
+  [["Depop", "50.00"], ["eBay", "62.00"]],
+  "a saved eBay price is preserved instead of being replaced with Depop plus five dollars"
+);
+assert.match(storefrontSource, /eBay: savedEbay \?\? \(depop === null \? null : depop \+ 5\)/);
 
 const inStockHtml = renderProductPage(inStockModel);
 const soldOutHtml = renderProductPage(soldOutModel);

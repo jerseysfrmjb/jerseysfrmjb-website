@@ -335,7 +335,7 @@ function synchronizedMarketplacePrices(item = {}) {
   const depop = savedDepop ?? (savedEbay === null ? fallback : Math.max(0, savedEbay - 5));
   return {
     Depop: depop,
-    eBay: depop === null ? savedEbay : depop + 5
+    eBay: savedEbay ?? (depop === null ? null : depop + 5)
   };
 }
 
