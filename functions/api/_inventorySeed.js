@@ -217,6 +217,33 @@ export const seedInventory = {
       "featured": false
     },
     {
+      "sort_order": 95,
+      "id": "world-cape-verde-vozinha-goalkeeper",
+      "photos": [
+        {
+          "src": "assets/inventory/world-cape-verde-vozinha-goalkeeper-front.jpg",
+          "alt": "Vozinha Cape Verde 2026 World Cup goalkeeper jersey front"
+        },
+        {
+          "src": "assets/inventory/world-cape-verde-vozinha-goalkeeper-back.jpg",
+          "alt": "Vozinha number 1 Cape Verde 2026 World Cup goalkeeper jersey back"
+        }
+      ],
+      "size": "M",
+      "sizes": {},
+      "price": 55,
+      "category": "world",
+      "name": "Vozinha #1 | Cape Verde 2026 World Cup Goalkeeper",
+      "quantity": 0,
+      "links": {
+        "depop": "https://www.depop.com/jerseysfrmjb/",
+        "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
+      },
+      "featured": false,
+      "new_arrival": false,
+      "date_added": "2026-08-05"
+    },
+    {
       "sort_order": 100,
       "id": "world-france-mbappe-home",
       "photos": [
@@ -1052,6 +1079,29 @@ async function applyOneTimeRestock(env, key, lines) {
     ON CONFLICT(key) DO UPDATE SET value = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP`).run();
 }
 
+async function applyOneTimeStockSet(env, key, lines) {
+  const existing = await env.DB.prepare("SELECT value FROM site_settings WHERE key = ?").bind(key).first();
+  if (existing?.value === "applied") return;
+
+  for (const line of lines) {
+    const quantity = Math.max(0, Math.floor(Number(line.quantity || 0)));
+    const sizes = quantity > 0 && line.size ? { [line.size]: quantity } : {};
+    const label = quantity > 0 ? line.size : (line.fallbackSize || line.size || "");
+    await env.DB.prepare(
+      `UPDATE inventory
+       SET sizes_json = ?, size = ?, quantity = ?, new_arrival = ?, date_added = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`
+    ).bind(JSON.stringify(sizes), label, quantity, line.newArrival ? 1 : 0, line.dateAdded || "", line.id).run();
+  }
+
+  await env.DB.prepare(`INSERT INTO site_settings (key, value, updated_at)
+    VALUES (?, 'applied', CURRENT_TIMESTAMP)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP`).bind(key).run();
+  await env.DB.prepare(`INSERT INTO site_settings (key, value, updated_at)
+    VALUES ('inventory_updated_at', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ON CONFLICT(key) DO UPDATE SET value = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP`).run();
+}
+
 async function applyOneTimeProductCorrections(env, key, corrections) {
   const existing = await env.DB.prepare("SELECT value FROM site_settings WHERE key = ?").bind(key).first();
   if (existing?.value === "applied") return;
@@ -1157,6 +1207,7 @@ export async function ensureInventory(env) {
     message TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'new',
     admin_notes TEXT NOT NULL DEFAULT '',
+    contacted_at TEXT,
     resolved_at TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -1168,9 +1219,21 @@ export async function ensureInventory(env) {
   await addColumnIfMissing(env, "ALTER TABLE contact_messages ADD COLUMN product_id TEXT NOT NULL DEFAULT ''");
   await addColumnIfMissing(env, "ALTER TABLE contact_messages ADD COLUMN product_name TEXT NOT NULL DEFAULT ''");
   await addColumnIfMissing(env, "ALTER TABLE contact_messages ADD COLUMN admin_notes TEXT NOT NULL DEFAULT ''");
+  await addColumnIfMissing(env, "ALTER TABLE contact_messages ADD COLUMN contacted_at TEXT");
   await addColumnIfMissing(env, "ALTER TABLE contact_messages ADD COLUMN resolved_at TEXT");
   await env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_contact_messages_created ON contact_messages(created_at DESC)`).run();
   await env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_contact_messages_status ON contact_messages(status, created_at DESC)`).run();
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS contact_message_products (
+    message_id INTEGER NOT NULL,
+    product_id TEXT NOT NULL DEFAULT '',
+    product_name TEXT NOT NULL DEFAULT '',
+    requested_size TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (message_id, product_id, product_name),
+    FOREIGN KEY (message_id) REFERENCES contact_messages(id) ON DELETE CASCADE
+  )`).run();
+  await env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_contact_message_products_product ON contact_message_products(product_id, created_at DESC)`).run();
+  await env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_contact_message_products_message ON contact_message_products(message_id)`).run();
 
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS restock_presets (
     id TEXT PRIMARY KEY,
@@ -1283,5 +1346,11 @@ export async function ensureInventory(env) {
     { id: "club-real-madrid-bellingham-home-2526", size: "M", quantity: 2 },
     { id: "club-liverpool-home-2526-blank", size: "M", quantity: 1 },
     { id: "club-manchester-united-home-2526-blank", size: "M", quantity: 1 }
+  ]);
+
+  await applyOneTimeStockSet(env, "international_home_restock_2026_08_05", [
+    { id: "world-england-bellingham-home", size: "M", quantity: 4, newArrival: true, dateAdded: "2026-08-05" },
+    { id: "world-norway-haaland-home", size: "M", quantity: 4, newArrival: true, dateAdded: "2026-08-05" },
+    { id: "world-cape-verde-vozinha-goalkeeper", size: "M", fallbackSize: "M", quantity: 0, newArrival: false, dateAdded: "2026-08-05" }
   ]);
 }

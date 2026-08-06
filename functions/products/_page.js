@@ -374,10 +374,14 @@ function structuredProduct(model) {
 
 function imageMarkup(image, label, loading = "lazy", index = 0) {
   if (!image) return "";
+  const responsiveMatch = String(image.src).match(/^(.*\/assets\/inventory\/)([^/?#]+)\.(?:jpe?g|png)(?:[?#].*)?$/i);
+  const responsive = responsiveMatch
+    ? `<source type="image/webp" srcset="${escapeHtml(`${responsiveMatch[1]}responsive/${responsiveMatch[2]}-480.webp`)} 480w, ${escapeHtml(`${responsiveMatch[1]}responsive/${responsiveMatch[2]}-900.webp`)} 900w" sizes="(max-width: 700px) 100vw, 560px">`
+    : "";
   return `
     <figure class="product-detail-photo">
       <button class="product-gallery-trigger" type="button" data-product-gallery-open data-gallery-index="${index}" aria-label="Open full-screen ${escapeHtml(label.toLowerCase())} photo">
-        <img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.alt)}" title="${escapeHtml(image.alt)}" width="1280" height="1280" loading="${escapeHtml(loading)}" decoding="async"${loading === "eager" ? ' fetchpriority="high"' : ""}>
+        <picture>${responsive}<img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.alt)}" title="${escapeHtml(image.alt)}" width="1280" height="1280" loading="${escapeHtml(loading)}" decoding="async"${loading === "eager" ? ' fetchpriority="high"' : ""}></picture>
         <span class="product-gallery-zoom" aria-hidden="true">Expand</span>
       </button>
       <figcaption>${escapeHtml(label)}</figcaption>
@@ -664,11 +668,11 @@ export function renderProductPage(model) {
   <script type="application/ld+json">${jsonForHtml(schema)}</script>
   <script type="application/ld+json">${jsonForHtml(breadcrumbs)}</script>
   <script type="application/ld+json">${jsonForHtml(faqSchema(faqs))}</script>
-  <link rel="stylesheet" href="/styles.css?v=product-actions-1">
+  <link rel="stylesheet" href="/styles.css?v=engagement-tools-1">
   <link rel="stylesheet" href="/design-preview.css?v=mobile-grid-2">
   <script src="/meta-pixel.js?v=1" defer></script>
   <script src="/analytics.js?v=operations-1" defer></script>
-  <script src="/storefront.js?v=instagram-contact-1" defer></script>
+  <script src="/storefront.js?v=engagement-tools-1" defer></script>
 </head>
 <body class="product-page-body has-mobile-product-actions">
   ${headerMarkup()}
@@ -693,7 +697,9 @@ export function renderProductPage(model) {
         data-product-value="${escapeHtml(model.metaPriceDisplay)}"
         data-product-category="${escapeHtml(model.category.label)}"
         data-product-availability="${model.available ? "in stock" : "out of stock"}"
+        data-product-sizes="${escapeHtml(model.sizes.map(size => size.label).join("|"))}"
       >
+        <button class="favorite-toggle product-page-favorite" type="button" data-favorite-product="${escapeHtml(model.id)}" aria-label="Save ${escapeHtml(model.title)}" aria-pressed="false"><span aria-hidden="true">&#9825;</span><small>Save</small></button>
         <div class="product-detail-labels">
           <span>${escapeHtml(model.category.label)}</span>
         </div>
@@ -751,11 +757,11 @@ export function renderProductNotFound(siteOrigin = DEFAULT_SITE_ORIGIN) {
   <meta name="description" content="This jersey could not be found in the current JerseysFrmJB inventory.">
   <meta name="robots" content="noindex,follow">
   <link rel="canonical" href="${escapeHtml(`${origin}/shop-all`)}">
-  <link rel="stylesheet" href="/styles.css?v=product-actions-1">
+  <link rel="stylesheet" href="/styles.css?v=engagement-tools-1">
   <link rel="stylesheet" href="/design-preview.css?v=mobile-grid-2">
   <script src="/meta-pixel.js?v=1" defer></script>
   <script src="/analytics.js?v=operations-1" defer></script>
-  <script src="/storefront.js?v=instagram-contact-1" defer></script>
+  <script src="/storefront.js?v=engagement-tools-1" defer></script>
 </head>
 <body class="product-page-body">
   ${headerMarkup()}

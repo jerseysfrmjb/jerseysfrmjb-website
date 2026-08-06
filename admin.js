@@ -12,6 +12,7 @@ const tickerMessage = document.querySelector("[data-ticker-message]");
 const statMessage = document.querySelector("[data-stat-message]");
 const saveBanner = document.querySelector("[data-save-banner]");
 const messagesList = document.querySelector("[data-admin-messages]");
+const requestSummary = document.querySelector("[data-request-summary]");
 const messageCount = document.querySelector("[data-message-count]");
 const refreshMessages = document.querySelector("[data-refresh-messages]");
 const feedbackList = document.querySelector("[data-admin-feedback]");
@@ -149,6 +150,7 @@ let featuredLimit = 3;
 let sizeOptions = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"];
 let messages = [];
 let unreadMessages = 0;
+let requestSummaryRows = [];
 let ebayFeedback = [];
 let feedbackLoaded = false;
 const savingFeedbackIds = new Set();
@@ -2890,6 +2892,7 @@ function renderMessages() {
       ? `mailto:${encodeURIComponent(message.email || "")}`
       : instagramProfile(username);
     const requestLabel = String(message.request_type || "jersey_request").replace(/_/g, " ");
+    const requestedProducts = Array.isArray(message.requested_products) ? message.requested_products : [];
     return `
       <article class="admin-message-card ${read ? "read" : "unread"}" data-id="${escapeHtml(message.id)}" data-status="${escapeHtml(normalizedStatus)}">
         <div class="admin-message-main">
@@ -2898,7 +2901,7 @@ function renderMessages() {
             <h3>${escapeHtml(contactLabel)}</h3>
           </div>
           <p><b>Jersey/request:</b> ${escapeHtml(message.jersey_request)}</p>
-          ${message.product_name ? `<p><b>Product:</b> ${escapeHtml(message.product_name)}</p>` : ""}
+          ${requestedProducts.length ? `<div class="message-requested-products"><b>Requested jerseys</b>${requestedProducts.map(product => `<span>${escapeHtml(product.product_name || product.product_id)} <small>${escapeHtml(product.requested_size || message.size || "Any size")}</small></span>`).join("")}</div>` : (message.product_name ? `<p><b>Product:</b> ${escapeHtml(message.product_name)}</p>` : "")}
           <p><b>Size:</b> ${escapeHtml(message.size || "Not specified")}</p>
           <p><b>Marketplace:</b> ${escapeHtml(message.marketplace_preference || "No preference")}</p>
           <p class="admin-message-body">${escapeHtml(message.message)}</p>
@@ -2917,6 +2920,7 @@ function renderMessages() {
         <label class="message-notes-control">Private admin notes
           <textarea rows="2" maxlength="1000" data-message-notes placeholder="Add follow-up notes...">${escapeHtml(message.admin_notes || "")}</textarea>
         </label>
+        <label class="message-contact-control"><input type="checkbox" data-message-contacted ${message.contacted_at ? "checked" : ""}> Contacted on Instagram${message.contacted_at ? `<small>${escapeHtml(formatMessageDate(message.contacted_at))}</small>` : ""}</label>
         <div class="admin-message-actions">
           <button type="button" data-copy-contact="${escapeHtml(contactLabel)}">Copy Contact</button>
           <a href="${escapeHtml(replyUrl)}" ${message.contact_preference === "email" ? "" : 'target="_blank" rel="noopener"'}>${message.contact_preference === "email" ? "Reply to legacy email" : "Open Instagram"}</a>
@@ -2927,10 +2931,26 @@ function renderMessages() {
   }).join("") : '<p class="empty-featured">No messages yet.</p>';
 }
 
+function renderRequestSummary() {
+  if (!requestSummary) return;
+  requestSummary.innerHTML = requestSummaryRows.length ? `
+    <div class="request-summary-head"><div><span class="section-kicker">Restock intelligence</span><h3>Requests by Jersey</h3></div><strong>${requestSummaryRows.reduce((total, row) => total + Number(row.request_count || 0), 0)} total</strong></div>
+    <div class="request-summary-grid">${requestSummaryRows.map(row => `
+      <article>
+        <div><h4>${escapeHtml(row.product_name || row.product_id || "Custom request")}</h4><strong>${Number(row.request_count || 0)} request${Number(row.request_count || 0) === 1 ? "" : "s"}</strong></div>
+        <p><b>Sizes:</b> ${Object.entries(row.sizes || {}).map(([size, count]) => `${escapeHtml(size)} (${count})`).join(", ") || "Any size"}</p>
+        <p><b>Instagram:</b> ${(row.usernames || []).map(username => `<a href="${escapeHtml(instagramProfile(username))}" target="_blank" rel="noopener">@${escapeHtml(username)}</a>`).join(", ") || "Not provided"}</p>
+        <footer><span>${Number(row.contacted || 0)} contacted</span><span class="${Number(row.pending || 0) ? "needs-contact" : ""}">${Number(row.pending || 0)} to contact</span></footer>
+      </article>`).join("")}</div>
+  ` : '<p class="empty-featured">No jersey or restock requests yet.</p>';
+}
+
 function applyMessageData(data) {
   if (Array.isArray(data.messages)) messages = data.messages;
+  if (Array.isArray(data.request_summary)) requestSummaryRows = data.request_summary;
   unreadMessages = Number(data.unread || 0);
   renderMessages();
+  renderRequestSummary();
 }
 
 async function loadMessages() {
@@ -2943,11 +2963,11 @@ async function loadMessages() {
   }
 }
 
-async function updateMessage(id, status, adminNotes = "") {
+async function updateMessage(id, status, adminNotes = "", contacted = false) {
   statusLine.textContent = "Updating message...";
   applyMessageData(await api("/api/admin/messages", {
     method: "PATCH",
-    body: JSON.stringify({ id, status, admin_notes: adminNotes })
+    body: JSON.stringify({ id, status, admin_notes: adminNotes, contacted })
   }));
   statusLine.textContent = "Message updated.";
 }
@@ -4217,6 +4237,11 @@ function renderPlannerProducts() {
           <span><small>Searches</small><b>${analyticsNumber(product.search_frequency)}</b></span>
           <span><small>Requests</small><b>${analyticsNumber(product.request_count)}</b></span>
         </div>
+        ${product.request_count ? `<div class="planner-request-intelligence">
+          <div><small>Requested sizes</small><strong>${Object.entries(product.request_details?.sizes || {}).map(([size, count]) => `${escapeHtml(size)} (${count})`).join(", ") || "Any size"}</strong></div>
+          <div><small>Instagram customers</small><strong>${(product.request_details?.usernames || []).map(username => `@${escapeHtml(username)}`).join(", ") || "Not provided"}</strong></div>
+          <div><small>Follow-up</small><strong>${analyticsNumber(product.request_details?.contacted || 0)} contacted · ${analyticsNumber(product.request_details?.pending || 0)} pending</strong></div>
+        </div>` : ""}
         ${product.risks?.length ? `<div class="planner-risk-chips">${product.risks.map(risk => `<span class="${escapeHtml(risk)}">${escapeHtml(plannerRiskLabel(risk))}</span>`).join("")}</div>` : ""}
         <div class="planner-reorder-band">
           <div><small>Recommendation</small><strong>Order ${analyticsNumber(product.recommended_quantity)}</strong><span>${plannerMoney(product.expected_profit)} expected profit</span></div>
@@ -4631,8 +4656,9 @@ messagesList?.addEventListener("click", async event => {
   if (event.target.matches("[data-save-message]")) {
     const nextStatus = card.querySelector("[data-message-status]")?.value || "new";
     const notes = card.querySelector("[data-message-notes]")?.value || "";
+    const contacted = Boolean(card.querySelector("[data-message-contacted]")?.checked);
     try {
-      await updateMessage(card.dataset.id, nextStatus, notes);
+      await updateMessage(card.dataset.id, nextStatus, notes, contacted);
     } catch (error) {
       statusLine.textContent = error.message;
     }

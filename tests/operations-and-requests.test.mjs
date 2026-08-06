@@ -84,7 +84,7 @@ assert.match(storefront, /data-help-product-context/);
 assert.match(storefront, /DM @jerseysfrmjb directly/);
 assert.match(storefront, /Or send a structured request/);
 assert.match(storefront, /help-widget\.css\?v=product-actions-1/);
-assert.match(storefront, /STOREFRONT_STYLE_VERSION = "product-actions-1"/);
+assert.match(storefront, /STOREFRONT_STYLE_VERSION = "engagement-tools-1"/);
 assert.match(storefront, /url\.searchParams\.set\("v", STOREFRONT_STYLE_VERSION\)/);
 assert.doesNotMatch(storefront, /<svg[^>]*help-widget-button/);
 assert.match(helpWidgetStyles, /\.help-widget \.help-widget-button/);

@@ -278,10 +278,23 @@ async function loadPlanner(context) {
     context.env.DB.prepare(`SELECT search_query, COUNT(*) AS searches
       FROM analytics_events WHERE event_type = 'search' AND search_query <> ''
       GROUP BY search_query ORDER BY searches DESC LIMIT 500`).all(),
-    context.env.DB.prepare(`SELECT product_id, product_name, jersey_request, COUNT(*) AS requests
-      FROM contact_messages
-      WHERE request_type IN ('jersey_request', 'restock_request')
-      GROUP BY product_id, product_name, jersey_request`).all()
+    context.env.DB.prepare(`
+      SELECT p.product_id, p.product_name, m.jersey_request, p.requested_size,
+        m.instagram_username, m.contacted_at, COUNT(*) AS requests
+      FROM contact_message_products p
+      JOIN contact_messages m ON m.id = p.message_id
+      WHERE m.request_type IN ('jersey_request', 'restock_request')
+      GROUP BY p.product_id, p.product_name, m.jersey_request, p.requested_size,
+        m.instagram_username, m.contacted_at
+      UNION ALL
+      SELECT m.product_id, m.product_name, m.jersey_request, m.size AS requested_size,
+        m.instagram_username, m.contacted_at, COUNT(*) AS requests
+      FROM contact_messages m
+      WHERE m.request_type IN ('jersey_request', 'restock_request')
+        AND NOT EXISTS (SELECT 1 FROM contact_message_products p WHERE p.message_id = m.id)
+      GROUP BY m.product_id, m.product_name, m.jersey_request, m.size,
+        m.instagram_username, m.contacted_at
+    `).all()
   ]);
 
   const platformResult = await context.env.DB.prepare(`SELECT product_id,
@@ -297,8 +310,18 @@ async function loadPlanner(context) {
   const sales = new Map((salesResult.results || []).map(row => [row.product_id, row]));
   const platforms = new Map((platformResult.results || []).map(row => [row.product_id, row]));
   const directRequests = new Map();
+  const requestDetails = new Map();
   for (const row of requestsResult.results || []) {
-    if (row.product_id) directRequests.set(row.product_id, number(directRequests.get(row.product_id)) + number(row.requests));
+    if (row.product_id) {
+      directRequests.set(row.product_id, number(directRequests.get(row.product_id)) + number(row.requests));
+      const detail = requestDetails.get(row.product_id) || { sizes: {}, usernames: new Set(), contacted: 0, pending: 0 };
+      const requestedSize = row.requested_size || "Any size";
+      detail.sizes[requestedSize] = number(detail.sizes[requestedSize]) + number(row.requests);
+      if (row.instagram_username) detail.usernames.add(row.instagram_username);
+      if (row.contacted_at) detail.contacted += number(row.requests);
+      else detail.pending += number(row.requests);
+      requestDetails.set(row.product_id, detail);
+    }
   }
 
   const products = (inventoryResult.results || []).map(row => {
@@ -328,6 +351,10 @@ async function loadPlanner(context) {
       days_in_inventory: daysSince(row.date_added || row.updated_at) ?? 0,
       search_frequency: 0,
       request_count: number(directRequests.get(row.id)),
+      request_details: (() => {
+        const detail = requestDetails.get(row.id);
+        return detail ? { ...detail, usernames: [...detail.usernames] } : { sizes: {}, usernames: [], contacted: 0, pending: 0 };
+      })(),
       prices: {
         Website: platform.website === null || platform.website === undefined ? number(row.price) : number(platform.website),
         eBay: platform.ebay === null || platform.ebay === undefined ? null : number(platform.ebay),

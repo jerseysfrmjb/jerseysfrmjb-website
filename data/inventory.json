@@ -259,17 +259,44 @@
       "price": 55,
       "category": "world",
       "name": "Erling Haaland #9 | Norway 2026 World Cup Home",
-      "quantity": 2,
+      "quantity": 4,
       "links": {
         "depop": "https://www.depop.com/jerseysfrmjb/",
         "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
       },
       "featured": false,
       "sizes": {
-        "M": 2
+        "M": 4
       },
       "new_arrival": true,
-      "date_added": "2026-07-22"
+      "date_added": "2026-08-05"
+    },
+    {
+      "sort_order": 95,
+      "id": "world-cape-verde-vozinha-goalkeeper",
+      "photos": [
+        {
+          "src": "assets/inventory/world-cape-verde-vozinha-goalkeeper-front.jpg",
+          "alt": "Vozinha Cape Verde 2026 World Cup goalkeeper jersey front"
+        },
+        {
+          "src": "assets/inventory/world-cape-verde-vozinha-goalkeeper-back.jpg",
+          "alt": "Vozinha number 1 Cape Verde 2026 World Cup goalkeeper jersey back"
+        }
+      ],
+      "size": "M",
+      "sizes": {},
+      "price": 55,
+      "category": "world",
+      "name": "Vozinha #1 | Cape Verde 2026 World Cup Goalkeeper",
+      "quantity": 0,
+      "links": {
+        "depop": "https://www.depop.com/jerseysfrmjb/",
+        "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
+      },
+      "featured": false,
+      "new_arrival": false,
+      "date_added": "2026-08-05"
     },
     {
       "sort_order": 100,
@@ -535,12 +562,12 @@
       ],
       "size": "M",
       "sizes": {
-        "M": 2
+        "M": 4
       },
       "price": 55,
       "category": "world",
       "name": "Jude Bellingham #10 | England 2026 World Cup Home",
-      "quantity": 2,
+      "quantity": 4,
       "links": {
         "depop": "https://www.depop.com/jerseysfrmjb/",
         "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
@@ -548,7 +575,7 @@
       "featured": false,
       "featured_order": 0,
       "new_arrival": true,
-      "date_added": "2026-07-22"
+      "date_added": "2026-08-05"
     },
     {
       "sort_order": 187,

@@ -27,6 +27,24 @@ function discordValue(value, fallback = "Not provided", max = 1000) {
   return text || fallback;
 }
 
+function cleanRequestedProducts(value, fallback = null) {
+  const rows = Array.isArray(value) ? value : [];
+  const seen = new Set();
+  const products = [];
+  for (const row of rows.slice(0, 20)) {
+    const product_id = clean(row?.product_id || row?.id, 120);
+    const product_name = clean(row?.product_name || row?.name, 200);
+    const requested_size = clean(row?.requested_size || row?.size, 40);
+    if (!product_id && !product_name) continue;
+    const key = `${product_id}\u0000${product_name}`.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    products.push({ product_id, product_name, requested_size });
+  }
+  if (!products.length && fallback && (fallback.product_id || fallback.product_name)) products.push(fallback);
+  return products;
+}
+
 async function sendDiscordNotification(env, data) {
   if (!env.DISCORD_WEBHOOK_URL) return;
 
@@ -70,8 +88,10 @@ async function sendDiscordNotification(env, data) {
             inline: true
           },
           {
-            name: "Product context",
-            value: discordValue(data.product_name, "No product selected", 240)
+            name: data.products?.length > 1 ? "Saved jerseys" : "Product context",
+            value: data.products?.length
+              ? discordValue(data.products.map(product => `• ${product.product_name || product.product_id}${product.requested_size ? ` — ${product.requested_size}` : ""}`).join("\n"), "No product selected", 1000)
+              : discordValue(data.product_name, "No product selected", 240)
           },
           {
             name: "Message",
@@ -117,6 +137,7 @@ export async function onRequestPost({ request, env }) {
     const message = clean(body.message, 1200);
     const product_id = clean(body.product_id, 120);
     const product_name = clean(body.product_name, 200);
+    const products = cleanRequestedProducts(body.products, { product_id, product_name, requested_size: size });
 
     if (!jersey_request || !message) {
       return json({ error: "Please describe what you need and include a message." }, 400);
@@ -173,6 +194,14 @@ export async function onRequestPost({ request, env }) {
     ).run();
     const requestId = Number(insertResult.meta?.last_row_id || 0) || undefined;
 
+    if (requestId && products.length) {
+      await env.DB.batch(products.map(product => env.DB.prepare(`
+        INSERT OR IGNORE INTO contact_message_products (
+          message_id, product_id, product_name, requested_size
+        ) VALUES (?, ?, ?, ?)
+      `).bind(requestId, product.product_id, product.product_name, product.requested_size)));
+    }
+
     try {
       await sendDiscordNotification(env, {
         instagram_username,
@@ -183,6 +212,7 @@ export async function onRequestPost({ request, env }) {
         size,
         marketplace_preference,
         product_name,
+        products,
         message,
         submitted_at
       });

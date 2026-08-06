@@ -1,4 +1,4 @@
-const STOREFRONT_STYLE_VERSION = "product-actions-1";
+const STOREFRONT_STYLE_VERSION = "engagement-tools-1";
 
 document.querySelectorAll('link[rel="stylesheet"][href*="styles.css"]').forEach(stylesheet => {
   const url = new URL(stylesheet.href, window.location.href);
@@ -11,6 +11,8 @@ const toggle = document.querySelector(".menu-toggle");
 const drawer = document.querySelector(".drawer");
 const backdrop = document.querySelector(".drawer-backdrop");
 const closeButton = document.querySelector(".drawer-close");
+const STOREFRONT_PRODUCTS = new Map();
+const FAVORITES_KEY = "jerseysfrmjb_favorites_v1";
 
 function enhanceMobileDrawer() {
   if (!drawer || drawer.dataset.enhanced === "true") return;
@@ -77,6 +79,20 @@ function inventoryImageSrc(src = "") {
   const revision = INVENTORY_IMAGE_REVISIONS.get(normalized);
   if (!revision) return value;
   return `${value}${value.includes("?") ? "&" : "?"}v=${revision}`;
+}
+
+function responsiveInventoryImage(src = "", alt = "", options = {}) {
+  const original = inventoryImageSrc(src);
+  const normalized = String(src).split(/[?#]/, 1)[0].replace(/^\//, "");
+  const match = normalized.match(/^assets\/inventory\/(.+)\.(?:jpe?g|png)$/i);
+  const loading = options.loading || "lazy";
+  const extra = options.fetchpriority ? ` fetchpriority="${escapeHtml(options.fetchpriority)}"` : "";
+  if (!match) return `<img src="${escapeHtml(original)}" alt="${escapeHtml(alt)}" title="${escapeHtml(alt)}" width="1280" height="1280" loading="${escapeHtml(loading)}" decoding="async"${extra}>`;
+  const base = `/assets/inventory/responsive/${match[1]}`;
+  return `<picture>
+    <source type="image/webp" srcset="${escapeHtml(base)}-480.webp 480w, ${escapeHtml(base)}-900.webp 900w" sizes="${escapeHtml(options.sizes || "(max-width: 540px) 50vw, (max-width: 900px) 50vw, 440px")}">
+    <img src="${escapeHtml(original)}" alt="${escapeHtml(alt)}" title="${escapeHtml(alt)}" width="1280" height="1280" loading="${escapeHtml(loading)}" decoding="async"${extra}>
+  </picture>`;
 }
 
 function requestedCatalogProductId() {
@@ -190,6 +206,33 @@ function displaySize(item) {
 
 function searchText(item) {
   return [item.id, item.name, item.category, categoryLabel(item.category), item.size, displaySize(item), ...(item.photos || []).map(photo => photo.alt || "")].join(" ").toLowerCase();
+}
+
+function productFilterIdentity(item = {}) {
+  const title = String(item.name || "").replace(/\s+/g, " ").trim();
+  const seasonMatch = title.match(/\b(?:19|20)?\d{2}\s*[\/-]\s*(?:\d{2}|(?:19|20)\d{2})\b/);
+  const season = seasonMatch ? seasonMatch[0].replace(/\s+/g, "") : "";
+  const beforePipe = title.split("|")[0].trim();
+  const player = /#\d+/.test(beforePipe) ? beforePipe.replace(/#\d+.*/, "").trim() : "";
+  let team = title.includes("|") ? title.split("|")[1].trim() : title;
+  team = team.replace(seasonMatch?.[0] || "", "").replace(/\b(?:home|away|third|3rd|goalkeeper|training|kit|jersey|shirt|longsleeve|long sleeve|short sleeve|fan version|player version).*$/i, "").trim();
+  if (!team && item.category === "retro") team = title.replace(seasonMatch?.[0] || "", "").replace(/\b(?:home|away|third|3rd|kit|jersey|shirt).*$/i, "").trim();
+  const lowered = title.toLowerCase();
+  const league = [
+    [["barcelona", "real madrid", "atletico madrid"], "La Liga"],
+    [["manchester united", "manchester city", "liverpool", "arsenal", "chelsea", "tottenham"], "Premier League"],
+    [["ac milan", "inter milan", "juventus", "napoli", "roma"], "Serie A"],
+    [["bayern", "dortmund", "leverkusen"], "Bundesliga"],
+    [["paris saint", "psg", "marseille", "monaco"], "Ligue 1"]
+  ].find(([clubs]) => clubs.some(club => `${team} ${title}`.toLowerCase().includes(club)))?.[1];
+  const competition = item.category === "world" || lowered.includes("world cup")
+    ? "World Cup"
+    : lowered.includes("champions league") || lowered.includes("ucl")
+      ? "Champions League"
+      : item.category === "retro" ? "Retro" : (league || "Club");
+  const prices = synchronizedMarketplacePrices(item);
+  const price = [prices.Depop, prices.eBay].filter(value => Number.isFinite(Number(value))).map(Number).sort((a, b) => a - b)[0] ?? null;
+  return { player, team, competition, season, price };
 }
 
 const SEARCH_ALIASES = new Map([
@@ -532,7 +575,7 @@ function renderSlides(item) {
   const newArrival = isNewArrival(item) ? '<p class="product-status new-arrival">New Arrival</p>' : "";
   return (item.photos || []).map((photo, index) => `
     <div class="slide${index === 0 ? " active" : ""}">
-      <img decoding="async" loading="lazy" width="1280" height="1280" src="${escapeHtml(inventoryImageSrc(photo.src))}" alt="${escapeHtml(productPhotoAlt(item, photo, index))}" title="${escapeHtml(productPhotoAlt(item, photo, index))}">
+      ${responsiveInventoryImage(photo.src, productPhotoAlt(item, photo, index))}
       ${sold && index === 0 ? '<p class="product-status out-of-stock">Out of Stock</p>' : ""}
       ${index === 0 ? newArrival : ""}
     </div>`).join("");
@@ -541,9 +584,11 @@ function renderSlides(item) {
 function renderProductCard(item) {
   const available = isAvailable(item);
   const sizes = available ? displaySize(item) : "Sold out";
+  const identity = productFilterIdentity(item);
 
   return `
-    <article id="product-${escapeHtml(item.id)}" ${metaProductAttributes(item, available)} data-stock="${available ? "available" : "sold-out"}" data-category="${escapeHtml(item.category || "")}" data-search="${escapeHtml(searchText(item))}" data-size="${escapeHtml(filterSizeTokens(item).join("|"))}" data-size-display="${escapeHtml(sizes)}" data-id="${escapeHtml(item.id)}">
+    <article id="product-${escapeHtml(item.id)}" ${metaProductAttributes(item, available)} data-stock="${available ? "available" : "sold-out"}" data-category="${escapeHtml(item.category || "")}" data-search="${escapeHtml(searchText(item))}" data-size="${escapeHtml(filterSizeTokens(item).join("|"))}" data-size-display="${escapeHtml(sizes)}" data-id="${escapeHtml(item.id)}" data-player="${escapeHtml(identity.player)}" data-team="${escapeHtml(identity.team)}" data-competition="${escapeHtml(identity.competition)}" data-season="${escapeHtml(identity.season)}" data-filter-price="${identity.price ?? ""}" data-new-arrival="${isNewArrival(item) ? "true" : "false"}">
+      <button class="favorite-toggle" type="button" data-favorite-product="${escapeHtml(item.id)}" aria-label="Save ${escapeHtml(item.name)}" aria-pressed="false"><span aria-hidden="true">&#9825;</span><small>Save</small></button>
       <div class="product-photo product-slider" data-slider>
         <div class="slides product-slides">${renderSlides(item)}</div>
         <div class="product-controls"><button data-prev type="button" aria-label="Previous photo">&lsaquo;</button><div class="slider-dots"></div><button data-next type="button" aria-label="Next photo">&rsaquo;</button></div>
@@ -563,7 +608,8 @@ function renderFeaturedCard(item, index) {
 
   return `
     <article class="featured-card" ${metaProductAttributes(item, available)} data-stock="${available ? "available" : "sold-out"}">
-      <img src="${escapeHtml(inventoryImageSrc(image.src))}" alt="${escapeHtml(productPhotoAlt(item, image, 0))}" title="${escapeHtml(productPhotoAlt(item, image, 0))}" width="1280" height="1280" loading="lazy" decoding="async">
+      <button class="favorite-toggle" type="button" data-favorite-product="${escapeHtml(item.id)}" aria-label="Save ${escapeHtml(item.name)}" aria-pressed="false"><span aria-hidden="true">&#9825;</span><small>Save</small></button>
+      ${responsiveInventoryImage(image.src, productPhotoAlt(item, image, 0), { sizes: "(max-width: 780px) 33vw, 340px" })}
       <div class="featured-copy">
         <span>FEATURED JERSEY ${String(index + 1).padStart(2, "0")}</span>
         <h3><a class="product-title-link" href="${escapeHtml(productDetailsUrl(item.id))}">${escapeHtml(item.name)}</a></h3>
@@ -750,6 +796,43 @@ function setupFilters(filterGroup, cards) {
     sizeSelect.innerHTML = '<option value="all">All Sizes</option>' + options.map(([value, label]) => `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`).join("");
   }
 
+  let advanced = container?.querySelector("[data-advanced-filters]");
+  if (!advanced) {
+    advanced = document.createElement("section");
+    advanced.className = "advanced-inventory-filters";
+    advanced.dataset.advancedFilters = "";
+    advanced.innerHTML = `
+      <div class="advanced-filter-heading"><div><span>Refine jerseys</span><h3>More Filters</h3></div><button type="button" data-clear-advanced-filters>Clear</button></div>
+      <div class="advanced-filter-grid">
+        <label>Player<select data-player-filter><option value="all">All players</option></select></label>
+        <label>Team / country<select data-team-filter><option value="all">All teams</option></select></label>
+        <label>Competition<select data-competition-filter><option value="all">All competitions</option></select></label>
+        <label>Season<select data-season-filter><option value="all">All seasons</option></select></label>
+        <label>Minimum price<input type="number" min="0" step="5" inputmode="numeric" placeholder="$0" data-min-price></label>
+        <label>Maximum price<input type="number" min="0" step="5" inputmode="numeric" placeholder="Any" data-max-price></label>
+      </div>
+      <label class="new-arrivals-filter"><input type="checkbox" data-new-arrivals-filter> New arrivals only</label>`;
+    filterGroup.insertAdjacentElement("afterend", advanced);
+  }
+  const playerSelect = advanced.querySelector("[data-player-filter]");
+  const teamSelect = advanced.querySelector("[data-team-filter]");
+  const competitionSelect = advanced.querySelector("[data-competition-filter]");
+  const seasonSelect = advanced.querySelector("[data-season-filter]");
+  const minPriceInput = advanced.querySelector("[data-min-price]");
+  const maxPriceInput = advanced.querySelector("[data-max-price]");
+  const newArrivalsInput = advanced.querySelector("[data-new-arrivals-filter]");
+  function populate(select, key, prefix) {
+    if (!select || select.options.length > 1) return;
+    const values = [...new Set(cards.map(card => card.dataset[key]).filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+    select.insertAdjacentHTML("beforeend", values.map(value => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join(""));
+    if (!values.length) select.closest("label").hidden = true;
+    else select.options[0].textContent = `All ${prefix}`;
+  }
+  populate(playerSelect, "player", "players");
+  populate(teamSelect, "team", "teams");
+  populate(competitionSelect, "competition", "competitions");
+  populate(seasonSelect, "season", "seasons");
+
   function selectedSizeLabel(value) {
     return { small: "Small", medium: "Medium", large: "Large", xl: "XL", "2xl": "2XL", "3xl": "3XL", "4xl": "4XL", "xl+": "XL+" }[value] || "";
   }
@@ -763,6 +846,13 @@ function setupFilters(filterGroup, cards) {
     const activeCategory = scope.querySelector("[data-category-filter].active")?.dataset.categoryFilter || "all";
     const selectedSize = sizeSelect?.value || "all";
     const query = (searchInput?.value || "").trim();
+    const player = playerSelect?.value || "all";
+    const team = teamSelect?.value || "all";
+    const competition = competitionSelect?.value || "all";
+    const season = seasonSelect?.value || "all";
+    const minPrice = minPriceInput?.value === "" ? null : Number(minPriceInput.value);
+    const maxPrice = maxPriceInput?.value === "" ? null : Number(maxPriceInput.value);
+    const newOnly = Boolean(newArrivalsInput?.checked);
     let visibleCount = 0;
     let availableMatchCount = 0;
     let soldOutMatchCount = 0;
@@ -776,8 +866,16 @@ function setupFilters(filterGroup, cards) {
       const sizeMatch = selectedSize === "all" || sizeTokens.includes(selectedSize) || (selectedSize === "xl" && sizeTokens.includes("xl+"));
       const score = searchScore(card, query);
       const searchMatch = score > 0;
+      const playerMatch = player === "all" || card.dataset.player === player;
+      const teamMatch = team === "all" || card.dataset.team === team;
+      const competitionMatch = competition === "all" || card.dataset.competition === competition;
+      const seasonMatch = season === "all" || card.dataset.season === season;
+      const cardPrice = card.dataset.filterPrice === "" ? null : Number(card.dataset.filterPrice);
+      const priceMatch = (minPrice === null || (cardPrice !== null && cardPrice >= minPrice)) && (maxPrice === null || (cardPrice !== null && cardPrice <= maxPrice));
+      const newMatch = !newOnly || card.dataset.newArrival === "true";
       card.dataset.searchScore = String(score);
-      const baseMatch = categoryMatch && sizeMatch && searchMatch;
+      const advancedMatch = playerMatch && teamMatch && competitionMatch && seasonMatch && priceMatch && newMatch;
+      const baseMatch = categoryMatch && sizeMatch && searchMatch && advancedMatch;
 
       if (baseMatch) {
         if (card.dataset.stock === "available") availableMatchCount += 1;
@@ -789,7 +887,7 @@ function setupFilters(filterGroup, cards) {
         if (card.dataset.stock === "available") selectedSizeAvailableCount += 1;
       }
 
-      card.hidden = !stockMatch || !categoryMatch || !sizeMatch || !searchMatch;
+      card.hidden = !stockMatch || !categoryMatch || !sizeMatch || !searchMatch || !advancedMatch;
       const sizeText = card.querySelector("[data-card-size]");
       if (sizeText) {
         sizeText.textContent = selectedSize === "all"
@@ -853,6 +951,16 @@ function setupFilters(filterGroup, cards) {
   });
   sizeSelect?.addEventListener("change", apply);
   searchInput?.addEventListener("input", apply);
+  [playerSelect, teamSelect, competitionSelect, seasonSelect, minPriceInput, maxPriceInput, newArrivalsInput].forEach(control => {
+    control?.addEventListener(control?.matches("input[type=number]") ? "input" : "change", apply);
+  });
+  advanced.querySelector("[data-clear-advanced-filters]")?.addEventListener("click", () => {
+    [playerSelect, teamSelect, competitionSelect, seasonSelect].forEach(select => { if (select) select.value = "all"; });
+    if (minPriceInput) minPriceInput.value = "";
+    if (maxPriceInput) maxPriceInput.value = "";
+    if (newArrivalsInput) newArrivalsInput.checked = false;
+    apply();
+  });
   apply();
 }
 
@@ -862,6 +970,7 @@ async function renderInventoryGrids() {
     const params = grid.dataset.category ? { category: grid.dataset.category } : {};
     const data = await fetchInventory(params);
     const items = sortInventory(data.items || []);
+    items.forEach(item => STOREFRONT_PRODUCTS.set(String(item.id), item));
     grid.innerHTML = items.map(renderProductCard).join("");
     window.JerseysMetaPixel?.observeProducts(grid);
     window.JerseysAnalytics?.observeProducts(grid);
@@ -871,6 +980,7 @@ async function renderInventoryGrids() {
     initSliders(grid);
     setupFilters(grid.closest(".inventory-page")?.querySelector(".inventory-filter, .shop-all-controls"), [...grid.querySelectorAll("article")]);
     focusRequestedCatalogProduct(grid);
+    window.JerseysFavorites?.refresh();
   }));
 }
 
@@ -882,9 +992,11 @@ async function renderFeaturedGrid() {
     .filter(item => item.featured)
     .sort((a, b) => Number(a.featured_order || 999) - Number(b.featured_order || 999))
     .slice(0, 3);
+  items.forEach(item => STOREFRONT_PRODUCTS.set(String(item.id), item));
   grid.innerHTML = items.map(renderFeaturedCard).join("");
   window.JerseysMetaPixel?.observeProducts(grid);
   window.JerseysAnalytics?.observeProducts(grid);
+  window.JerseysFavorites?.refresh();
 }
 
 async function renderHomepageStats() {
@@ -1040,6 +1152,130 @@ function initReviewLightbox() {
   });
 }
 
+function createFavoritesManager() {
+  function read() {
+    try {
+      const value = JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]");
+      return Array.isArray(value) ? value.slice(0, 30) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function write(items) {
+    try {
+      localStorage.setItem(FAVORITES_KEY, JSON.stringify(items.slice(0, 30)));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  const root = document.createElement("div");
+  root.className = "favorites-widget";
+  root.innerHTML = `
+    <button class="favorites-launcher" type="button" aria-expanded="false"><span aria-hidden="true">&#9825;</span><b>Saved Jerseys</b><small data-favorites-count>0</small></button>
+    <div class="favorites-overlay" data-favorites-overlay hidden></div>
+    <section class="favorites-panel" aria-label="Saved jerseys" hidden>
+      <header><div><span>Your shortlist</span><h2>Saved Jerseys</h2></div><button type="button" data-favorites-close aria-label="Close saved jerseys">&times;</button></header>
+      <p>Saved only on this device. Choose sizes, then send one combined request.</p>
+      <div class="favorites-list" data-favorites-list></div>
+      <footer><button type="button" data-favorites-request>Request Saved Jerseys on Instagram</button><button type="button" data-favorites-clear>Clear all</button></footer>
+    </section>`;
+  document.body.appendChild(root);
+  const launcher = root.querySelector(".favorites-launcher");
+  const panel = root.querySelector(".favorites-panel");
+  const overlay = root.querySelector("[data-favorites-overlay]");
+  const list = root.querySelector("[data-favorites-list]");
+  const count = root.querySelector("[data-favorites-count]");
+
+  function productRecord(id, trigger = null) {
+    const item = STOREFRONT_PRODUCTS.get(String(id));
+    const context = trigger?.closest("[data-meta-product]") || document.querySelector(`[data-meta-product][data-product-id="${CSS.escape(String(id))}"]`);
+    const image = context?.querySelector("img") || context?.closest(".product-landing-card")?.querySelector(".product-detail-gallery img");
+    return {
+      product_id: String(id),
+      product_name: item?.name || context?.dataset.productName || String(id),
+      image: inventoryImageSrc(item?.photos?.[0]?.src || image?.getAttribute("src") || ""),
+      sizes: item ? activeSizes(item) : String(context?.dataset.productSizes || "").split("|").filter(Boolean)
+    };
+  }
+
+  function setOpen(open) {
+    panel.hidden = !open;
+    overlay.hidden = !open;
+    launcher.setAttribute("aria-expanded", String(open));
+    root.classList.toggle("open", open);
+    if (open) render();
+  }
+
+  function render() {
+    const saved = read();
+    count.textContent = String(saved.length);
+    launcher.hidden = saved.length === 0 && !document.querySelector("[data-favorite-product]");
+    document.querySelectorAll("[data-favorite-product]").forEach(button => {
+      const active = saved.some(item => item.product_id === button.dataset.favoriteProduct);
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", String(active));
+      const icon = button.querySelector("span");
+      const label = button.querySelector("small");
+      if (icon) icon.innerHTML = active ? "&#9829;" : "&#9825;";
+      if (label) label.textContent = active ? "Saved" : "Save";
+    });
+    list.innerHTML = saved.length ? saved.map(item => {
+      const current = STOREFRONT_PRODUCTS.get(item.product_id);
+      const record = current ? productRecord(item.product_id) : item;
+      const sizes = record.sizes || [];
+      return `<article data-favorite-row="${escapeHtml(item.product_id)}">
+        ${record.image ? `<img src="${escapeHtml(record.image)}" alt="${escapeHtml(record.product_name)}">` : ""}
+        <div><h3>${escapeHtml(record.product_name)}</h3><label>Requested size<select data-favorite-size><option value="">Any size</option>${sizes.map(size => `<option value="${escapeHtml(size)}">${escapeHtml(size)}</option>`).join("")}</select></label></div>
+        <button type="button" data-favorite-remove aria-label="Remove ${escapeHtml(record.product_name)}">&times;</button>
+      </article>`;
+    }).join("") : '<p class="favorites-empty">Tap the heart on a jersey to build your shortlist.</p>';
+    root.querySelector("[data-favorites-request]").disabled = !saved.length;
+    root.querySelector("[data-favorites-clear]").disabled = !saved.length;
+  }
+
+  document.addEventListener("click", event => {
+    const button = event.target.closest?.("[data-favorite-product]");
+    if (!button) return;
+    event.preventDefault();
+    const id = button.dataset.favoriteProduct;
+    const saved = read();
+    const index = saved.findIndex(item => item.product_id === id);
+    if (index >= 0) saved.splice(index, 1);
+    else saved.push(productRecord(id, button));
+    write(saved);
+    render();
+  });
+  launcher.addEventListener("click", () => setOpen(panel.hidden));
+  overlay.addEventListener("click", () => setOpen(false));
+  root.querySelector("[data-favorites-close]").addEventListener("click", () => setOpen(false));
+  list.addEventListener("click", event => {
+    const row = event.target.closest("[data-favorite-row]");
+    if (!row || !event.target.closest("[data-favorite-remove]")) return;
+    write(read().filter(item => item.product_id !== row.dataset.favoriteRow));
+    render();
+  });
+  root.querySelector("[data-favorites-clear]").addEventListener("click", () => { write([]); render(); });
+  root.querySelector("[data-favorites-request]").addEventListener("click", () => {
+    const saved = read();
+    const products = saved.map(item => {
+      const row = list.querySelector(`[data-favorite-row="${CSS.escape(item.product_id)}"]`);
+      return {
+        product_id: item.product_id,
+        product_name: item.product_name,
+        requested_size: row?.querySelector("[data-favorite-size]")?.value || ""
+      };
+    });
+    setOpen(false);
+    window.JerseysHelp?.openCombined(products);
+  });
+  document.addEventListener("keydown", event => { if (event.key === "Escape" && !panel.hidden) setOpen(false); });
+  render();
+  return { refresh: render };
+}
+
 function createHelpWidget() {
   const instagramUrl = "https://www.instagram.com/jerseysfrmjb/";
   if (!document.querySelector('link[data-help-widget-style]')) {
@@ -1165,6 +1401,7 @@ function createHelpWidget() {
   let sent = false;
   let submitting = false;
   let touchStartY = 0;
+  let combinedProducts = [];
   const pageProducts = [...document.querySelectorAll("[data-meta-product]")];
   const pageProduct = pageProducts.length === 1 ? pageProducts[0] : null;
   const requestTypes = {
@@ -1206,6 +1443,7 @@ function createHelpWidget() {
   }
 
   function applyProductContext(product = pageProduct) {
+    combinedProducts = [];
     const id = product?.dataset.productId || "";
     const name = product?.dataset.productName || "";
     const image = pageProductImage(product);
@@ -1226,6 +1464,7 @@ function createHelpWidget() {
   }
 
   function clearProductContext() {
+    combinedProducts = [];
     form.elements.product_id.value = "";
     form.elements.product_name.value = "";
     form.elements.jersey_request.value = "";
@@ -1288,6 +1527,22 @@ function createHelpWidget() {
     }
   }
 
+  function openCombined(products = []) {
+    combinedProducts = Array.isArray(products) ? products.filter(product => product?.product_id || product?.product_name).slice(0, 20) : [];
+    if (!combinedProducts.length) return;
+    form.elements.product_id.value = "";
+    form.elements.product_name.value = `${combinedProducts.length} saved jerseys`;
+    form.elements.jersey_request.value = combinedProducts.map(product => product.product_name).join(", ");
+    productContext.hidden = false;
+    productName.textContent = `${combinedProducts.length} saved jerseys`;
+    productImage.hidden = true;
+    form.elements.message.value = `I would like to request these saved jerseys: ${combinedProducts.map(product => `${product.product_name}${product.requested_size ? ` (${product.requested_size})` : ""}`).join("; ")}.`;
+    setOpen(true);
+    chooseRequestType("jersey_request", true);
+  }
+
+  window.JerseysHelp = { openCombined };
+
   toggle.addEventListener("click", () => setOpen(panel.hidden));
   document.addEventListener("click", event => {
     const button = event.target.closest?.("[data-open-help]");
@@ -1346,6 +1601,7 @@ function createHelpWidget() {
 
     try {
       const body = Object.fromEntries(new FormData(form).entries());
+      if (combinedProducts.length) body.products = combinedProducts;
       const response = await fetch("/api/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1378,6 +1634,7 @@ function createHelpWidget() {
   });
 }
 
+window.JerseysFavorites = createFavoritesManager();
 createHelpWidget();
 
 const contactForm = document.querySelector("[data-contact-form]");
