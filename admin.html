@@ -45,6 +45,7 @@
         <button type="button" data-admin-tab="feedback">Marketplace Feedback</button>
         <button type="button" data-admin-tab="facebook">Facebook</button>
         <button type="button" data-admin-tab="pinterest">Pinterest</button>
+        <button type="button" data-admin-tab="shopify">Shopify</button>
         <button type="button" data-admin-tab="homepage">Homepage</button>
       </nav>
       <label class="admin-mobile-section-control">
@@ -61,6 +62,7 @@
           <option value="feedback">Marketplace Feedback</option>
           <option value="facebook">Facebook</option>
           <option value="pinterest">Pinterest</option>
+          <option value="shopify">Shopify</option>
           <option value="homepage">Homepage</option>
         </select>
       </label>
@@ -428,6 +430,25 @@
             <p class="empty-featured">Open this section to load saved Facebook posts.</p>
           </div>
         </section>
+      </section>
+      <section class="admin-shopify-panel" data-admin-section="shopify" aria-label="Shopify checkout integration" hidden>
+        <header class="shopify-admin-head">
+          <div><span class="section-kicker">Secure Website Checkout</span><h2>Shopify</h2><p>D1 remains the source of truth. Preview changes before syncing products, sizes, prices, and inventory to Shopify.</p></div>
+          <div><button class="shop-button secondary-admin" type="button" data-shopify-preview-all>Preview All</button><button class="shop-button secondary-admin" type="button" data-shopify-sync-all>Sync All</button><button class="shop-button secondary-admin" type="button" data-shopify-retry-sync>Retry Failed</button><button class="shop-button secondary-admin" type="button" data-refresh-shopify>Refresh</button></div>
+        </header>
+        <p class="form-status" data-shopify-admin-status role="status">Open this section to check Shopify setup.</p>
+        <div class="shopify-admin-config" data-shopify-config></div>
+        <div class="shopify-admin-counts" data-shopify-counts></div>
+        <section class="shopify-admin-sync">
+          <div class="shopify-admin-section-head"><div><span class="section-kicker">Product Sync</span><h3>Choose pilot products</h3><p>Start with three products, preview the exact changes, then apply only after credentials and the sync flag are ready.</p></div><div><button class="shop-button secondary-admin" type="button" data-shopify-suggest-pilot>Use Suggested 3</button><button class="shop-button secondary-admin" type="button" data-shopify-preview>Preview Selected</button><button class="shop-button" type="button" data-shopify-run>Sync Selected</button></div></div>
+          <label class="shopify-product-filter"><span>Search products</span><input type="search" data-shopify-search placeholder="Search jersey or product ID"></label>
+          <div class="shopify-product-list" data-shopify-products><p class="empty-featured">Shopify products will load here.</p></div>
+        </section>
+        <section class="shopify-sync-preview" data-shopify-preview-results hidden></section>
+        <div class="shopify-admin-lower-grid">
+          <section><div class="shopify-admin-section-head"><div><span class="section-kicker">Orders</span><h3>Recent Shopify orders</h3></div></div><div data-shopify-orders><p class="empty-featured">No Shopify orders recorded.</p></div></section>
+          <section><div class="shopify-admin-section-head"><div><span class="section-kicker">Webhook Health</span><h3>Failed events</h3></div></div><div data-shopify-webhooks><p class="empty-featured">No failed Shopify events.</p></div></section>
+        </div>
       </section>
       <section class="admin-pinterest-panel" data-admin-section="pinterest" aria-label="Pinterest publisher" hidden>
         <div class="admin-messages-head">

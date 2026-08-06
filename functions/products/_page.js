@@ -265,6 +265,19 @@ export function buildProductPageModel(row = {}, options = {}) {
   const canonicalUrl = productLandingUrl(id, siteOrigin);
   const description = productDescription(row, identity, category, availableSizes, available);
   const metaPrice = selectedMetaPrice(row);
+  const shopifyVariants = parseJson(row.shopify_variants_json, []);
+  const mappedSizes = new Set((Array.isArray(shopifyVariants) ? shopifyVariants : [])
+    .filter(variant => variant?.variant_id)
+    .map(variant => String(variant.size || "")));
+  const shopify = {
+    available: Boolean(options.shopifyCheckoutEnabled),
+    enabled: Boolean(options.shopifyCheckoutEnabled && Number(row.shopify_pilot_enabled) && row.shopify_product_id),
+    price: row.website_price === null || row.website_price === undefined || String(row.website_price).trim() === ""
+      ? Number(row.base_price ?? row.price ?? 0)
+      : Number(row.website_price),
+    sizes: availableSizes.filter(size => mappedSizes.has(size.name))
+  };
+  shopify.enabled = Boolean(shopify.enabled && shopify.price >= 0 && shopify.sizes.length);
 
   return {
     id,
@@ -294,12 +307,23 @@ export function buildProductPageModel(row = {}, options = {}) {
     metaPrice,
     metaPriceDisplay: metaPrice === null ? "" : metaPrice.toFixed(2),
     relatedProducts: Array.isArray(options.relatedProducts) ? options.relatedProducts : [],
-    reviewSummary: options.reviewSummary || null
+    reviewSummary: options.reviewSummary || null,
+    shopify
   };
 }
 
 function structuredProduct(model) {
-  const offers = model.marketplaces.flatMap(marketplace => {
+  const offers = [
+    ...(model.shopify?.enabled ? [{
+      "@type": "Offer",
+      name: "Website checkout",
+      url: model.canonicalUrl,
+      price: model.shopify.price.toFixed(2),
+      priceCurrency: "USD",
+      availability: model.availabilityUrl,
+      seller: { "@type": "Organization", name: "JerseysFrmJB", url: model.siteOrigin }
+    }] : []),
+    ...model.marketplaces.flatMap(marketplace => {
     if (marketplace.price === null || !marketplace.link) return [];
     return [{
       "@type": "Offer",
@@ -314,7 +338,7 @@ function structuredProduct(model) {
         url: model.siteOrigin
       }
     }];
-  });
+  })];
 
   const schema = {
     "@context": "https://schema.org",
@@ -429,9 +453,26 @@ function productFaqs(model) {
     },
     {
       question: "Where is checkout completed?",
-      answer: "Checkout is completed on the linked Depop or eBay listing. JerseysFrmJB does not process payment on this product page."
+      answer: model.shopify?.enabled
+        ? "Website orders continue to Shopify's secure hosted checkout. Depop and eBay remain available when their listings are linked."
+        : "Checkout is completed on the linked Depop or eBay listing. JerseysFrmJB does not process payment on this product page."
     }
   ];
+}
+
+function shopifyCheckoutMarkup(model) {
+  if (!model.available || !model.shopify?.enabled) return "";
+  return `
+    <section class="shopify-checkout-card" data-shopify-product data-product-id="${escapeHtml(model.id)}" data-product-name="${escapeHtml(model.title)}" data-product-price="${escapeHtml(model.shopify.price.toFixed(2))}">
+      <div class="product-section-heading"><span>Website checkout</span><h2>$${escapeHtml(model.shopify.price.toFixed(2))}</h2></div>
+      <p>Choose your size, then continue to secure Shopify checkout.</p>
+      <label><span>Size</span><select data-shopify-size required><option value="">Choose a size</option>${model.shopify.sizes.map(size => `<option value="${escapeHtml(size.name)}">${escapeHtml(size.label)}</option>`).join("")}</select></label>
+      <div class="shopify-checkout-actions">
+        <button type="button" data-shopify-add>Add to Cart</button>
+        <button type="button" data-shopify-buy-now>Buy Now</button>
+      </div>
+      <p class="shopify-checkout-status" data-shopify-status role="status"></p>
+    </section>`;
 }
 
 function faqSchema(faqs) {
@@ -564,7 +605,7 @@ function mobileActionMarkup(model) {
     </aside>`;
 }
 
-function headerMarkup() {
+function headerMarkup(model) {
   return `
   <header class="site-header">
     <button class="menu-toggle" type="button" aria-label="Open menu" aria-expanded="false">&#9776;</button>
@@ -578,6 +619,7 @@ function headerMarkup() {
       <a href="/size-guide">Size Guide</a>
       <a href="/#contact-form">Contact</a>
     </nav>
+    ${model?.shopify?.available ? '<button class="site-cart-button" type="button" data-shopify-cart-open aria-label="Open shopping cart">Cart <span data-shopify-cart-count>0</span></button>' : ""}
   </header>
   <aside class="drawer" aria-hidden="true">
     <button class="drawer-close" type="button" aria-label="Close menu">&times;</button>
@@ -673,9 +715,10 @@ export function renderProductPage(model) {
   <script src="/meta-pixel.js?v=1" defer></script>
   <script src="/analytics.js?v=operations-1" defer></script>
   <script src="/storefront.js?v=engagement-tools-1" defer></script>
+  ${model.shopify?.available ? '<script src="/shopify-cart.js?v=1" defer></script>' : ""}
 </head>
 <body class="product-page-body has-mobile-product-actions">
-  ${headerMarkup()}
+  ${headerMarkup(model)}
   <main class="product-page-main">
     <nav class="product-breadcrumbs" aria-label="Breadcrumb">
       <a href="/">Home</a>
@@ -719,8 +762,9 @@ export function renderProductPage(model) {
           </div>
           ${model.available ? `<ul>${stockMarkup}</ul>` : ""}
         </section>
+        ${shopifyCheckoutMarkup(model)}
         ${marketplaceMarkup(model)}
-        ${model.available && model.marketplaces.length ? '<p class="product-checkout-note">Purchases are completed securely on the selected marketplace. JerseysFrmJB does not process checkout on this page.</p>' : ""}
+        ${model.available && model.marketplaces.length ? `<p class="product-checkout-note">${model.shopify?.enabled ? "Choose secure Shopify checkout above or use an available marketplace listing." : "Purchases are completed securely on the selected marketplace. JerseysFrmJB does not process checkout on this page."}</p>` : ""}
       </section>
     </article>
     <section class="product-page-support">
@@ -742,6 +786,7 @@ export function renderProductPage(model) {
   </main>
   ${mobileActionMarkup(model)}
   ${footerMarkup()}
+  ${model.shopify?.available ? '<aside class="shopify-cart-drawer" data-shopify-cart-drawer aria-hidden="true"><div class="shopify-cart-head"><div><span>Website cart</span><h2>Your jerseys</h2></div><button type="button" data-shopify-cart-close aria-label="Close cart">&times;</button></div><div data-shopify-cart-lines><p>Your cart is empty.</p></div><div class="shopify-cart-footer" data-shopify-cart-footer hidden><p><span>Subtotal</span><strong data-shopify-cart-subtotal>$0.00</strong></p><button type="button" data-shopify-checkout>Continue to Secure Checkout</button><small>Payment and shipping details are entered securely on Shopify.</small></div></aside><button class="shopify-cart-backdrop" type="button" data-shopify-cart-close aria-label="Close cart" hidden></button>' : ""}
 </body>
 </html>`;
 }

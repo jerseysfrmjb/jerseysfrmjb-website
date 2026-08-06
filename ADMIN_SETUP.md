@@ -56,3 +56,51 @@ recent admin activity, and recent API errors. API errors use the existing
 - Sold-out jerseys show an Out of Stock badge, hide the active purchase button, and move below available jerseys.
 - Available jerseys move above sold-out jerseys automatically.
 - The public shop pages use filters for All, Available, Sold Out, and Size.
+
+## Shopify checkout pilot
+
+Shopify is an optional checkout and order backend. The custom website and D1
+inventory remain in place. Both feature flags default to off when omitted.
+
+Add these variables in Cloudflare Pages for Production and Preview as needed:
+
+- `SHOPIFY_STORE_DOMAIN` — the permanent `your-store.myshopify.com` domain, not a storefront URL.
+- `SHOPIFY_ADMIN_ACCESS_TOKEN` — secret; used only by authenticated admin sync endpoints.
+- `SHOPIFY_STOREFRONT_ACCESS_TOKEN` — secret; used only by the server-side cart endpoint.
+- `SHOPIFY_WEBHOOK_SECRET` — secret shown when configuring Shopify webhooks.
+- `SHOPIFY_API_VERSION` — optional; defaults to `2026-07`.
+- `SHOPIFY_LOCATION_ID` — optional Admin GraphQL location GID. The sync discovers the first active location when omitted.
+- `SHOPIFY_PUBLICATION_ID` — recommended Storefront/Headless publication GID. The sync auto-detects only when there is one unambiguous publication.
+- `SHOPIFY_SYNC_ENABLED` — set to `true` only after reviewing a dry-run preview.
+- `SHOPIFY_CHECKOUT_ENABLED` — set to `true` only during the selected-product pilot.
+
+Never place access tokens in browser JavaScript, HTML, Git, screenshots, or
+logs. The admin UI reports only whether each credential is configured.
+
+Run migration `0016_shopify_checkout.sql`, then use **Admin → Shopify**:
+
+1. Select the suggested three pilot jerseys (one single-size, one multi-size,
+   and one low-stock product).
+2. Enable **Pilot checkout** only for those products.
+3. Run **Preview Selected** while the sync flag remains off.
+4. Confirm titles, Website/base fallback prices, images, SKUs, size variants,
+   and inventory.
+5. Turn on `SHOPIFY_SYNC_ENABLED`, sync those selected products, and inspect the
+   resulting Shopify products. Pilot products are published only to the chosen
+   Storefront publication; non-pilot products remain drafts.
+6. Complete a Shopify test-mode checkout before turning on
+   `SHOPIFY_CHECKOUT_ENABLED`.
+
+Stable SKUs use `JFB-<D1-product-id>-<size>`. D1 sends product and size-level
+inventory changes to Shopify. Paid-order webhooks map the Shopify variant back
+to the same D1 product and size, record a Website sale, and decrement D1 once.
+Marketplace sales continue to reduce D1 through the existing sales workflow;
+the next Shopify sync sends that lower size-level quantity to Shopify.
+
+Configure Shopify webhook delivery to:
+
+`https://jerseysfrmjb.com/api/shopify/webhooks`
+
+Subscribe to paid orders, cancellations, refunds, and fulfillment updates.
+The receiver verifies the raw-body HMAC, stores only a sanitized order summary
+(no name, email, address, or payment information), and deduplicates events.

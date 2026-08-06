@@ -144,6 +144,21 @@ const refreshOperations = document.querySelector("[data-refresh-operations]");
 const runCatalogHealthButton = document.querySelector("[data-run-catalog-health]");
 const catalogHealthStatus = document.querySelector("[data-catalog-health-status]");
 const catalogHealthResults = document.querySelector("[data-catalog-health-results]");
+const shopifyAdminStatus = document.querySelector("[data-shopify-admin-status]");
+const shopifyConfig = document.querySelector("[data-shopify-config]");
+const shopifyCounts = document.querySelector("[data-shopify-counts]");
+const shopifyProducts = document.querySelector("[data-shopify-products]");
+const shopifySearch = document.querySelector("[data-shopify-search]");
+const shopifyPreviewResults = document.querySelector("[data-shopify-preview-results]");
+const shopifyOrders = document.querySelector("[data-shopify-orders]");
+const shopifyWebhooks = document.querySelector("[data-shopify-webhooks]");
+const refreshShopify = document.querySelector("[data-refresh-shopify]");
+const suggestShopifyPilot = document.querySelector("[data-shopify-suggest-pilot]");
+const previewShopify = document.querySelector("[data-shopify-preview]");
+const runShopify = document.querySelector("[data-shopify-run]");
+const previewShopifyAll = document.querySelector("[data-shopify-preview-all]");
+const syncShopifyAll = document.querySelector("[data-shopify-sync-all]");
+const retryShopifySync = document.querySelector("[data-shopify-retry-sync]");
 let inventory = [];
 let settings = {};
 let featuredLimit = 3;
@@ -186,6 +201,10 @@ let plannerLoading = false;
 let plannerData = null;
 const plannerPurchase = new Map();
 let operationsLoaded = false;
+let shopifyLoaded = false;
+let shopifyLoading = false;
+let shopifyData = null;
+const selectedShopifyProducts = new Set();
 let salesAnalyticsPanel = document.querySelector("[data-sales-analytics]");
 let quickSaleMatches = [];
 let quickSalePriceManuallyEdited = false;
@@ -242,6 +261,7 @@ function setAdminTab(tab = "dashboard") {
     if (!facebookLoaded) loadFacebookHistory();
   }
   if (tab === "pinterest" && !pinterestLoaded) loadPinterestStatus();
+  if (tab === "shopify" && !shopifyLoaded) loadShopifyStatus();
 }
 
 const ANALYTICS_COLORS = ["#7b1638", "#bc5b75", "#d28b42", "#2e6f76", "#5b4b8a", "#708238", "#9b6b43"];
@@ -4920,6 +4940,168 @@ plannerPurchaseTable?.addEventListener("click", event => {
   renderPlannerPurchaseTable();
   renderPlannerPurchaseSummary();
   renderPlannerProducts();
+});
+
+function shopifyStatusLabel(status = "") {
+  return ({
+    ready: "Ready", created: "Created", updated: "Updated", unchanged: "Unchanged",
+    missing_information: "Missing information", failed: "Failed", needs_review: "Needs review",
+    unmapped: "Not mapped"
+  })[status] || String(status || "Not mapped").replaceAll("_", " ");
+}
+
+function renderShopifyAdmin() {
+  if (!shopifyData) return;
+  const configuration = shopifyData.configuration || {};
+  if (shopifyConfig) {
+    const checks = [
+      ["Store", configuration.store_domain || "Not configured", Boolean(configuration.store_domain)],
+      ["Admin API", configuration.admin_configured ? "Configured" : "Missing", configuration.admin_configured],
+      ["Storefront API", configuration.storefront_configured ? "Configured" : "Missing", configuration.storefront_configured],
+      ["Webhook secret", configuration.webhook_configured ? "Configured" : "Missing", configuration.webhook_configured],
+      ["Storefront publication", configuration.publication_configured ? "Configured" : "Auto-detect", true],
+      ["Sync flag", configuration.sync_enabled ? "On" : "Off", configuration.sync_enabled],
+      ["Checkout flag", configuration.checkout_enabled ? "On" : "Off", configuration.checkout_enabled]
+    ];
+    shopifyConfig.innerHTML = checks.map(([label, value, healthy]) => `<article class="${healthy ? "healthy" : "waiting"}"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></article>`).join("");
+  }
+  if (shopifyCounts) {
+    const counts = shopifyData.counts || {};
+    const last = shopifyData.last_run;
+    shopifyCounts.innerHTML = [
+      ["Mapped products", counts.mapped_products], ["Not mapped", counts.unmapped_products],
+      ["Mapped variants", counts.mapped_variants], ["Unmapped variants", counts.unmapped_variants],
+      ["Inventory mismatches", counts.inventory_mismatches],
+      ["Last sync", last?.completed_at ? analyticsDate(last.completed_at) : "Never"]
+    ].map(([label, value]) => `<article><span>${escapeHtml(label)}</span><strong>${escapeHtml(value ?? 0)}</strong></article>`).join("");
+  }
+  renderShopifyProducts();
+  if (shopifyOrders) {
+    shopifyOrders.innerHTML = (shopifyData.recent_orders || []).length
+      ? shopifyData.recent_orders.map(order => `<article class="shopify-order-row"><div><strong>${escapeHtml(order.order_number || order.shopify_order_id)}</strong><span>${escapeHtml(order.payment_status || "Pending")} · ${escapeHtml(order.fulfillment_status || "Unfulfilled")}</span></div><div><b>${plannerMoney(order.subtotal)} ${escapeHtml(order.currency || "USD")}</b><time>${escapeHtml(analyticsDate(order.updated_at))}</time></div></article>`).join("")
+      : '<p class="empty-featured">No Shopify orders recorded.</p>';
+  }
+  if (shopifyWebhooks) {
+    shopifyWebhooks.innerHTML = (shopifyData.failed_events || []).length
+      ? shopifyData.failed_events.map(event => `<article class="shopify-webhook-row"><div><strong>${escapeHtml(event.topic)}</strong><span>${escapeHtml(event.error || "Processing failed")}</span></div><button class="shop-button secondary-admin" type="button" data-shopify-retry-event="${escapeHtml(event.event_id)}">Retry</button></article>`).join("")
+      : '<p class="empty-featured">No failed Shopify events.</p>';
+  }
+}
+
+function renderShopifyProducts() {
+  if (!shopifyProducts || !shopifyData) return;
+  const query = String(shopifySearch?.value || "").trim().toLowerCase();
+  const products = (shopifyData.products || []).filter(product => !query || `${product.id} ${product.title}`.toLowerCase().includes(query));
+  shopifyProducts.innerHTML = products.length ? products.map(product => {
+    const selected = selectedShopifyProducts.has(product.id);
+    const sizes = product.variants.map(variant => `${variant.size}: ${variant.quantity}`).join(" · ");
+    const status = product.missing?.length ? "missing_information" : product.sync_status;
+    return `<article class="shopify-product-row ${selected ? "selected" : ""}" data-shopify-product-row="${escapeHtml(product.id)}">
+      <label class="shopify-product-select"><input type="checkbox" data-shopify-select ${selected ? "checked" : ""}><span><strong>${escapeHtml(product.title)}</strong><small>${escapeHtml(product.id)} · ${escapeHtml(sizes || "No size data")}</small></span></label>
+      <div class="shopify-product-meta"><span class="shopify-sync-status status-${escapeHtml(status)}">${escapeHtml(shopifyStatusLabel(status))}</span><b>${product.website_price === null ? "No price" : plannerMoney(product.website_price)}</b></div>
+      <label class="shopify-pilot-toggle"><input type="checkbox" data-shopify-pilot ${product.pilot_enabled ? "checked" : ""}><span>Pilot checkout</span></label>
+      ${product.shopify_admin_url ? `<a class="shop-button secondary-admin" href="${escapeHtml(product.shopify_admin_url)}" target="_blank" rel="noopener">Open in Shopify</a>` : ""}
+    </article>`;
+  }).join("") : '<p class="empty-featured">No matching products.</p>';
+}
+
+async function loadShopifyStatus(force = false) {
+  if (shopifyLoading) return;
+  if (shopifyLoaded && !force) { renderShopifyAdmin(); return; }
+  shopifyLoading = true;
+  if (shopifyAdminStatus) shopifyAdminStatus.textContent = "Checking Shopify configuration and mappings...";
+  try {
+    shopifyData = await api("/api/admin/shopify/status");
+    shopifyLoaded = true;
+    renderShopifyAdmin();
+    if (shopifyAdminStatus) shopifyAdminStatus.textContent = shopifyData.configuration?.sync_enabled
+      ? "Shopify sync is available. Preview before applying changes."
+      : "Safe mode: Shopify sync is off. Dry-run previews remain available.";
+  } catch (error) {
+    if (shopifyAdminStatus) shopifyAdminStatus.textContent = error.message;
+  } finally {
+    shopifyLoading = false;
+  }
+}
+
+function renderShopifyPreview(data) {
+  if (!shopifyPreviewResults) return;
+  shopifyPreviewResults.hidden = false;
+  const summary = data.summary || {};
+  shopifyPreviewResults.innerHTML = `<div class="shopify-admin-section-head"><div><span class="section-kicker">${data.dry_run ? "Dry Run" : "Sync Result"}</span><h3>${data.dry_run ? "Proposed Shopify changes" : "Shopify sync completed"}</h3><p>${Number(summary.created || 0)} created · ${Number(summary.updated || 0)} updated · ${Number(summary.unchanged || 0)} unchanged · ${Number(summary.needs_review || 0)} needs review · ${Number(summary.failed || 0)} failed</p></div></div>
+    <div class="shopify-preview-items">${(data.items || []).map(item => `<article><div><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.product_id)} · ${item.variants.length} size variant${item.variants.length === 1 ? "" : "s"}</span></div><b class="shopify-sync-status status-${escapeHtml(item.status)}">${escapeHtml(shopifyStatusLabel(item.status))}</b>${item.missing?.length ? `<small>Missing: ${escapeHtml(item.missing.join(", "))}</small>` : ""}${item.error ? `<small>${escapeHtml(item.error)}</small>` : ""}</article>`).join("")}</div>`;
+  shopifyPreviewResults.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+async function runShopifySync({ dryRun = true, scope = "selected", productIds = [] } = {}) {
+  if (shopifyLoading) return;
+  const ids = productIds.length ? productIds : [...selectedShopifyProducts];
+  if (scope !== "all" && !ids.length) {
+    if (shopifyAdminStatus) shopifyAdminStatus.textContent = "Select at least one product first.";
+    return;
+  }
+  if (!dryRun && scope === "all" && !window.confirm("Sync every inventory product to Shopify now? Preview All first and confirm your credentials, pricing, and Shopify test mode.")) return;
+  if (!dryRun && scope !== "all" && !window.confirm(`Sync ${ids.length} selected product${ids.length === 1 ? "" : "s"} to Shopify now?`)) return;
+  shopifyLoading = true;
+  if (shopifyAdminStatus) shopifyAdminStatus.textContent = dryRun ? "Building a safe dry-run preview..." : "Syncing products to Shopify...";
+  try {
+    const data = await api("/api/admin/shopify/sync", {
+      method: "POST",
+      body: JSON.stringify({ dry_run: dryRun, scope, product_ids: ids, confirm_all: scope === "all" })
+    });
+    renderShopifyPreview(data);
+    if (shopifyAdminStatus) shopifyAdminStatus.textContent = dryRun ? "Preview ready. No Shopify data was changed." : "Sync finished. Review the result below.";
+    if (!dryRun) { shopifyLoaded = false; await loadShopifyStatus(true); }
+  } catch (error) {
+    if (shopifyAdminStatus) shopifyAdminStatus.textContent = error.message;
+  } finally {
+    shopifyLoading = false;
+  }
+}
+
+shopifyProducts?.addEventListener("change", async event => {
+  const row = event.target.closest("[data-shopify-product-row]");
+  if (!row) return;
+  const id = row.dataset.shopifyProductRow;
+  if (event.target.matches("[data-shopify-select]")) {
+    if (event.target.checked) selectedShopifyProducts.add(id); else selectedShopifyProducts.delete(id);
+    renderShopifyProducts();
+  }
+  if (event.target.matches("[data-shopify-pilot]")) {
+    event.target.disabled = true;
+    try {
+      await api("/api/admin/shopify/pilot", { method: "PATCH", body: JSON.stringify({ product_id: id, enabled: event.target.checked }) });
+      const product = shopifyData.products.find(item => item.id === id);
+      if (product) product.pilot_enabled = event.target.checked;
+      if (shopifyAdminStatus) shopifyAdminStatus.textContent = `${product?.title || id} pilot checkout ${event.target.checked ? "enabled" : "disabled"}. The global checkout flag must also be on.`;
+    } catch (error) {
+      event.target.checked = !event.target.checked;
+      if (shopifyAdminStatus) shopifyAdminStatus.textContent = error.message;
+    } finally { event.target.disabled = false; }
+  }
+});
+shopifyWebhooks?.addEventListener("click", async event => {
+  const button = event.target.closest("[data-shopify-retry-event]");
+  if (!button) return;
+  button.disabled = true;
+  try { await api("/api/admin/shopify/retry", { method: "POST", body: JSON.stringify({ event_id: button.dataset.shopifyRetryEvent }) }); shopifyLoaded = false; await loadShopifyStatus(true); }
+  catch (error) { if (shopifyAdminStatus) shopifyAdminStatus.textContent = error.message; }
+  finally { button.disabled = false; }
+});
+shopifySearch?.addEventListener("input", renderShopifyProducts);
+refreshShopify?.addEventListener("click", () => loadShopifyStatus(true));
+suggestShopifyPilot?.addEventListener("click", () => {
+  (shopifyData?.suggested_pilot_products || []).forEach(id => selectedShopifyProducts.add(id));
+  renderShopifyProducts();
+  if (shopifyAdminStatus) shopifyAdminStatus.textContent = "Suggested pilot products selected. Review them, enable Pilot checkout individually, then run Preview Selected.";
+});
+previewShopify?.addEventListener("click", () => runShopifySync({ dryRun: true }));
+runShopify?.addEventListener("click", () => runShopifySync({ dryRun: false }));
+previewShopifyAll?.addEventListener("click", () => runShopifySync({ dryRun: true, scope: "all" }));
+syncShopifyAll?.addEventListener("click", () => runShopifySync({ dryRun: false, scope: "all" }));
+retryShopifySync?.addEventListener("click", () => {
+  const failed = (shopifyData?.products || []).filter(product => ["failed", "needs_review"].includes(product.sync_status)).map(product => product.id);
+  runShopifySync({ dryRun: false, scope: "retry", productIds: failed });
 });
 refreshSales?.addEventListener("click", loadSales);
 refreshAnalytics?.addEventListener("click", loadAnalytics);

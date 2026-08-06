@@ -8,6 +8,8 @@ import {
   loadSeoRows,
   relatedProducts
 } from "../_seo.js";
+import { ensureShopifySchema } from "../api/shopify/_schema.js";
+import { shopifyConfiguration } from "../api/shopify/_shared.js";
 
 const DEFAULT_SITE_ORIGIN = "https://jerseysfrmjb.com";
 const PRODUCT_PAGE_CACHE = "public, max-age=60, s-maxage=120, stale-while-revalidate=30";
@@ -33,7 +35,25 @@ function htmlResponse(body, status = 200, cacheControl = PRODUCT_PAGE_CACHE) {
   });
 }
 
-async function loadProduct(env, id) {
+async function loadProduct(env, id, includeShopify = false) {
+  const shopifyFields = includeShopify ? `,
+      shopify_products.pilot_enabled AS shopify_pilot_enabled,
+      shopify_products.shopify_product_id,
+      COALESCE((
+        SELECT json_group_array(json_object(
+          'size', shopify_variants.size,
+          'variant_id', shopify_variants.shopify_variant_id
+        ))
+        FROM shopify_variant_mappings AS shopify_variants
+        WHERE shopify_variants.product_id = inventory.id
+          AND shopify_variants.shopify_variant_id <> ''
+      ), '[]') AS shopify_variants_json` : `,
+      0 AS shopify_pilot_enabled,
+      '' AS shopify_product_id,
+      '[]' AS shopify_variants_json`;
+  const shopifyJoin = includeShopify ? `
+    LEFT JOIN shopify_product_mappings AS shopify_products
+      ON shopify_products.product_id = inventory.id` : "";
   return env.DB.prepare(`
     SELECT
       inventory.id,
@@ -50,6 +70,7 @@ async function loadProduct(env, id) {
       ebay_prices.price AS ebay_price,
       facebook_prices.price AS facebook_price,
       website_prices.price AS website_price
+      ${shopifyFields}
     FROM inventory
     LEFT JOIN product_platform_prices AS depop_prices
       ON depop_prices.product_id = inventory.id
@@ -63,6 +84,7 @@ async function loadProduct(env, id) {
     LEFT JOIN product_platform_prices AS website_prices
       ON website_prices.product_id = inventory.id
       AND website_prices.platform = 'Website'
+    ${shopifyJoin}
     WHERE inventory.id = ?
     LIMIT 1
   `).bind(id).first();
@@ -106,7 +128,9 @@ export async function onRequestGet(context) {
   }
 
   try {
-    const row = await loadProduct(context.env, id);
+    const shopify = shopifyConfiguration(context.env);
+    if (shopify.checkout) await ensureShopifySchema(context.env);
+    const row = await loadProduct(context.env, id, shopify.checkout);
     if (!row) return htmlResponse(renderProductNotFound(origin), 404, "no-store");
 
     let recommendations = [];
@@ -123,7 +147,8 @@ export async function onRequestGet(context) {
     const model = buildProductPageModel(row, {
       siteOrigin: origin,
       relatedProducts: recommendations,
-      reviewSummary
+      reviewSummary,
+      shopifyCheckoutEnabled: shopify.checkout
     });
     if (!model?.images?.front) {
       return htmlResponse(renderProductNotFound(origin), 404, "no-store");
