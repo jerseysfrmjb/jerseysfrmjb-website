@@ -93,6 +93,15 @@ assert.equal(safeConfig.publicationConfigured, false);
 assert.equal(JSON.stringify(safeConfig).includes("admin-test-token"), false, "configuration never exposes tokens");
 assert.equal(shopifyConfiguration({ SHOPIFY_STORE_DOMAIN: "https://example.com" }).storeDomain, "");
 assert.equal(shopifyWebhookSecret({ SHOPIFY_CLIENT_SECRET: "client-secret" }), "client-secret");
+const privateStorefrontRequests = [];
+await shopifyGraphql({
+  SHOPIFY_STORE_DOMAIN: env.SHOPIFY_STORE_DOMAIN,
+  SHOPIFY_STOREFRONT_PRIVATE_ACCESS_TOKEN: "shpat_private-test-token"
+}, "storefront", "query PrivateStorefrontHealth { shop { name } }", {}, {
+  fetchImpl: jsonFetch({ data: { shop: { name: "JerseysFrmJB" } } }, 200, privateStorefrontRequests)
+});
+assert.equal(privateStorefrontRequests[0].options.headers["Shopify-Storefront-Private-Token"], "shpat_private-test-token");
+assert.equal(privateStorefrontRequests[0].options.headers["X-Shopify-Storefront-Access-Token"], undefined);
 const credentialRequests = [];
 const clientCredentialToken = await shopifyAdminAccessToken({
   SHOPIFY_STORE_DOMAIN: "jerseysfrmjb.myshopify.com",

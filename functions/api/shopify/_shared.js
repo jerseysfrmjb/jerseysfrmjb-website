@@ -40,11 +40,28 @@ export function shopifyConfiguration(env = {}) {
     apiVersion: shopifyApiVersion(env.SHOPIFY_API_VERSION),
     adminConfigured: Boolean(storeDomain && (hasLegacyAdminToken || hasClientCredentials)),
     adminAuthMode: hasClientCredentials ? "client_credentials" : hasLegacyAdminToken ? "legacy_token" : "missing",
-    storefrontConfigured: Boolean(storeDomain && env.SHOPIFY_STOREFRONT_ACCESS_TOKEN),
+    storefrontConfigured: Boolean(storeDomain && (
+      String(env.SHOPIFY_STOREFRONT_PRIVATE_ACCESS_TOKEN || "").trim()
+      || String(env.SHOPIFY_STOREFRONT_ACCESS_TOKEN || "").trim()
+    )),
     webhookConfigured: Boolean(shopifyWebhookSecret(env)),
     locationConfigured: Boolean(String(env.SHOPIFY_LOCATION_ID || "").trim()),
     publicationConfigured: Boolean(String(env.SHOPIFY_PUBLICATION_ID || "").trim())
   };
+}
+
+function shopifyStorefrontToken(env = {}) {
+  return String(
+    env.SHOPIFY_STOREFRONT_PRIVATE_ACCESS_TOKEN
+    || env.SHOPIFY_STOREFRONT_ACCESS_TOKEN
+    || ""
+  ).trim();
+}
+
+function storefrontTokenHeader(token) {
+  return /^shpat_/i.test(String(token || ""))
+    ? "Shopify-Storefront-Private-Token"
+    : "X-Shopify-Storefront-Access-Token";
 }
 
 export function shopifyWebhookSecret(env = {}) {
@@ -141,7 +158,7 @@ export async function shopifyGraphql(env, kind, query, variables = {}, options =
   const admin = kind === "admin";
   const token = admin
     ? await shopifyAdminAccessToken(env, options)
-    : String(env.SHOPIFY_STOREFRONT_ACCESS_TOKEN || "").trim();
+    : shopifyStorefrontToken(env);
   if (!configuration.storeDomain || !token) {
     throw new ShopifyApiError(`Shopify ${admin ? "Admin" : "Storefront"} API is not configured.`);
   }
@@ -152,7 +169,7 @@ export async function shopifyGraphql(env, kind, query, variables = {}, options =
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      [admin ? "X-Shopify-Access-Token" : "X-Shopify-Storefront-Access-Token"]: accessToken
+      [admin ? "X-Shopify-Access-Token" : storefrontTokenHeader(accessToken)]: accessToken
     },
     body: JSON.stringify({ query, variables })
   });
