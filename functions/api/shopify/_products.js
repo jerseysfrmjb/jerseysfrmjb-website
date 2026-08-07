@@ -376,7 +376,9 @@ export function previewAction(product, payloadHash) {
   return { action: "update", status: "ready" };
 }
 
-export function safeProductSummary(product, action, status) {
+export function safeProductSummary(product, action, status, options = {}) {
+  const locationId = String(options.locationId || "").trim();
+  const publicationId = String(options.publicationId || "").trim();
   return {
     product_id: product.id,
     title: product.title,
@@ -391,7 +393,29 @@ export function safeProductSummary(product, action, status) {
     })),
     images: product.photos.map(photo => photo.url),
     missing: product.missing,
-    shopify_product_id: product.shopifyProductId
+    shopify_product_id: product.shopifyProductId,
+    shopify_request_preview: {
+      operation: "productSet",
+      variables: {
+        input: productSetInput(product, { locationId }),
+        identifier: product.shopifyProductId ? { id: product.shopifyProductId } : null
+      },
+      publication: product.pilotEnabled ? {
+        operation: "publishablePublish",
+        variables: {
+          id: product.shopifyProductId || "<Shopify product ID returned by productSet>",
+          input: [{ publicationId: publicationId || "<SHOPIFY_PUBLICATION_ID required>" }],
+          publicationId: publicationId || "<SHOPIFY_PUBLICATION_ID required>"
+        }
+      } : null
+    },
+    inventory_location_id: locationId,
+    inventory_location_pending: !locationId,
+    publication: product.pilotEnabled ? {
+      operation: "publishablePublish",
+      publication_id: publicationId,
+      publication_pending: !publicationId
+    } : null
   };
 }
 

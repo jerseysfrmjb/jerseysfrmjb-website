@@ -434,10 +434,11 @@
       <section class="admin-shopify-panel" data-admin-section="shopify" aria-label="Shopify checkout integration" hidden>
         <header class="shopify-admin-head">
           <div><span class="section-kicker">Secure Website Checkout</span><h2>Shopify</h2><p>D1 remains the source of truth. Preview changes before syncing products, sizes, prices, and inventory to Shopify.</p></div>
-          <div><button class="shop-button secondary-admin" type="button" data-shopify-preview-all>Preview All</button><button class="shop-button secondary-admin" type="button" data-shopify-sync-all>Sync All</button><button class="shop-button secondary-admin" type="button" data-shopify-retry-sync>Retry Failed</button><button class="shop-button secondary-admin" type="button" data-refresh-shopify>Refresh</button></div>
+          <div><button class="shop-button secondary-admin" type="button" data-shopify-check-connection>Check Connection</button><button class="shop-button secondary-admin" type="button" data-shopify-register-webhooks>Register Webhooks</button><button class="shop-button secondary-admin" type="button" data-shopify-preview-all>Preview All</button><button class="shop-button secondary-admin" type="button" data-shopify-sync-all>Sync All</button><button class="shop-button secondary-admin" type="button" data-shopify-retry-sync>Retry Failed</button><button class="shop-button secondary-admin" type="button" data-refresh-shopify>Refresh</button></div>
         </header>
         <p class="form-status" data-shopify-admin-status role="status">Open this section to check Shopify setup.</p>
         <div class="shopify-admin-config" data-shopify-config></div>
+        <section class="shopify-setup-audit" data-shopify-setup-audit hidden></section>
         <div class="shopify-admin-counts" data-shopify-counts></div>
         <section class="shopify-admin-sync">
           <div class="shopify-admin-section-head"><div><span class="section-kicker">Product Sync</span><h3>Choose pilot products</h3><p>Start with three products, preview the exact changes, then apply only after credentials and the sync flag are ready.</p></div><div><button class="shop-button secondary-admin" type="button" data-shopify-suggest-pilot>Use Suggested 3</button><button class="shop-button secondary-admin" type="button" data-shopify-preview>Preview Selected</button><button class="shop-button" type="button" data-shopify-run>Sync Selected</button></div></div>

@@ -159,6 +159,9 @@ const runShopify = document.querySelector("[data-shopify-run]");
 const previewShopifyAll = document.querySelector("[data-shopify-preview-all]");
 const syncShopifyAll = document.querySelector("[data-shopify-sync-all]");
 const retryShopifySync = document.querySelector("[data-shopify-retry-sync]");
+const checkShopifyConnection = document.querySelector("[data-shopify-check-connection]");
+const registerShopifyWebhooksButton = document.querySelector("[data-shopify-register-webhooks]");
+const shopifySetupAudit = document.querySelector("[data-shopify-setup-audit]");
 let inventory = [];
 let settings = {};
 let featuredLimit = 3;
@@ -4956,7 +4959,7 @@ function renderShopifyAdmin() {
   if (shopifyConfig) {
     const checks = [
       ["Store", configuration.store_domain || "Not configured", Boolean(configuration.store_domain)],
-      ["Admin API", configuration.admin_configured ? "Configured" : "Missing", configuration.admin_configured],
+      ["Admin API", configuration.admin_configured ? `Configured (${configuration.admin_auth_mode === "client_credentials" ? "client credentials" : "legacy token"})` : "Missing", configuration.admin_configured],
       ["Storefront API", configuration.storefront_configured ? "Configured" : "Missing", configuration.storefront_configured],
       ["Webhook secret", configuration.webhook_configured ? "Configured" : "Missing", configuration.webhook_configured],
       ["Storefront publication", configuration.publication_configured ? "Configured" : "Auto-detect", true],
@@ -4985,6 +4988,46 @@ function renderShopifyAdmin() {
     shopifyWebhooks.innerHTML = (shopifyData.failed_events || []).length
       ? shopifyData.failed_events.map(event => `<article class="shopify-webhook-row"><div><strong>${escapeHtml(event.topic)}</strong><span>${escapeHtml(event.error || "Processing failed")}</span></div><button class="shop-button secondary-admin" type="button" data-shopify-retry-event="${escapeHtml(event.event_id)}">Retry</button></article>`).join("")
       : '<p class="empty-featured">No failed Shopify events.</p>';
+  }
+}
+
+function renderShopifySetupAudit(setup = {}) {
+  if (!shopifySetupAudit) return;
+  shopifySetupAudit.hidden = false;
+  const selectedLocationId = setup.configured_location_id || setup.recommended_location_id;
+  const selectedPublicationId = setup.configured_publication_id || setup.recommended_publication_id;
+  const location = (setup.locations || []).find(item => item.id === selectedLocationId);
+  const publication = (setup.publications || []).find(item => item.id === selectedPublicationId);
+  const missingScopes = setup.missing_scopes || [];
+  const missingTopics = setup.missing_webhook_topics || [];
+  const checks = [
+    ["Connection", setup.connected ? `${setup.store?.name || "Shopify store"} connected` : setup.error || setup.checks?.connection || "Not connected", setup.connected],
+    ["API scopes", missingScopes.length ? `Missing: ${missingScopes.join(", ")}` : "All required scopes granted", !missingScopes.length],
+    ["Location", setup.configured_location_id ? location?.name || "Configured location" : location ? `Recommended: ${location.name}` : "No usable location found", Boolean(location)],
+    ["Publication", setup.configured_publication_id ? publication?.name || "Configured publication" : publication ? `Recommended: ${publication.name}` : "No usable publication found", Boolean(publication)],
+    ["Webhooks", missingTopics.length ? `Missing: ${missingTopics.join(", ")}` : "All required webhooks registered", !missingTopics.length]
+  ];
+  shopifySetupAudit.innerHTML = `<div class="shopify-admin-section-head"><div><span class="section-kicker">Connection Audit</span><h3>Shopify readiness</h3><p>No access tokens or customer data are shown here.</p></div></div><div class="shopify-setup-checks">${checks.map(([label, value, healthy]) => `<article class="${healthy ? "healthy" : "waiting"}"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></article>`).join("")}</div>${!setup.configured_location_id && setup.recommended_location_id ? `<p class="shopify-setup-hint">Set <code>SHOPIFY_LOCATION_ID</code> to <code>${escapeHtml(setup.recommended_location_id)}</code> in Cloudflare.</p>` : ""}${!setup.configured_publication_id && setup.recommended_publication_id ? `<p class="shopify-setup-hint">Set <code>SHOPIFY_PUBLICATION_ID</code> to <code>${escapeHtml(setup.recommended_publication_id)}</code> in Cloudflare.</p>` : ""}`;
+}
+
+async function inspectShopifyConnection({ registerWebhooks = false } = {}) {
+  if (shopifyLoading) return;
+  if (registerWebhooks && !window.confirm("Register any missing Shopify order, refund, and fulfillment webhooks now? Existing matching webhooks will be left unchanged.")) return;
+  shopifyLoading = true;
+  if (shopifyAdminStatus) shopifyAdminStatus.textContent = registerWebhooks ? "Registering missing Shopify webhooks..." : "Checking Shopify connection, scopes, locations, publications, and webhooks...";
+  try {
+    const setup = await api("/api/admin/shopify/setup", registerWebhooks ? {
+      method: "POST",
+      body: JSON.stringify({ action: "register_webhooks", confirm: true })
+    } : {});
+    renderShopifySetupAudit(setup.setup || setup);
+    if (shopifyAdminStatus) shopifyAdminStatus.textContent = registerWebhooks
+      ? "Webhook registration finished. Review the readiness audit below."
+      : "Shopify connection audit complete.";
+  } catch (error) {
+    if (shopifyAdminStatus) shopifyAdminStatus.textContent = error.message;
+  } finally {
+    shopifyLoading = false;
   }
 }
 
@@ -5029,7 +5072,7 @@ function renderShopifyPreview(data) {
   shopifyPreviewResults.hidden = false;
   const summary = data.summary || {};
   shopifyPreviewResults.innerHTML = `<div class="shopify-admin-section-head"><div><span class="section-kicker">${data.dry_run ? "Dry Run" : "Sync Result"}</span><h3>${data.dry_run ? "Proposed Shopify changes" : "Shopify sync completed"}</h3><p>${Number(summary.created || 0)} created · ${Number(summary.updated || 0)} updated · ${Number(summary.unchanged || 0)} unchanged · ${Number(summary.needs_review || 0)} needs review · ${Number(summary.failed || 0)} failed</p></div></div>
-    <div class="shopify-preview-items">${(data.items || []).map(item => `<article><div><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.product_id)} · ${item.variants.length} size variant${item.variants.length === 1 ? "" : "s"}</span></div><b class="shopify-sync-status status-${escapeHtml(item.status)}">${escapeHtml(shopifyStatusLabel(item.status))}</b>${item.missing?.length ? `<small>Missing: ${escapeHtml(item.missing.join(", "))}</small>` : ""}${item.error ? `<small>${escapeHtml(item.error)}</small>` : ""}</article>`).join("")}</div>`;
+    <div class="shopify-preview-items">${(data.items || []).map(item => `<article><div class="shopify-preview-summary"><div><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.product_id)} · ${item.variants.length} size variant${item.variants.length === 1 ? "" : "s"}</span></div><b class="shopify-sync-status status-${escapeHtml(item.status)}">${escapeHtml(shopifyStatusLabel(item.status))}</b></div>${item.missing?.length ? `<small>Missing: ${escapeHtml(item.missing.join(", "))}</small>` : ""}${item.error ? `<small>${escapeHtml(item.error)}</small>` : ""}${item.shopify_request_preview ? `<details class="shopify-request-preview"><summary>View exact Shopify request</summary><pre>${escapeHtml(JSON.stringify(item.shopify_request_preview, null, 2))}</pre></details>` : ""}</article>`).join("")}</div>`;
   shopifyPreviewResults.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -5090,6 +5133,8 @@ shopifyWebhooks?.addEventListener("click", async event => {
 });
 shopifySearch?.addEventListener("input", renderShopifyProducts);
 refreshShopify?.addEventListener("click", () => loadShopifyStatus(true));
+checkShopifyConnection?.addEventListener("click", () => inspectShopifyConnection());
+registerShopifyWebhooksButton?.addEventListener("click", () => inspectShopifyConnection({ registerWebhooks: true }));
 suggestShopifyPilot?.addEventListener("click", () => {
   (shopifyData?.suggested_pilot_products || []).forEach(id => selectedShopifyProducts.add(id));
   renderShopifyProducts();

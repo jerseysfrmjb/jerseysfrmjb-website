@@ -10,17 +10,28 @@ import {
   normalizeShopifySizes,
   previewAction,
   productSetInput,
+  safeProductSummary,
   shopifyPayloadHash,
   shopifySku,
   suggestedPilotProducts
 } from "../functions/api/shopify/_products.js";
 import {
   sanitizeWebhookPayload,
+  shopifyAdminAccessToken,
   shopifyConfiguration,
   shopifyFlags,
   shopifyGraphql,
+  shopifyWebhookSecret,
   verifyShopifyWebhook
 } from "../functions/api/shopify/_shared.js";
+import {
+  inspectShopifySetup,
+  recommendShopifyLocation,
+  recommendShopifyPublication,
+  registerShopifyWebhooks,
+  REQUIRED_SHOPIFY_WEBHOOK_TOPICS,
+  SHOPIFY_WEBHOOK_URI
+} from "../functions/api/shopify/_setup.js";
 import {
   addCartLine,
   createCart,
@@ -81,6 +92,27 @@ assert.equal(safeConfig.storefrontConfigured, true);
 assert.equal(safeConfig.publicationConfigured, false);
 assert.equal(JSON.stringify(safeConfig).includes("admin-test-token"), false, "configuration never exposes tokens");
 assert.equal(shopifyConfiguration({ SHOPIFY_STORE_DOMAIN: "https://example.com" }).storeDomain, "");
+assert.equal(shopifyWebhookSecret({ SHOPIFY_CLIENT_SECRET: "client-secret" }), "client-secret");
+const credentialRequests = [];
+const clientCredentialToken = await shopifyAdminAccessToken({
+  SHOPIFY_STORE_DOMAIN: "jerseysfrmjb.myshopify.com",
+  SHOPIFY_CLIENT_ID: "client-id",
+  SHOPIFY_CLIENT_SECRET: "client-secret"
+}, {
+  now: 1_000,
+  fetchImpl: async (url, options) => {
+    credentialRequests.push({ url, options });
+    return new Response(JSON.stringify({ access_token: "short-lived-admin-token", expires_in: 86_399 }));
+  }
+});
+assert.equal(clientCredentialToken, "short-lived-admin-token");
+assert.equal(credentialRequests[0].url, "https://jerseysfrmjb.myshopify.com/admin/oauth/access_token");
+assert.match(credentialRequests[0].options.body, /grant_type=client_credentials/);
+assert.equal(JSON.stringify(shopifyConfiguration({
+  SHOPIFY_STORE_DOMAIN: "jerseysfrmjb.myshopify.com",
+  SHOPIFY_CLIENT_ID: "client-id",
+  SHOPIFY_CLIENT_SECRET: "client-secret"
+})).includes("client-secret"), false);
 
 assert.deepEqual(normalizeShopifySizes('{"M":2,"L":0}', "", 0), { M: 2, L: 0 });
 assert.equal(shopifySku("club-barcelona-yamal-home-2627", "M"), "JFB-CLUB-BARCELONA-YAMAL-HOME-2627-M");
@@ -128,6 +160,53 @@ assert.notEqual(
   "inventory-only changes alter the sync fingerprint"
 );
 assert.deepEqual(previewAction(singleSize, "new-hash"), { action: "create", status: "ready" });
+const exactPreview = safeProductSummary(singleSize, "create", "ready", {
+  locationId: "gid://shopify/Location/1",
+  publicationId: "gid://shopify/Publication/5"
+});
+assert.equal(exactPreview.shopify_request_preview.operation, "productSet");
+assert.equal(exactPreview.shopify_request_preview.variables.input.variants[0].inventoryQuantities[0].locationId, "gid://shopify/Location/1");
+assert.equal(exactPreview.shopify_request_preview.publication.variables.publicationId, "gid://shopify/Publication/5");
+
+const setupLocations = [
+  { id: "inactive", isActive: false, fulfillsOnlineOrders: false },
+  { id: "active", isActive: true, fulfillsOnlineOrders: false },
+  { id: "online", isActive: true, fulfillsOnlineOrders: true }
+];
+assert.equal(recommendShopifyLocation(setupLocations).id, "online");
+assert.equal(recommendShopifyPublication([{ id: "online", name: "Online Store" }, { id: "headless", name: "Headless" }]).id, "headless");
+
+const setupFetch = async (url, options) => {
+  const request = JSON.parse(options.body);
+  if (request.query.includes("JerseysFrmJBShopifyConnection")) return new Response(JSON.stringify({ data: {
+    shop: { name: "JerseysFrmJB", myshopifyDomain: "jerseysfrmjb.myshopify.com", currencyCode: "USD" },
+    currentAppInstallation: { accessScopes: ["read_products", "write_products", "read_inventory", "write_inventory", "read_locations", "read_publications", "write_publications", "read_orders", "read_fulfillments"].map(handle => ({ handle })) }
+  } }));
+  if (request.query.includes("JerseysFrmJBLocations")) return new Response(JSON.stringify({ data: { locations: { nodes: [{ id: "gid://shopify/Location/1", name: "Main", isActive: true, fulfillsOnlineOrders: true }] } } }));
+  if (request.query.includes("JerseysFrmJBPublications")) return new Response(JSON.stringify({ data: { publications: { nodes: [{ id: "gid://shopify/Publication/5", name: "Headless", autoPublish: false, supportsFuturePublishing: true }] } } }));
+  if (request.query.includes("JerseysFrmJBWebhookSubscriptions")) return new Response(JSON.stringify({ data: { webhookSubscriptions: { nodes: [] } } }));
+  return new Response(JSON.stringify({ data: { webhookSubscriptionCreate: { webhookSubscription: { id: "gid://shopify/WebhookSubscription/1", topic: request.variables.topic, uri: SHOPIFY_WEBHOOK_URI }, userErrors: [] } } }));
+};
+const setupAudit = await inspectShopifySetup(env, { fetchImpl: setupFetch });
+assert.equal(setupAudit.connected, true);
+assert.equal(setupAudit.missing_scopes.length, 0);
+assert.equal(setupAudit.recommended_location_id, "gid://shopify/Location/1");
+assert.equal(setupAudit.recommended_publication_id, "gid://shopify/Publication/5");
+assert.deepEqual(setupAudit.missing_webhook_topics, REQUIRED_SHOPIFY_WEBHOOK_TOPICS);
+const webhookRegistrations = await registerShopifyWebhooks(env, { fetchImpl: setupFetch });
+assert.equal(webhookRegistrations.length, REQUIRED_SHOPIFY_WEBHOOK_TOPICS.length);
+assert.equal(webhookRegistrations.every(item => item.status === "created"), true);
+const existingWebhookFetch = async (url, options) => {
+  const request = JSON.parse(options.body);
+  assert.match(request.query, /JerseysFrmJBWebhookSubscriptions/);
+  return new Response(JSON.stringify({ data: { webhookSubscriptions: { nodes: REQUIRED_SHOPIFY_WEBHOOK_TOPICS.map((topic, index) => ({
+    id: `gid://shopify/WebhookSubscription/${index + 1}`,
+    topic,
+    uri: SHOPIFY_WEBHOOK_URI
+  })) } } }));
+};
+const idempotentRegistrations = await registerShopifyWebhooks(env, { fetchImpl: existingWebhookFetch });
+assert.equal(idempotentRegistrations.every(item => item.status === "existing"), true);
 
 const pilots = suggestedPilotProducts([
   singleSize,

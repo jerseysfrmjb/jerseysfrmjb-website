@@ -1,16 +1,27 @@
 import { ensureShopifySchema } from "./_schema.js";
-import { json, sanitizeWebhookPayload, verifyShopifyWebhook } from "./_shared.js";
+import { json, sanitizeWebhookPayload, shopifyWebhookSecret, verifyShopifyWebhook } from "./_shared.js";
 import { processSanitizedWebhook, webhookEventId } from "./_webhooks.js";
 
+const ALLOWED_TOPICS = new Set([
+  "orders/create",
+  "orders/paid",
+  "orders/cancelled",
+  "refunds/create",
+  "fulfillments/create",
+  "fulfillments/update"
+]);
+
 export async function onRequestPost({ request, env }) {
-  if (!env?.DB || !env.SHOPIFY_WEBHOOK_SECRET) return json({ error: "Webhook receiver is not configured." }, 503);
+  const webhookSecret = shopifyWebhookSecret(env);
+  if (!env?.DB || !webhookSecret) return json({ error: "Webhook receiver is not configured." }, 503);
   const rawBody = await request.arrayBuffer();
   const hmac = request.headers.get("X-Shopify-Hmac-Sha256") || "";
-  if (!(await verifyShopifyWebhook(rawBody, hmac, env.SHOPIFY_WEBHOOK_SECRET))) {
+  if (!(await verifyShopifyWebhook(rawBody, hmac, webhookSecret))) {
     return json({ error: "Invalid Shopify signature." }, 401);
   }
   await ensureShopifySchema(env);
   const topic = String(request.headers.get("X-Shopify-Topic") || "").toLowerCase();
+  if (!ALLOWED_TOPICS.has(topic)) return json({ error: "Unsupported Shopify webhook topic." }, 400);
   const shop = String(request.headers.get("X-Shopify-Shop-Domain") || "").toLowerCase();
   const eventId = await webhookEventId(rawBody, request.headers.get("X-Shopify-Webhook-Id"), topic);
   const existing = await env.DB.prepare("SELECT status FROM shopify_webhook_events WHERE event_id = ?").bind(eventId).first();

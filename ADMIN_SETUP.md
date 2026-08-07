@@ -65,9 +65,11 @@ inventory remain in place. Both feature flags default to off when omitted.
 Add these variables in Cloudflare Pages for Production and Preview as needed:
 
 - `SHOPIFY_STORE_DOMAIN` — the permanent `your-store.myshopify.com` domain, not a storefront URL.
-- `SHOPIFY_ADMIN_ACCESS_TOKEN` — secret; used only by authenticated admin sync endpoints.
+- `SHOPIFY_CLIENT_ID` — text; copied from the app's Dev Dashboard settings.
+- `SHOPIFY_CLIENT_SECRET` — secret; used server-side to obtain short-lived Admin API tokens and verify webhook signatures.
+- `SHOPIFY_ADMIN_ACCESS_TOKEN` — optional legacy secret fallback; leave unset for the Dev Dashboard client-credentials flow.
 - `SHOPIFY_STOREFRONT_ACCESS_TOKEN` — secret; used only by the server-side cart endpoint.
-- `SHOPIFY_WEBHOOK_SECRET` — secret shown when configuring Shopify webhooks.
+- `SHOPIFY_WEBHOOK_SECRET` — optional secret override; leave unset to use the app client secret.
 - `SHOPIFY_API_VERSION` — optional; defaults to `2026-07`.
 - `SHOPIFY_LOCATION_ID` — optional Admin GraphQL location GID. The sync discovers the first active location when omitted.
 - `SHOPIFY_PUBLICATION_ID` — recommended Storefront/Headless publication GID. The sync auto-detects only when there is one unambiguous publication.
@@ -77,7 +79,9 @@ Add these variables in Cloudflare Pages for Production and Preview as needed:
 Never place access tokens in browser JavaScript, HTML, Git, screenshots, or
 logs. The admin UI reports only whether each credential is configured.
 
-Run migration `0016_shopify_checkout.sql`, then use **Admin → Shopify**:
+See `SHOPIFY_SETUP.md` for the exact migration command, Cloudflare variable types,
+app scopes, connection audit, webhook registration, and pre-test-order checklist.
+Then use **Admin → Shopify**:
 
 1. Select the suggested three pilot jerseys (one single-size, one multi-size,
    and one low-stock product).

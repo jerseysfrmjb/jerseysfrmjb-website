@@ -104,23 +104,34 @@ export async function onRequestPost({ request, env }) {
     if (!dryRun && !configuration.adminConfigured) return json({ error: "Shopify Admin API credentials are incomplete." }, 503);
     const rows = await loadShopifySyncRows(env, scope === "all" ? [] : productIds);
     const products = rows.map(row => buildShopifyProduct(row));
+    const configuredLocationId = String(env.SHOPIFY_LOCATION_ID || "").trim();
+    const configuredPublicationId = String(env.SHOPIFY_PUBLICATION_ID || "").trim();
     const runId = crypto.randomUUID();
     const items = [];
     for (const product of products) {
       const payloadHash = await shopifyPayloadHash(product);
       const preview = previewAction(product, payloadHash);
       if (dryRun || preview.status === "missing_information" || preview.status === "unchanged") {
-        items.push({ ...safeProductSummary(product, preview.action, preview.status), error: "" });
+        items.push({ ...safeProductSummary(product, preview.action, preview.status, {
+          locationId: configuredLocationId,
+          publicationId: configuredPublicationId
+        }), error: "" });
         continue;
       }
       try {
         const result = await applyShopifyProduct(env, product);
         const status = product.shopifyProductId ? "updated" : "created";
         await persistMapping(env, product, result, status);
-        items.push({ ...safeProductSummary(product, status === "created" ? "create" : "update", status), error: "" });
+        items.push({ ...safeProductSummary(product, status === "created" ? "create" : "update", status, {
+          locationId: result.locationId,
+          publicationId: result.publicationId
+        }), error: "" });
       } catch (error) {
         await markFailure(env, product.id, error?.message);
-        items.push({ ...safeProductSummary(product, "failed", "failed"), error: String(error?.message || "Unknown Shopify error") });
+        items.push({ ...safeProductSummary(product, "failed", "failed", {
+          locationId: configuredLocationId,
+          publicationId: configuredPublicationId
+        }), error: String(error?.message || "Unknown Shopify error") });
       }
     }
     const hasFailures = items.some(item => ["failed", "missing_information", "needs_review"].includes(item.status));

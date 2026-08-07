@@ -1,7 +1,12 @@
 # Optional Shopify checkout integration. Keep real values out of Git.
 SHOPIFY_STORE_DOMAIN=your-store.myshopify.com
+# Preferred Dev Dashboard authentication. The app exchanges these for short-lived Admin tokens.
+SHOPIFY_CLIENT_ID=
+SHOPIFY_CLIENT_SECRET=
+# Optional legacy fallback only; leave blank for Dev Dashboard apps.
 SHOPIFY_ADMIN_ACCESS_TOKEN=
 SHOPIFY_STOREFRONT_ACCESS_TOKEN=
+# Optional override. When blank, webhook HMAC verification uses SHOPIFY_CLIENT_SECRET.
 SHOPIFY_WEBHOOK_SECRET=
 SHOPIFY_API_VERSION=2026-07
 SHOPIFY_LOCATION_ID=

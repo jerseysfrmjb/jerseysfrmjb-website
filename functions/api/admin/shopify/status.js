@@ -57,6 +57,7 @@ export async function onRequestGet({ request, env }) {
         sync_enabled: configuration.sync,
         checkout_enabled: configuration.checkout,
         admin_configured: configuration.adminConfigured,
+        admin_auth_mode: configuration.adminAuthMode,
         storefront_configured: configuration.storefrontConfigured,
         webhook_configured: configuration.webhookConfigured,
         location_configured: configuration.locationConfigured,

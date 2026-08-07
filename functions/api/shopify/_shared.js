@@ -1,4 +1,5 @@
 const DEFAULT_API_VERSION = "2026-07";
+const adminTokenCache = new Map();
 
 export function enabled(value) {
   return /^(1|true|yes|on)$/i.test(String(value || "").trim());
@@ -28,16 +29,26 @@ export function shopifyApiVersion(value = "") {
 export function shopifyConfiguration(env = {}) {
   const flags = shopifyFlags(env);
   const storeDomain = normalizeShopDomain(env.SHOPIFY_STORE_DOMAIN);
+  const hasLegacyAdminToken = Boolean(String(env.SHOPIFY_ADMIN_ACCESS_TOKEN || "").trim());
+  const hasClientCredentials = Boolean(
+    String(env.SHOPIFY_CLIENT_ID || "").trim()
+    && String(env.SHOPIFY_CLIENT_SECRET || "").trim()
+  );
   return {
     ...flags,
     storeDomain,
     apiVersion: shopifyApiVersion(env.SHOPIFY_API_VERSION),
-    adminConfigured: Boolean(storeDomain && env.SHOPIFY_ADMIN_ACCESS_TOKEN),
+    adminConfigured: Boolean(storeDomain && (hasLegacyAdminToken || hasClientCredentials)),
+    adminAuthMode: hasClientCredentials ? "client_credentials" : hasLegacyAdminToken ? "legacy_token" : "missing",
     storefrontConfigured: Boolean(storeDomain && env.SHOPIFY_STOREFRONT_ACCESS_TOKEN),
-    webhookConfigured: Boolean(env.SHOPIFY_WEBHOOK_SECRET),
+    webhookConfigured: Boolean(shopifyWebhookSecret(env)),
     locationConfigured: Boolean(String(env.SHOPIFY_LOCATION_ID || "").trim()),
     publicationConfigured: Boolean(String(env.SHOPIFY_PUBLICATION_ID || "").trim())
   };
+}
+
+export function shopifyWebhookSecret(env = {}) {
+  return String(env.SHOPIFY_WEBHOOK_SECRET || env.SHOPIFY_CLIENT_SECRET || "").trim();
 }
 
 export class ShopifyApiError extends Error {
@@ -79,24 +90,77 @@ export async function verifyShopifyWebhook(rawBody, suppliedHmac, secret) {
   return mismatch === 0;
 }
 
+function adminTokenCacheKey(configuration, env) {
+  return `${configuration.storeDomain}:${String(env.SHOPIFY_CLIENT_ID || "").trim()}`;
+}
+
+export function clearShopifyAdminTokenCache(env = {}) {
+  const configuration = shopifyConfiguration(env);
+  adminTokenCache.delete(adminTokenCacheKey(configuration, env));
+}
+
+export async function shopifyAdminAccessToken(env, options = {}) {
+  const legacyToken = String(env.SHOPIFY_ADMIN_ACCESS_TOKEN || "").trim();
+  if (legacyToken) return legacyToken;
+  const configuration = shopifyConfiguration(env);
+  const clientId = String(env.SHOPIFY_CLIENT_ID || "").trim();
+  const clientSecret = String(env.SHOPIFY_CLIENT_SECRET || "").trim();
+  if (!configuration.storeDomain || !clientId || !clientSecret) {
+    throw new ShopifyApiError("Shopify Admin API is not configured.");
+  }
+  const cacheKey = adminTokenCacheKey(configuration, env);
+  const now = Number(options.now || Date.now());
+  const cached = adminTokenCache.get(cacheKey);
+  if (cached?.token && cached.expiresAt > now + 60_000) return cached.token;
+  const fetchImpl = options.fetchImpl || fetch;
+  const body = new URLSearchParams({
+    grant_type: "client_credentials",
+    client_id: clientId,
+    client_secret: clientSecret
+  });
+  const response = await fetchImpl(`https://${configuration.storeDomain}/admin/oauth/access_token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: body.toString()
+  });
+  const payload = await response.json().catch(() => ({}));
+  const token = String(payload.access_token || "").trim();
+  if (!response.ok || !token) {
+    throw new ShopifyApiError(`Shopify authentication returned ${response.status}.`, { status: response.status });
+  }
+  const expiresIn = Math.max(300, Number(payload.expires_in || 86_399));
+  adminTokenCache.set(cacheKey, {
+    token,
+    expiresAt: now + Math.max(60, expiresIn - 300) * 1000
+  });
+  return token;
+}
+
 export async function shopifyGraphql(env, kind, query, variables = {}, options = {}) {
   const configuration = shopifyConfiguration(env);
   const admin = kind === "admin";
-  const token = admin ? env.SHOPIFY_ADMIN_ACCESS_TOKEN : env.SHOPIFY_STOREFRONT_ACCESS_TOKEN;
+  const token = admin
+    ? await shopifyAdminAccessToken(env, options)
+    : String(env.SHOPIFY_STOREFRONT_ACCESS_TOKEN || "").trim();
   if (!configuration.storeDomain || !token) {
     throw new ShopifyApiError(`Shopify ${admin ? "Admin" : "Storefront"} API is not configured.`);
   }
   const path = admin ? "admin/api" : "api";
   const url = `https://${configuration.storeDomain}/${path}/${configuration.apiVersion}/graphql.json`;
   const fetchImpl = options.fetchImpl || fetch;
-  const response = await fetchImpl(url, {
+  const request = accessToken => fetchImpl(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      [admin ? "X-Shopify-Access-Token" : "X-Shopify-Storefront-Access-Token"]: token
+      [admin ? "X-Shopify-Access-Token" : "X-Shopify-Storefront-Access-Token"]: accessToken
     },
     body: JSON.stringify({ query, variables })
   });
+  let response = await request(token);
+  if (admin && response.status === 401 && !String(env.SHOPIFY_ADMIN_ACCESS_TOKEN || "").trim()) {
+    clearShopifyAdminTokenCache(env);
+    response = await request(await shopifyAdminAccessToken(env, options));
+  }
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
     throw new ShopifyApiError(`Shopify API returned ${response.status}.`, { status: response.status });
