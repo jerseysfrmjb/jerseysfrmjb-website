@@ -46,7 +46,10 @@ export async function onRequestGet({ request, env }) {
     const configuration = shopifyConfiguration(env);
     const rows = await loadShopifySyncRows(env);
     const publicationWarnings = [];
-    if (configuration.sync && configuration.adminConfigured && configuration.publicationConfigured) {
+    // Pilot products must be published for Storefront checkout even while the
+    // full inventory sync remains disabled. Publishing the explicitly selected
+    // pilot is not a bulk sync and does not change D1 quantities.
+    if ((configuration.sync || configuration.checkout) && configuration.adminConfigured && configuration.publicationConfigured) {
       for (const row of rows.filter(item => Number(item.pilot_enabled) === 1 && item.shopify_product_id)) {
         try {
           await ensurePilotPublished(env, row.id);

@@ -1,4 +1,3 @@
-import { ensureShopifySchema } from "./_schema.js";
 import { addCartLine, createCart, getCart, removeCartLine, updateCartLine } from "./_cart.js";
 import { json, shopifyConfiguration } from "./_shared.js";
 import { normalizeSize } from "./_products.js";
@@ -68,7 +67,6 @@ export async function onRequestPost({ request, env }) {
   if (!configuration.checkout) return json({ error: "Website checkout is not enabled yet. Please use eBay or Depop." }, 409);
   if (!configuration.storefrontConfigured) return json({ error: "Secure checkout is temporarily unavailable." }, 503);
   try {
-    await ensureShopifySchema(env);
     const body = await request.json().catch(() => ({}));
     const action = cleanId(body.action, 30).toLowerCase();
     const cartId = cleanId(body.cart_id);

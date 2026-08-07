@@ -2992,6 +2992,7 @@
 .product-landing-card {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(350px, .9fr);
+  align-items: start;
   overflow: hidden;
   border: 1px solid #d9cec8;
   border-radius: 22px;
@@ -3002,6 +3003,9 @@
 .product-detail-gallery {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-self: start;
+  height: auto;
+  min-height: 0;
   gap: 12px;
   align-content: start;
   padding: 18px;
