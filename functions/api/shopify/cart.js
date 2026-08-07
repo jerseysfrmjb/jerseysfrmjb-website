@@ -57,8 +57,17 @@ async function validateCartLineQuantity(env, cart, lineId, requestedQuantity) {
   if (requestedQuantity > available) throw new Error("The requested quantity is no longer available.");
 }
 
+function variantGid(value = "") {
+  const raw = String(value || "").trim();
+  if (/^gid:\/\/shopify\/ProductVariant\/\d+$/.test(raw)) return raw;
+  const numeric = raw.match(/^(\d+)$/)?.[1] || raw.match(/(?:^|\/)(\d+)$/)?.[1] || "";
+  return numeric ? `gid://shopify/ProductVariant/${numeric}` : "";
+}
+
 function lineInput(variantId, requestedQuantity) {
-  return { merchandiseId: variantId, quantity: requestedQuantity };
+  const merchandiseId = variantGid(variantId);
+  if (!merchandiseId) throw new Error("Website checkout is not mapped for this jersey and size yet.");
+  return { merchandiseId, quantity: requestedQuantity };
 }
 
 export async function onRequestPost({ request, env }) {
