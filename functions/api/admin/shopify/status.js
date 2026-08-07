@@ -1,11 +1,41 @@
 import { adminConfigError, isAuthorized, unauthorized } from "../_auth.js";
 import { ensureShopifySchema } from "../../shopify/_schema.js";
-import { json, shopifyConfiguration } from "../../shopify/_shared.js";
+import { json, shopifyConfiguration, shopifyGraphql } from "../../shopify/_shared.js";
 import {
   buildShopifyProduct,
+  discoverShopifyPublication,
   loadShopifySyncRows,
+  publishShopifyProduct,
   suggestedPilotProducts
 } from "../../shopify/_products.js";
+
+const ACTIVATE_PRODUCT_MUTATION = `
+  mutation ActivateJerseysFrmJBProduct($input: ProductInput!) {
+    productUpdate(input: $input) {
+      product { id status }
+      userErrors { field message }
+    }
+  }
+`;
+
+async function ensurePilotPublished(env, productId) {
+  const mapping = await env.DB.prepare(`
+    SELECT shopify_product_id FROM shopify_product_mappings
+    WHERE product_id = ? AND pilot_enabled = 1 AND shopify_product_id <> ''
+  `).bind(productId).first();
+  if (!mapping?.shopify_product_id) return null;
+
+  const data = await shopifyGraphql(env, "admin", ACTIVATE_PRODUCT_MUTATION, {
+    input: { id: mapping.shopify_product_id, status: "ACTIVE" }
+  });
+  const errors = data.productUpdate?.userErrors || [];
+  if (errors.length) throw new Error(errors.map(error => error.message).join("; "));
+
+  const publicationId = await discoverShopifyPublication(env);
+  if (!publicationId) throw new Error("No Shopify storefront publication is configured.");
+  await publishShopifyProduct(env, mapping.shopify_product_id, publicationId);
+  return { product_id: productId, shopify_product_id: mapping.shopify_product_id };
+}
 
 export async function onRequestGet({ request, env }) {
   const configError = adminConfigError(env, { requireDb: true });
@@ -15,6 +45,16 @@ export async function onRequestGet({ request, env }) {
     await ensureShopifySchema(env);
     const configuration = shopifyConfiguration(env);
     const rows = await loadShopifySyncRows(env);
+    const publicationWarnings = [];
+    if (configuration.sync && configuration.adminConfigured && configuration.publicationConfigured) {
+      for (const row of rows.filter(item => Number(item.pilot_enabled) === 1 && item.shopify_product_id)) {
+        try {
+          await ensurePilotPublished(env, row.id);
+        } catch (error) {
+          publicationWarnings.push(`${row.id}: ${error?.message || "Pilot publication check failed"}`);
+        }
+      }
+    }
     const products = rows.map(row => buildShopifyProduct(row));
     const totalVariants = products.reduce((total, product) => total + product.variants.length, 0);
     const mappedVariants = Number((await env.DB.prepare("SELECT COUNT(*) AS total FROM shopify_variant_mappings WHERE shopify_variant_id <> ''").first())?.total || 0);
@@ -81,7 +121,8 @@ export async function onRequestGet({ request, env }) {
           : ""
       })),
       recent_orders: recentOrders.results || [],
-      failed_events: failedEvents.results || []
+      failed_events: failedEvents.results || [],
+      pilot_publication_warnings: publicationWarnings
     });
   } catch (error) {
     return json({ error: `Shopify status error: ${error?.message || "Unknown error"}` }, 500);
