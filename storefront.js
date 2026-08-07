@@ -796,43 +796,7 @@ function setupFilters(filterGroup, cards) {
     sizeSelect.innerHTML = '<option value="all">All Sizes</option>' + options.map(([value, label]) => `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`).join("");
   }
 
-  let advanced = container?.querySelector("[data-advanced-filters]");
-  if (!advanced) {
-    advanced = document.createElement("section");
-    advanced.className = "advanced-inventory-filters";
-    advanced.dataset.advancedFilters = "";
-    advanced.innerHTML = `
-      <div class="advanced-filter-heading"><div><span>Refine jerseys</span><h3>More Filters</h3></div><button type="button" data-clear-advanced-filters>Clear</button></div>
-      <div class="advanced-filter-grid">
-        <label>Player<select data-player-filter><option value="all">All players</option></select></label>
-        <label>Team / country<select data-team-filter><option value="all">All teams</option></select></label>
-        <label>Competition<select data-competition-filter><option value="all">All competitions</option></select></label>
-        <label>Season<select data-season-filter><option value="all">All seasons</option></select></label>
-        <label>Minimum price<input type="number" min="0" step="5" inputmode="numeric" placeholder="$0" data-min-price></label>
-        <label>Maximum price<input type="number" min="0" step="5" inputmode="numeric" placeholder="Any" data-max-price></label>
-      </div>
-      <label class="new-arrivals-filter"><input type="checkbox" data-new-arrivals-filter> New arrivals only</label>`;
-    filterGroup.insertAdjacentElement("afterend", advanced);
-  }
-  const playerSelect = advanced.querySelector("[data-player-filter]");
-  const teamSelect = advanced.querySelector("[data-team-filter]");
-  const competitionSelect = advanced.querySelector("[data-competition-filter]");
-  const seasonSelect = advanced.querySelector("[data-season-filter]");
-  const minPriceInput = advanced.querySelector("[data-min-price]");
-  const maxPriceInput = advanced.querySelector("[data-max-price]");
-  const newArrivalsInput = advanced.querySelector("[data-new-arrivals-filter]");
-  function populate(select, key, prefix) {
-    if (!select || select.options.length > 1) return;
-    const values = [...new Set(cards.map(card => card.dataset[key]).filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-    select.insertAdjacentHTML("beforeend", values.map(value => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join(""));
-    if (!values.length) select.closest("label").hidden = true;
-    else select.options[0].textContent = `All ${prefix}`;
-  }
-  populate(playerSelect, "player", "players");
-  populate(teamSelect, "team", "teams");
-  populate(competitionSelect, "competition", "competitions");
-  populate(seasonSelect, "season", "seasons");
-
+  container?.querySelector("[data-advanced-filters]")?.remove();
   function selectedSizeLabel(value) {
     return { small: "Small", medium: "Medium", large: "Large", xl: "XL", "2xl": "2XL", "3xl": "3XL", "4xl": "4XL", "xl+": "XL+" }[value] || "";
   }
@@ -846,13 +810,6 @@ function setupFilters(filterGroup, cards) {
     const activeCategory = scope.querySelector("[data-category-filter].active")?.dataset.categoryFilter || "all";
     const selectedSize = sizeSelect?.value || "all";
     const query = (searchInput?.value || "").trim();
-    const player = playerSelect?.value || "all";
-    const team = teamSelect?.value || "all";
-    const competition = competitionSelect?.value || "all";
-    const season = seasonSelect?.value || "all";
-    const minPrice = minPriceInput?.value === "" ? null : Number(minPriceInput.value);
-    const maxPrice = maxPriceInput?.value === "" ? null : Number(maxPriceInput.value);
-    const newOnly = Boolean(newArrivalsInput?.checked);
     let visibleCount = 0;
     let availableMatchCount = 0;
     let soldOutMatchCount = 0;
@@ -866,15 +823,8 @@ function setupFilters(filterGroup, cards) {
       const sizeMatch = selectedSize === "all" || sizeTokens.includes(selectedSize) || (selectedSize === "xl" && sizeTokens.includes("xl+"));
       const score = searchScore(card, query);
       const searchMatch = score > 0;
-      const playerMatch = player === "all" || card.dataset.player === player;
-      const teamMatch = team === "all" || card.dataset.team === team;
-      const competitionMatch = competition === "all" || card.dataset.competition === competition;
-      const seasonMatch = season === "all" || card.dataset.season === season;
-      const cardPrice = card.dataset.filterPrice === "" ? null : Number(card.dataset.filterPrice);
-      const priceMatch = (minPrice === null || (cardPrice !== null && cardPrice >= minPrice)) && (maxPrice === null || (cardPrice !== null && cardPrice <= maxPrice));
-      const newMatch = !newOnly || card.dataset.newArrival === "true";
       card.dataset.searchScore = String(score);
-      const advancedMatch = playerMatch && teamMatch && competitionMatch && seasonMatch && priceMatch && newMatch;
+      const advancedMatch = true;
       const baseMatch = categoryMatch && sizeMatch && searchMatch && advancedMatch;
 
       if (baseMatch) {
@@ -951,16 +901,6 @@ function setupFilters(filterGroup, cards) {
   });
   sizeSelect?.addEventListener("change", apply);
   searchInput?.addEventListener("input", apply);
-  [playerSelect, teamSelect, competitionSelect, seasonSelect, minPriceInput, maxPriceInput, newArrivalsInput].forEach(control => {
-    control?.addEventListener(control?.matches("input[type=number]") ? "input" : "change", apply);
-  });
-  advanced.querySelector("[data-clear-advanced-filters]")?.addEventListener("click", () => {
-    [playerSelect, teamSelect, competitionSelect, seasonSelect].forEach(select => { if (select) select.value = "all"; });
-    if (minPriceInput) minPriceInput.value = "";
-    if (maxPriceInput) maxPriceInput.value = "";
-    if (newArrivalsInput) newArrivalsInput.checked = false;
-    apply();
-  });
   apply();
 }
 

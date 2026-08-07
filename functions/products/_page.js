@@ -454,7 +454,7 @@ function productFaqs(model) {
     {
       question: "Where is checkout completed?",
       answer: model.shopify?.enabled
-        ? "Website orders continue to Shopify's secure hosted checkout. Depop and eBay remain available when their listings are linked."
+        ? "You can purchase directly through JerseysFrmJB using secure Shopify checkout. Depop and eBay remain available when their listings are linked."
         : "Checkout is completed on the linked Depop or eBay listing. JerseysFrmJB does not process payment on this product page."
     }
   ];
@@ -465,7 +465,7 @@ function shopifyCheckoutMarkup(model) {
   return `
     <section class="shopify-checkout-card" data-shopify-product data-product-id="${escapeHtml(model.id)}" data-product-name="${escapeHtml(model.title)}" data-product-price="${escapeHtml(model.shopify.price.toFixed(2))}">
       <div class="product-section-heading"><span>Website checkout</span><h2>$${escapeHtml(model.shopify.price.toFixed(2))}</h2></div>
-      <p>Choose your size, then continue to secure Shopify checkout.</p>
+      <p>Choose your size and purchase securely right here on JerseysFrmJB.</p>
       <label><span>Size</span><select data-shopify-size required><option value="">Choose a size</option>${model.shopify.sizes.map(size => `<option value="${escapeHtml(size.name)}">${escapeHtml(size.label)}</option>`).join("")}</select></label>
       <div class="shopify-checkout-actions">
         <button type="button" data-shopify-add>Add to Cart</button>
@@ -714,7 +714,7 @@ export function renderProductPage(model) {
   <link rel="stylesheet" href="/design-preview.css?v=mobile-grid-2">
   <script src="/meta-pixel.js?v=1" defer></script>
   <script src="/analytics.js?v=operations-1" defer></script>
-  <script src="/storefront.js?v=engagement-tools-1" defer></script>
+  <script src="/storefront.js?v=filters-simplified-1" defer></script>
   ${model.shopify?.available ? '<script src="/shopify-cart.js?v=1" defer></script>' : ""}
 </head>
 <body class="product-page-body has-mobile-product-actions">
@@ -764,7 +764,7 @@ export function renderProductPage(model) {
         </section>
         ${shopifyCheckoutMarkup(model)}
         ${marketplaceMarkup(model)}
-        ${model.available && model.marketplaces.length ? `<p class="product-checkout-note">${model.shopify?.enabled ? "Choose secure Shopify checkout above or use an available marketplace listing." : "Purchases are completed securely on the selected marketplace. JerseysFrmJB does not process checkout on this page."}</p>` : ""}
+        ${model.available && model.marketplaces.length ? `<p class="product-checkout-note">${model.shopify?.enabled ? "Purchase securely through JerseysFrmJB above, or use an available marketplace listing." : "Purchases are completed securely on the selected marketplace. JerseysFrmJB does not process checkout on this page."}</p>` : ""}
       </section>
     </article>
     <section class="product-page-support">
@@ -806,7 +806,7 @@ export function renderProductNotFound(siteOrigin = DEFAULT_SITE_ORIGIN) {
   <link rel="stylesheet" href="/design-preview.css?v=mobile-grid-2">
   <script src="/meta-pixel.js?v=1" defer></script>
   <script src="/analytics.js?v=operations-1" defer></script>
-  <script src="/storefront.js?v=engagement-tools-1" defer></script>
+  <script src="/storefront.js?v=filters-simplified-1" defer></script>
 </head>
 <body class="product-page-body">
   ${headerMarkup()}
