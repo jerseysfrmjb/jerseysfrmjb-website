@@ -208,6 +208,7 @@ let shopifyLoaded = false;
 let shopifyLoading = false;
 let shopifyData = null;
 const selectedShopifyProducts = new Set();
+let lastShopifyRequest = null;
 let salesAnalyticsPanel = document.querySelector("[data-sales-analytics]");
 let quickSaleMatches = [];
 let quickSalePriceManuallyEdited = false;
@@ -1845,13 +1846,20 @@ function featuredItems() {
 
 async function api(path, options = {}) {
   let response;
+  const { timeoutMs = 0, ...requestOptions } = options;
+  const controller = timeoutMs > 0 ? new AbortController() : null;
+  const timeout = controller ? window.setTimeout(() => controller.abort(), timeoutMs) : null;
   try {
     response = await fetch(path, {
       headers: { "Content-Type": "application/json", ...(options.headers || {}) },
-      ...options
+      ...requestOptions,
+      ...(controller ? { signal: controller.signal } : {})
     });
   } catch (error) {
+    if (error?.name === "AbortError") throw new Error("This request timed out. No Shopify products were created. Try the preview again.");
     throw new Error("Could not reach the server. Refresh and try again.");
+  } finally {
+    if (timeout) window.clearTimeout(timeout);
   }
   const text = await response.text();
   let data = {};
@@ -5071,7 +5079,7 @@ function renderShopifyPreview(data) {
   if (!shopifyPreviewResults) return;
   shopifyPreviewResults.hidden = false;
   const summary = data.summary || {};
-  shopifyPreviewResults.innerHTML = `<div class="shopify-admin-section-head"><div><span class="section-kicker">${data.dry_run ? "Dry Run" : "Sync Result"}</span><h3>${data.dry_run ? "Proposed Shopify changes" : "Shopify sync completed"}</h3><p>${Number(summary.created || 0)} created · ${Number(summary.updated || 0)} updated · ${Number(summary.unchanged || 0)} unchanged · ${Number(summary.needs_review || 0)} needs review · ${Number(summary.failed || 0)} failed</p></div></div>
+  shopifyPreviewResults.innerHTML = `<div class="shopify-admin-section-head"><div><span class="section-kicker">${data.dry_run ? "Dry Run" : "Sync Result"}</span><h3>${data.dry_run ? "Proposed Shopify changes" : "Shopify sync completed"}</h3><p>${Number(summary.created || 0)} created · ${Number(summary.updated || 0)} updated · ${Number(summary.unchanged || 0)} unchanged · ${Number(summary.needs_review || 0)} needs review · ${Number(summary.failed || 0)} failed</p></div>${data.dry_run ? '<button class="shop-button secondary-admin" type="button" data-shopify-retry-preview>Retry preview</button>' : ""}</div>
     <div class="shopify-preview-items">${(data.items || []).map(item => `<article><div class="shopify-preview-summary"><div><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.product_id)} · ${item.variants.length} size variant${item.variants.length === 1 ? "" : "s"}</span></div><b class="shopify-sync-status status-${escapeHtml(item.status)}">${escapeHtml(shopifyStatusLabel(item.status))}</b></div>${item.missing?.length ? `<small>Missing: ${escapeHtml(item.missing.join(", "))}</small>` : ""}${item.error ? `<small>${escapeHtml(item.error)}</small>` : ""}${item.shopify_request_preview ? `<details class="shopify-request-preview"><summary>View exact Shopify request</summary><pre>${escapeHtml(JSON.stringify(item.shopify_request_preview, null, 2))}</pre></details>` : ""}</article>`).join("")}</div>`;
   shopifyPreviewResults.scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -5085,20 +5093,34 @@ async function runShopifySync({ dryRun = true, scope = "selected", productIds = 
   }
   if (!dryRun && scope === "all" && !window.confirm("Sync every inventory product to Shopify now? Preview All first and confirm your credentials, pricing, and Shopify test mode.")) return;
   if (!dryRun && scope !== "all" && !window.confirm(`Sync ${ids.length} selected product${ids.length === 1 ? "" : "s"} to Shopify now?`)) return;
+  const request = { dryRun, scope, productIds: ids };
+  lastShopifyRequest = request;
   shopifyLoading = true;
-  if (shopifyAdminStatus) shopifyAdminStatus.textContent = dryRun ? "Building a safe dry-run preview..." : "Syncing products to Shopify...";
+  const actionButtons = [previewShopify, runShopify, previewShopifyAll, syncShopifyAll, retryShopifySync, suggestShopifyPilot].filter(Boolean);
+  actionButtons.forEach(button => { button.disabled = true; button.setAttribute("aria-busy", "true"); });
+  if (shopifyPreviewResults) {
+    shopifyPreviewResults.hidden = false;
+    shopifyPreviewResults.innerHTML = `<div class="shopify-request-progress" role="status" aria-live="polite"><strong>${dryRun ? "Preparing safe dry-run preview" : "Preparing Shopify sync"}</strong><span>Reading ${scope === "all" ? "the live inventory" : `${ids.length} selected product${ids.length === 1 ? "" : "s"}`} and validating the request. No products will be created while dry-run mode is active.</span><i></i></div>`;
+  }
+  if (shopifyAdminStatus) shopifyAdminStatus.textContent = dryRun ? "Building a safe dry-run preview… Please keep this tab open." : "Syncing products to Shopify…";
   try {
     const data = await api("/api/admin/shopify/sync", {
       method: "POST",
-      body: JSON.stringify({ dry_run: dryRun, scope, product_ids: ids, confirm_all: scope === "all" })
+      body: JSON.stringify({ dry_run: dryRun, scope, product_ids: ids, confirm_all: scope === "all" }),
+      timeoutMs: dryRun ? (scope === "all" ? 90000 : 45000) : 90000
     });
     renderShopifyPreview(data);
     if (shopifyAdminStatus) shopifyAdminStatus.textContent = dryRun ? "Preview ready. No Shopify data was changed." : "Sync finished. Review the result below.";
     if (!dryRun) { shopifyLoaded = false; await loadShopifyStatus(true); }
   } catch (error) {
     if (shopifyAdminStatus) shopifyAdminStatus.textContent = error.message;
+    if (shopifyPreviewResults) {
+      shopifyPreviewResults.hidden = false;
+      shopifyPreviewResults.innerHTML = `<div class="shopify-request-error" role="alert"><strong>Preview could not be completed</strong><span>${escapeHtml(error.message)}</span><button class="shop-button secondary-admin" type="button" data-shopify-retry-preview>Retry preview</button></div>`;
+    }
   } finally {
     shopifyLoading = false;
+    actionButtons.forEach(button => { button.disabled = false; button.removeAttribute("aria-busy"); });
   }
 }
 
@@ -5132,6 +5154,10 @@ shopifyWebhooks?.addEventListener("click", async event => {
   finally { button.disabled = false; }
 });
 shopifySearch?.addEventListener("input", renderShopifyProducts);
+shopifyPreviewResults?.addEventListener("click", event => {
+  if (!event.target.closest("[data-shopify-retry-preview]") || !lastShopifyRequest) return;
+  runShopifySync(lastShopifyRequest);
+});
 refreshShopify?.addEventListener("click", () => loadShopifyStatus(true));
 checkShopifyConnection?.addEventListener("click", () => inspectShopifyConnection());
 registerShopifyWebhooksButton?.addEventListener("click", () => inspectShopifyConnection({ registerWebhooks: true }));
