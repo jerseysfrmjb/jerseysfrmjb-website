@@ -504,7 +504,59 @@ try {
 } finally {
   globalThis.fetch = originalFetch;
 }
-assert.equal(unavailableAttempts, 2, "publication repair retries the add exactly once");
+assert.equal(unavailableAttempts, 5, "publication repair allows Shopify time to finish publishing");
+
+let delayedPublicationAttempts = 0;
+globalThis.fetch = async (url, options) => {
+  const request = JSON.parse(options.body);
+  if (request.query.includes("JerseysFrmJBCartAdd")) {
+    delayedPublicationAttempts += 1;
+    if (delayedPublicationAttempts < 4) {
+      return new Response(JSON.stringify({ data: { cartLinesAdd: {
+        cart: null,
+        userErrors: [{ field: ["lines", "0", "merchandiseId"], message: "The merchandise with this ID does not exist." }]
+      } } }));
+    }
+    return new Response(JSON.stringify({ data: { cartLinesAdd: { cart: rawCart, userErrors: [] } } }));
+  }
+  if (request.query.includes("ActivateJerseysFrmJBCheckoutProduct")) {
+    return new Response(JSON.stringify({ data: { productUpdate: {
+      product: { id: "gid://shopify/Product/100", status: "ACTIVE" }, userErrors: []
+    } } }));
+  }
+  if (request.query.includes("PublishJerseysFrmJBProduct")) {
+    return new Response(JSON.stringify({ data: { publishablePublish: {
+      publishable: { publishedOnPublication: true }, userErrors: []
+    } } }));
+  }
+  throw new Error(`Unexpected Shopify operation: ${request.query}`);
+};
+try {
+  const delayedPublicationResponse = await cartEndpoint({
+    request: new Request("https://jerseysfrmjb.com/api/shopify/cart", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "add",
+        cart_id: rawCart.id,
+        product_id: singleSize.id,
+        size: "M",
+        quantity: 1
+      })
+    }),
+    env: {
+      ...env,
+      DB: cartDatabase,
+      SHOPIFY_CHECKOUT_ENABLED: "true",
+      SHOPIFY_PUBLICATION_ID: "gid://shopify/Publication/5"
+    }
+  });
+  assert.equal(delayedPublicationResponse.status, 200, "the first click waits for Storefront publication");
+  assert.equal((await delayedPublicationResponse.json()).cart.id, rawCart.id);
+} finally {
+  globalThis.fetch = originalFetch;
+}
+assert.equal(delayedPublicationAttempts, 4, "the existing cart receives the jersey after publication propagation");
 
 const webhookBody = new TextEncoder().encode('{"id":1}');
 const hmacKey = await crypto.subtle.importKey("raw", new TextEncoder().encode(env.SHOPIFY_WEBHOOK_SECRET), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);

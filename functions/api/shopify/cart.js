@@ -78,15 +78,21 @@ async function createOrAddCart(env, action, cartId, line, mapping) {
     }
     if (!unpublishedMerchandise(error)) throw error;
     await ensureCheckoutProductPublished(env, mapping);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    try {
-      return await submit();
-    } catch (retryError) {
-      if (action === "add" && cartId && staleCart(retryError)) {
-        return createCart(env, line);
+    const retryDelays = [250, 750, 1500, 2500];
+    let retryError = error;
+    for (const delay of retryDelays) {
+      await new Promise(resolve => setTimeout(resolve, delay));
+      try {
+        return await submit();
+      } catch (nextError) {
+        retryError = nextError;
+        if (action === "add" && cartId && staleCart(nextError)) {
+          return createCart(env, line);
+        }
+        if (!unpublishedMerchandise(nextError)) throw nextError;
       }
-      throw retryError;
     }
+    throw retryError;
   }
 }
 
