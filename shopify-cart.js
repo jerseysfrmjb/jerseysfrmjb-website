@@ -4,6 +4,25 @@
   const CART_KEY = "jfb_shopify_cart_id";
   const VISITOR_KEY = "jfb_commerce_visitor";
   const SESSION_KEY = "jfb_commerce_session";
+
+  function ensureCartInterface() {
+    const header = document.querySelector(".site-header");
+    if (header && !header.querySelector("[data-shopify-cart-open]")) {
+      header.insertAdjacentHTML("beforeend", '<button class="site-cart-button" type="button" data-shopify-cart-open aria-label="Open shopping cart">Cart <span data-shopify-cart-count>0</span></button>');
+    }
+    if (!document.querySelector(".site-checkout-banner")) {
+      const banner = document.createElement("section");
+      banner.className = "site-checkout-banner";
+      banner.setAttribute("aria-label", "Website checkout available");
+      banner.innerHTML = '<div><span aria-hidden="true">&#10003;</span><p><strong>Shop directly on JerseysFrmJB</strong><small>Choose a size, add jerseys to your cart, and check out securely.</small></p></div><button type="button" data-shopify-cart-open>View Cart <span data-shopify-cart-count>0</span></button>';
+      header?.insertAdjacentElement("afterend", banner);
+    }
+    if (!document.querySelector("[data-shopify-cart-drawer]")) {
+      document.body.insertAdjacentHTML("beforeend", '<aside class="shopify-cart-drawer" data-shopify-cart-drawer aria-hidden="true"><div class="shopify-cart-head"><div><span>Website cart</span><h2>Your jerseys</h2></div><button type="button" data-shopify-cart-close aria-label="Close cart">&times;</button></div><div data-shopify-cart-lines><p class="shopify-cart-empty">Your cart is empty.</p></div><div class="shopify-cart-footer" data-shopify-cart-footer hidden><p><span>Subtotal</span><strong data-shopify-cart-subtotal>$0.00</strong></p><button type="button" data-shopify-checkout>Continue to Secure Checkout</button><small>Payment and shipping details are entered securely on Shopify.</small></div></aside><button class="shopify-cart-backdrop" type="button" data-shopify-cart-close aria-label="Close cart" hidden></button>');
+    }
+  }
+
+  ensureCartInterface();
   const drawer = document.querySelector("[data-shopify-cart-drawer]");
   const linesElement = document.querySelector("[data-shopify-cart-lines]");
   const footer = document.querySelector("[data-shopify-cart-footer]");

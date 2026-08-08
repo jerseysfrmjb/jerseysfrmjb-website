@@ -419,7 +419,7 @@ const pageRow = row({
   depop_price: 50,
   ebay_price: null,
   facebook_price: null,
-  shopify_pilot_enabled: 1,
+  shopify_pilot_enabled: 0,
   shopify_product_id: "gid://shopify/Product/100",
   shopify_variants_json: JSON.stringify([{ size: "M", variant_id: "gid://shopify/ProductVariant/9" }])
 });
@@ -435,6 +435,7 @@ const migration = await readFile(path.join(workspace, "migrations", "0016_shopif
 const webhookSource = await readFile(path.join(workspace, "functions", "api", "shopify", "_webhooks.js"), "utf8");
 const cartSource = await readFile(path.join(workspace, "functions", "api", "shopify", "cart.js"), "utf8");
 const clientSource = await readFile(path.join(workspace, "shopify-cart.js"), "utf8");
+const storefrontSource = await readFile(path.join(workspace, "storefront.js"), "utf8");
 const productPageSource = await readFile(path.join(workspace, "functions", "products", "[slug].js"), "utf8");
 assert.match(migration, /shopify_refunds/);
 assert.match(migration, /'pending', 'ready', 'processed', 'failed', 'needs_review'/);
@@ -443,10 +444,14 @@ assert.match(webhookSource, /processing_status = 'processed'/);
 assert.match(webhookSource, /INSERT INTO sales/);
 assert.match(webhookSource, /INSERT OR IGNORE INTO shopify_commerce_events/);
 assert.match(cartSource, /validateCartLineQuantity/);
+assert.doesNotMatch(cartSource, /pilot_enabled/, "mapped Shopify products no longer require the retired pilot flag");
 assert.match(clientSource, /AddToCart/);
 assert.match(clientSource, /InitiateCheckout/);
 assert.match(clientSource, /localStorage/);
+assert.match(clientSource, /Shop directly on JerseysFrmJB/);
 assert.doesNotMatch(clientSource, /SHOPIFY_(ADMIN|STOREFRONT|WEBHOOK)/);
+assert.match(storefrontSource, /Choose Size &amp; Add to Cart/);
+assert.match(storefrontSource, /Secure website checkout/);
 assert.match(productPageSource, /if \(shopify\.checkout\) await ensureShopifySchema/);
 
 console.log("Shopify checkout integration tests passed:");

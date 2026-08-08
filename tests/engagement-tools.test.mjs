@@ -15,12 +15,9 @@ assert.match(storefront, /FAVORITES_KEY = "jerseysfrmjb_favorites_v1"/);
 assert.match(storefront, /data-favorite-product/);
 assert.match(storefront, /openCombined\(products/);
 assert.match(storefront, /body\.products = combinedProducts/);
-assert.match(storefront, /data-player-filter/);
-assert.match(storefront, /data-team-filter/);
-assert.match(storefront, /data-competition-filter/);
-assert.match(storefront, /data-season-filter/);
-assert.match(storefront, /data-min-price/);
-assert.match(storefront, /data-new-arrivals-filter/);
+assert.doesNotMatch(storefront, /data-player-filter/);
+assert.doesNotMatch(storefront, /data-team-filter/);
+assert.doesNotMatch(storefront, /data-competition-filter/);
 assert.match(storefront, /type="image\/webp"/);
 assert.match(productPage, /responsive\/\$\{responsiveMatch\[2\]\}-480\.webp/);
 assert.match(productPage, /data-product-sizes/);
@@ -42,6 +39,6 @@ for (const image of sourceImages) {
 
 console.log("Engagement tools tests passed:");
 console.log("- device-only favorites and combined Instagram requests are wired");
-console.log("- player, team, competition, season, price, and new-arrival filters are present");
+console.log("- the intentionally simplified storefront filter interface remains in place");
 console.log("- request details and contacted status feed the Inventory Planner");
 console.log(`- ${sourceImages.length * 2} responsive WebP variants retain original-image fallbacks`);

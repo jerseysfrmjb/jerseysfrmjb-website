@@ -15,7 +15,7 @@ function quantity(value) {
 async function mappedVariant(env, productId, size, requestedQuantity) {
   const row = await env.DB.prepare(`
     SELECT inventory.id, inventory.name, inventory.sizes_json,
-      product_mappings.pilot_enabled, product_mappings.shopify_product_id,
+      product_mappings.shopify_product_id,
       variant_mappings.shopify_variant_id, variant_mappings.size
     FROM inventory
     JOIN shopify_product_mappings AS product_mappings ON product_mappings.product_id = inventory.id
@@ -25,7 +25,6 @@ async function mappedVariant(env, productId, size, requestedQuantity) {
     LIMIT 1
   `).bind(size, productId).first();
   if (!row?.shopify_variant_id || !row.shopify_product_id) throw new Error("Website checkout is not mapped for this jersey and size yet.");
-  if (!Number(row.pilot_enabled)) throw new Error("Website checkout is not enabled for this jersey yet.");
   let sizes = {};
   try { sizes = JSON.parse(row.sizes_json || "{}"); } catch { sizes = {}; }
   const available = Math.max(0, Math.floor(Number(sizes[size] || 0)));
@@ -38,8 +37,7 @@ async function validateCartLineQuantity(env, cart, lineId, requestedQuantity) {
   const line = cart?.lines?.find(item => item.id === lineId);
   if (!line?.variant_id) throw new Error("That cart item is no longer available.");
   const mapping = await env.DB.prepare(`
-    SELECT variant_mappings.product_id, variant_mappings.size, inventory.sizes_json,
-      product_mappings.pilot_enabled
+    SELECT variant_mappings.product_id, variant_mappings.size, inventory.sizes_json
     FROM shopify_variant_mappings AS variant_mappings
     JOIN shopify_product_mappings AS product_mappings
       ON product_mappings.product_id = variant_mappings.product_id
@@ -48,8 +46,8 @@ async function validateCartLineQuantity(env, cart, lineId, requestedQuantity) {
        OR variant_mappings.shopify_variant_id LIKE ?
     LIMIT 1
   `).bind(line.variant_id, `%/${String(line.variant_id).match(/(\d+)$/)?.[1] || "__missing__"}`).first();
-  if (!mapping?.product_id || !Number(mapping.pilot_enabled)) {
-    throw new Error("That cart item is no longer enabled for website checkout.");
+  if (!mapping?.product_id) {
+    throw new Error("That cart item is no longer mapped for website checkout.");
   }
   let sizes = {};
   try { sizes = JSON.parse(mapping.sizes_json || "{}"); } catch { sizes = {}; }

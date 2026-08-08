@@ -465,6 +465,25 @@ function productDetailsUrl(id = "") {
   return `/products/${encodeURIComponent(String(id).trim())}`;
 }
 
+function websiteCheckoutPrice(item = {}) {
+  return numericPublicPrice(item.website_price) ?? numericPublicPrice(item.base_price ?? item.price);
+}
+
+function renderWebsiteCheckout(item = {}, available = true) {
+  if (!available) return "";
+  const price = websiteCheckoutPrice(item);
+  const formattedPrice = price === null ? "" : `$${formatPriceValue(price)}`;
+  return `
+    <section class="website-checkout-card" aria-label="Buy this jersey directly from JerseysFrmJB">
+      <div class="website-checkout-heading">
+        <span>Secure website checkout</span>
+        ${formattedPrice ? `<strong>${escapeHtml(formattedPrice)}</strong>` : ""}
+      </div>
+      <p>Choose an available size, add it to your cart, and check out securely.</p>
+      <a href="${escapeHtml(productDetailsUrl(item.id))}"><span>Choose Size &amp; Add to Cart</span><span aria-hidden="true">&rarr;</span></a>
+    </section>`;
+}
+
 function formatInventoryUpdated(value = "") {
   if (!value) return "";
   const date = new Date(String(value).includes("T") ? value : value + "Z");
@@ -598,6 +617,7 @@ function renderProductCard(item) {
       <h2><a class="product-title-link" href="${escapeHtml(productDetailsUrl(item.id))}">${escapeHtml(item.name)}</a></h2>
       <a class="product-details-button" href="${escapeHtml(productDetailsUrl(item.id))}" aria-label="View jersey details for ${escapeHtml(item.name)}">View Jersey Details <span aria-hidden="true">&rarr;</span></a>
       <p data-card-size>${escapeHtml(sizes)}</p>
+      ${renderWebsiteCheckout(item, available)}
       ${renderPlatformAvailability(item, available)}
     </article>`;
 }
@@ -615,6 +635,7 @@ function renderFeaturedCard(item, index) {
         <h3><a class="product-title-link" href="${escapeHtml(productDetailsUrl(item.id))}">${escapeHtml(item.name)}</a></h3>
         <a class="product-details-button" href="${escapeHtml(productDetailsUrl(item.id))}" aria-label="View jersey details for ${escapeHtml(item.name)}">View Jersey Details <span aria-hidden="true">&rarr;</span></a>
         <div class="featured-meta"><p>${escapeHtml(available ? displaySize(item) : "Sold out")}</p></div>
+        ${renderWebsiteCheckout(item, available)}
         ${renderPlatformAvailability(item, available)}
       </div>
     </article>`;

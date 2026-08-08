@@ -271,7 +271,7 @@ export function buildProductPageModel(row = {}, options = {}) {
     .map(variant => String(variant.size || "")));
   const shopify = {
     available: Boolean(options.shopifyCheckoutEnabled),
-    enabled: Boolean(options.shopifyCheckoutEnabled && Number(row.shopify_pilot_enabled) && row.shopify_product_id),
+    enabled: Boolean(options.shopifyCheckoutEnabled && row.shopify_product_id),
     price: row.website_price === null || row.website_price === undefined || String(row.website_price).trim() === ""
       ? Number(row.base_price ?? row.price ?? 0)
       : Number(row.website_price),
@@ -715,7 +715,7 @@ export function renderProductPage(model) {
   <script src="/meta-pixel.js?v=1" defer></script>
   <script src="/analytics.js?v=operations-1" defer></script>
   <script src="/storefront.js?v=filters-simplified-1" defer></script>
-  ${model.shopify?.available ? '<script src="/shopify-cart.js?v=1" defer></script>' : ""}
+  ${model.shopify?.available ? '<script src="/shopify-cart.js?v=sitewide-cart-1" defer></script>' : ""}
 </head>
 <body class="product-page-body has-mobile-product-actions">
   ${headerMarkup(model)}
