@@ -411,6 +411,101 @@ assert.equal(repairedCartRequests.some(request => request.query.includes("Activa
 assert.equal(repairedCartRequests.some(request => request.query.includes("PublishJerseysFrmJBProduct")), true);
 assert.equal(cartDatabaseCalls.length, 1, "publication repair performs no D1 inventory writes");
 
+let staleCartAddAttempts = 0;
+let staleCartCreateAttempts = 0;
+globalThis.fetch = async (url, options) => {
+  const request = JSON.parse(options.body);
+  if (request.query.includes("JerseysFrmJBCartAdd")) {
+    staleCartAddAttempts += 1;
+    return new Response(JSON.stringify({ data: { cartLinesAdd: {
+      cart: null,
+      userErrors: [{ field: ["cartId"], message: "The cart specified does not exist." }]
+    } } }));
+  }
+  if (request.query.includes("JerseysFrmJBCartCreate")) {
+    staleCartCreateAttempts += 1;
+    return new Response(JSON.stringify({ data: { cartCreate: { cart: rawCart, userErrors: [] } } }));
+  }
+  throw new Error(`Unexpected Shopify operation: ${request.query}`);
+};
+try {
+  const recoveredCartResponse = await cartEndpoint({
+    request: new Request("https://jerseysfrmjb.com/api/shopify/cart", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "add",
+        cart_id: "gid://shopify/Cart/expired",
+        product_id: singleSize.id,
+        size: "M",
+        quantity: 1
+      })
+    }),
+    env: {
+      ...env,
+      DB: cartDatabase,
+      SHOPIFY_CHECKOUT_ENABLED: "true"
+    }
+  });
+  assert.equal(recoveredCartResponse.status, 200, "an expired saved cart is replaced in the same request");
+  assert.equal((await recoveredCartResponse.json()).cart.id, rawCart.id);
+} finally {
+  globalThis.fetch = originalFetch;
+}
+assert.equal(staleCartAddAttempts, 1);
+assert.equal(staleCartCreateAttempts, 1, "the selected jersey is retained in a newly created cart");
+
+let unavailableAttempts = 0;
+globalThis.fetch = async (url, options) => {
+  const request = JSON.parse(options.body);
+  if (request.query.includes("JerseysFrmJBCartAdd")) {
+    unavailableAttempts += 1;
+    return new Response(JSON.stringify({ data: { cartLinesAdd: {
+      cart: null,
+      userErrors: [{ field: ["lines", "0", "merchandiseId"], message: "The merchandise with this ID does not exist." }]
+    } } }));
+  }
+  if (request.query.includes("ActivateJerseysFrmJBCheckoutProduct")) {
+    return new Response(JSON.stringify({ data: { productUpdate: {
+      product: { id: "gid://shopify/Product/100", status: "ACTIVE" }, userErrors: []
+    } } }));
+  }
+  if (request.query.includes("PublishJerseysFrmJBProduct")) {
+    return new Response(JSON.stringify({ data: { publishablePublish: {
+      publishable: { publishedOnPublication: true }, userErrors: []
+    } } }));
+  }
+  throw new Error(`Unexpected Shopify operation: ${request.query}`);
+};
+try {
+  const unavailableResponse = await cartEndpoint({
+    request: new Request("https://jerseysfrmjb.com/api/shopify/cart", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "add",
+        cart_id: rawCart.id,
+        product_id: singleSize.id,
+        size: "M",
+        quantity: 1
+      })
+    }),
+    env: {
+      ...env,
+      DB: cartDatabase,
+      SHOPIFY_CHECKOUT_ENABLED: "true",
+      SHOPIFY_PUBLICATION_ID: "gid://shopify/Publication/5"
+    }
+  });
+  const unavailableBody = await unavailableResponse.json();
+  assert.equal(unavailableResponse.status, 502);
+  assert.equal(unavailableBody.clear_cart, false, "a merchandise error never clears a valid cart");
+  assert.match(unavailableBody.error, /merchandise/i);
+} finally {
+  globalThis.fetch = originalFetch;
+}
+assert.equal(unavailableAttempts, 2, "publication repair retries the add exactly once");
+
 const webhookBody = new TextEncoder().encode('{"id":1}');
 const hmacKey = await crypto.subtle.importKey("raw", new TextEncoder().encode(env.SHOPIFY_WEBHOOK_SECRET), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
 const signatureBytes = new Uint8Array(await crypto.subtle.sign("HMAC", hmacKey, webhookBody));

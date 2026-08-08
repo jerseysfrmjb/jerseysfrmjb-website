@@ -60,6 +60,12 @@ function unpublishedMerchandise(error) {
     && /not exist|not available|invalid/i.test(String(error?.message || ""));
 }
 
+function staleCart(error) {
+  const message = String(error?.message || "");
+  return /\bcart\b/i.test(message)
+    && /does not exist|not found|invalid|expired/i.test(message);
+}
+
 async function createOrAddCart(env, action, cartId, line, mapping) {
   const submit = () => action === "add" && cartId
     ? addCartLine(env, cartId, line)
@@ -67,10 +73,20 @@ async function createOrAddCart(env, action, cartId, line, mapping) {
   try {
     return await submit();
   } catch (error) {
+    if (action === "add" && cartId && staleCart(error)) {
+      return createCart(env, line);
+    }
     if (!unpublishedMerchandise(error)) throw error;
     await ensureCheckoutProductPublished(env, mapping);
     await new Promise(resolve => setTimeout(resolve, 500));
-    return submit();
+    try {
+      return await submit();
+    } catch (retryError) {
+      if (action === "add" && cartId && staleCart(retryError)) {
+        return createCart(env, line);
+      }
+      throw retryError;
+    }
   }
 }
 
@@ -153,7 +169,7 @@ export async function onRequestPost({ request, env }) {
     return json({ error: "Unsupported cart action." }, 400);
   } catch (error) {
     const message = String(error?.message || "Secure checkout is temporarily unavailable.");
-    const stale = /not exist|invalid cart|not found/i.test(message);
+    const stale = staleCart(error);
     return json({ error: stale ? "Your saved cart expired. Please add the jersey again." : message, clear_cart: stale }, stale ? 404 : 502);
   }
 }
