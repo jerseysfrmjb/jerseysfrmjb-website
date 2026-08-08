@@ -173,19 +173,36 @@ export async function shopifyGraphql(env, kind, query, variables = {}, options =
     },
     body: JSON.stringify({ query, variables })
   });
-  let response = await request(token);
-  if (admin && response.status === 401 && !String(env.SHOPIFY_ADMIN_ACCESS_TOKEN || "").trim()) {
-    clearShopifyAdminTokenCache(env);
-    response = await request(await shopifyAdminAccessToken(env, options));
+  const maxAttempts = Math.max(1, Math.min(4, Number(options.maxAttempts || 4)));
+  let accessToken = token;
+  let lastError;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    let response = await request(accessToken);
+    if (admin && response.status === 401 && !String(env.SHOPIFY_ADMIN_ACCESS_TOKEN || "").trim() && attempt === 0) {
+      clearShopifyAdminTokenCache(env);
+      accessToken = await shopifyAdminAccessToken(env, options);
+      response = await request(accessToken);
+    }
+    const body = await response.json().catch(() => ({}));
+    const messages = Array.isArray(body.errors)
+      ? body.errors.map(error => String(error?.message || "")).filter(Boolean)
+      : [];
+    const transient = response.status === 429
+      || response.status >= 500
+      || messages.some(message => /throttl|rate limit|try again|temporar/i.test(message));
+    if (response.ok && !messages.length) return body.data || {};
+    lastError = new ShopifyApiError(
+      response.ok ? (messages.join("; ") || "Shopify API request failed.") : `Shopify API returned ${response.status}.`,
+      { status: response.status, errors: body.errors || [] }
+    );
+    if (!transient || attempt >= maxAttempts - 1) throw lastError;
+    const retryAfter = Number(response.headers?.get?.("Retry-After"));
+    const delay = Number.isFinite(retryAfter) && retryAfter > 0
+      ? Math.min(4000, retryAfter * 1000)
+      : Math.min(4000, 500 * (2 ** attempt));
+    await new Promise(resolve => setTimeout(resolve, delay));
   }
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new ShopifyApiError(`Shopify API returned ${response.status}.`, { status: response.status });
-  }
-  if (Array.isArray(body.errors) && body.errors.length) {
-    throw new ShopifyApiError(body.errors.map(error => error.message).join("; "), { errors: body.errors });
-  }
-  return body.data || {};
+  throw lastError || new ShopifyApiError("Shopify API request failed.");
 }
 
 export function shopifyNumericId(value = "") {
