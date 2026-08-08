@@ -173,12 +173,13 @@ export function buildShopifyProduct(row = {}, options = {}) {
 
 export function productSetInput(product, options = {}) {
   const locationId = String(options.locationId || "").trim();
+  const checkoutEligible = product.variants.some(variant => Number(variant.quantity || 0) > 0);
   return {
     title: product.title,
     descriptionHtml: product.descriptionHtml,
     vendor: "JerseysFrmJB",
     productType: product.productType,
-    status: product.pilotEnabled ? "ACTIVE" : "DRAFT",
+    status: checkoutEligible ? "ACTIVE" : "DRAFT",
     tags: product.tags,
     productOptions: [{
       name: "Size",
@@ -213,6 +214,7 @@ export function productSetInput(product, options = {}) {
 }
 
 export async function shopifyPayloadHash(product, options = {}) {
+  const checkoutEligible = product.variants.some(variant => Number(variant.quantity || 0) > 0);
   return sha256(JSON.stringify({
     id: product.id,
     title: product.title,
@@ -222,7 +224,7 @@ export async function shopifyPayloadHash(product, options = {}) {
     productType: product.productType,
     tags: product.tags,
     photos: product.photos,
-    pilotEnabled: product.pilotEnabled,
+    checkoutEligible,
     variants: product.variants.map(variant => ({
       size: variant.size,
       sku: variant.sku,
@@ -354,10 +356,11 @@ export async function applyShopifyProduct(env, product, options = {}) {
   }
   if (!payload.product?.id) throw new Error("Shopify did not return a product ID.");
   let publicationId = "";
-  if (product.pilotEnabled) {
+  const checkoutEligible = product.variants.some(variant => Number(variant.quantity || 0) > 0);
+  if (checkoutEligible) {
     publicationId = await discoverShopifyPublication(env, options);
     if (!publicationId) {
-      throw new Error("No unambiguous Shopify Storefront publication was found. Set SHOPIFY_PUBLICATION_ID before enabling pilot checkout.");
+      throw new Error("No unambiguous Shopify Storefront publication was found. Set SHOPIFY_PUBLICATION_ID before enabling website checkout.");
     }
     await publishShopifyProduct(env, payload.product.id, publicationId, options);
   }
@@ -379,6 +382,7 @@ export function previewAction(product, payloadHash) {
 export function safeProductSummary(product, action, status, options = {}) {
   const locationId = String(options.locationId || "").trim();
   const publicationId = String(options.publicationId || "").trim();
+  const checkoutEligible = product.variants.some(variant => Number(variant.quantity || 0) > 0);
   return {
     product_id: product.id,
     title: product.title,
@@ -400,7 +404,7 @@ export function safeProductSummary(product, action, status, options = {}) {
         input: productSetInput(product, { locationId }),
         identifier: product.shopifyProductId ? { id: product.shopifyProductId } : null
       },
-      publication: product.pilotEnabled ? {
+      publication: checkoutEligible ? {
         operation: "publishablePublish",
         variables: {
           id: product.shopifyProductId || "<Shopify product ID returned by productSet>",
@@ -411,7 +415,7 @@ export function safeProductSummary(product, action, status, options = {}) {
     },
     inventory_location_id: locationId,
     inventory_location_pending: !locationId,
-    publication: product.pilotEnabled ? {
+    publication: checkoutEligible ? {
       operation: "publishablePublish",
       publication_id: publicationId,
       publication_pending: !publicationId

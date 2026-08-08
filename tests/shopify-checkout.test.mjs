@@ -147,6 +147,7 @@ assert.deepEqual(multiSize.variants.map(variant => variant.size), ["S", "M", "L"
 assert.equal(multiSize.variants.find(variant => variant.size === "M").shopifyVariantId, "gid://shopify/ProductVariant/22");
 const soldOut = buildShopifyProduct(row({ id: "retro-sold-out", category: "retro", sizes_json: '{"M":0}', quantity: 0 }));
 assert.equal(soldOut.variants[0].quantity, 0);
+const nonPilotInStock = buildShopifyProduct(row({ pilot_enabled: 0 }));
 
 const syncInput = productSetInput(multiSize, { locationId: "gid://shopify/Location/1" });
 assert.equal(syncInput.vendor, "JerseysFrmJB");
@@ -157,6 +158,8 @@ assert.equal(syncInput.variants[0].inventoryQuantities[0].quantity, 1);
 assert.equal(syncInput.files.length, 2);
 assert.ok(syncInput.tags.includes("World Cup"));
 assert.equal(syncInput.metafields.find(field => field.key === "d1_product_id").value, multiSize.id);
+assert.equal(productSetInput(nonPilotInStock).status, "ACTIVE", "all in-stock products are checkout eligible");
+assert.equal(productSetInput(soldOut).status, "DRAFT", "sold-out products remain unavailable");
 assert.equal((await shopifyPayloadHash(multiSize, { locationId: "gid://shopify/Location/1" })).length, 64);
 assert.notEqual(
   await shopifyPayloadHash(multiSize),
@@ -270,6 +273,33 @@ assert.equal(applied.publicationId, "gid://shopify/Publication/5");
 assert.equal(applyCapture.find(request => request.query.includes("SyncJerseysFrmJBProduct")).variables.input.variants[0].sku, singleSize.variants[0].sku);
 assert.equal(applyCapture.at(-1).variables.publicationId, "gid://shopify/Publication/5");
 
+const nonPilotApplyCapture = [];
+await applyShopifyProduct(env, nonPilotInStock, {
+  locationId: "gid://shopify/Location/1",
+  publicationId: "gid://shopify/Publication/5",
+  fetchImpl: async (url, options) => {
+    const request = JSON.parse(options.body);
+    nonPilotApplyCapture.push(request);
+    if (request.query.includes("ExistingJerseysFrmJBVariant")) {
+      return new Response(JSON.stringify({ data: { productVariants: { nodes: [] } } }));
+    }
+    if (request.query.includes("PublishJerseysFrmJBProduct")) {
+      return new Response(JSON.stringify({ data: { publishablePublish: {
+        publishable: { publishedOnPublication: true }, userErrors: []
+      } } }));
+    }
+    return new Response(JSON.stringify({ data: { productSet: {
+      product: { id: "gid://shopify/Product/101", handle: "non-pilot", title: nonPilotInStock.title, variants: { nodes: [] } },
+      userErrors: []
+    } } }));
+  }
+});
+assert.equal(
+  nonPilotApplyCapture.some(request => request.query.includes("PublishJerseysFrmJBProduct")),
+  true,
+  "non-pilot in-stock products publish to the Storefront channel"
+);
+
 await assert.rejects(() => shopifyGraphql(env, "admin", "query Test { shop { name } }", {}, {
   fetchImpl: jsonFetch({ errors: [{ message: "API unavailable" }] }, 500)
 }), /returned 500/);
@@ -309,6 +339,77 @@ const disabledCart = await cartEndpoint({
   env: { DB: {} }
 });
 assert.equal(disabledCart.status, 409, "checkout stays unavailable when the flag is omitted");
+
+const cartDatabaseCalls = [];
+const cartDatabase = {
+  prepare(sql) {
+    cartDatabaseCalls.push(sql);
+    return {
+      bind() { return this; },
+      async first() {
+        return {
+          id: singleSize.id,
+          name: singleSize.title,
+          sizes_json: JSON.stringify({ M: 2 }),
+          shopify_product_id: "gid://shopify/Product/100",
+          shopify_variant_id: "gid://shopify/ProductVariant/9",
+          size: "M"
+        };
+      }
+    };
+  }
+};
+const originalFetch = globalThis.fetch;
+const repairedCartRequests = [];
+let storefrontAttempts = 0;
+globalThis.fetch = async (url, options) => {
+  const request = JSON.parse(options.body);
+  repairedCartRequests.push(request);
+  if (request.query.includes("JerseysFrmJBCartCreate")) {
+    storefrontAttempts += 1;
+    if (storefrontAttempts === 1) {
+      return new Response(JSON.stringify({ data: { cartCreate: {
+        cart: null,
+        userErrors: [{ field: ["input", "lines", "0", "merchandiseId"], message: "The merchandise with this ID does not exist." }]
+      } } }));
+    }
+    return new Response(JSON.stringify({ data: { cartCreate: { cart: rawCart, userErrors: [] } } }));
+  }
+  if (request.query.includes("ActivateJerseysFrmJBCheckoutProduct")) {
+    return new Response(JSON.stringify({ data: { productUpdate: {
+      product: { id: "gid://shopify/Product/100", status: "ACTIVE" }, userErrors: []
+    } } }));
+  }
+  if (request.query.includes("PublishJerseysFrmJBProduct")) {
+    return new Response(JSON.stringify({ data: { publishablePublish: {
+      publishable: { publishedOnPublication: true }, userErrors: []
+    } } }));
+  }
+  throw new Error(`Unexpected Shopify operation: ${request.query}`);
+};
+try {
+  const repairedCartResponse = await cartEndpoint({
+    request: new Request("https://jerseysfrmjb.com/api/shopify/cart", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "create", product_id: singleSize.id, size: "M", quantity: 1 })
+    }),
+    env: {
+      ...env,
+      DB: cartDatabase,
+      SHOPIFY_CHECKOUT_ENABLED: "true",
+      SHOPIFY_PUBLICATION_ID: "gid://shopify/Publication/5"
+    }
+  });
+  assert.equal(repairedCartResponse.status, 200);
+  assert.equal((await repairedCartResponse.json()).cart.id, rawCart.id);
+} finally {
+  globalThis.fetch = originalFetch;
+}
+assert.equal(storefrontAttempts, 2, "cart creation retries once after repairing publication");
+assert.equal(repairedCartRequests.some(request => request.query.includes("ActivateJerseysFrmJBCheckoutProduct")), true);
+assert.equal(repairedCartRequests.some(request => request.query.includes("PublishJerseysFrmJBProduct")), true);
+assert.equal(cartDatabaseCalls.length, 1, "publication repair performs no D1 inventory writes");
 
 const webhookBody = new TextEncoder().encode('{"id":1}');
 const hmacKey = await crypto.subtle.importKey("raw", new TextEncoder().encode(env.SHOPIFY_WEBHOOK_SECRET), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);

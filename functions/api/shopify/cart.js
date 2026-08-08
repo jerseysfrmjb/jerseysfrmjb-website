@@ -1,6 +1,15 @@
 import { addCartLine, createCart, getCart, removeCartLine, updateCartLine } from "./_cart.js";
-import { json, shopifyConfiguration } from "./_shared.js";
-import { normalizeSize } from "./_products.js";
+import { json, shopifyConfiguration, shopifyGraphql } from "./_shared.js";
+import { discoverShopifyPublication, normalizeSize, publishShopifyProduct } from "./_products.js";
+
+const ACTIVATE_PRODUCT_MUTATION = `
+  mutation ActivateJerseysFrmJBCheckoutProduct($input: ProductInput!) {
+    productUpdate(input: $input) {
+      product { id status }
+      userErrors { field message }
+    }
+  }
+`;
 
 function cleanId(value, limit = 500) {
   const result = String(value || "").trim();
@@ -31,6 +40,38 @@ async function mappedVariant(env, productId, size, requestedQuantity) {
   if (!available) throw new Error("That size is sold out.");
   if (requestedQuantity > available) throw new Error("The requested quantity is no longer available.");
   return row;
+}
+
+async function ensureCheckoutProductPublished(env, mapping) {
+  const productId = String(mapping?.shopify_product_id || "").trim();
+  if (!productId) throw new Error("Website checkout is not mapped for this jersey yet.");
+  const data = await shopifyGraphql(env, "admin", ACTIVATE_PRODUCT_MUTATION, {
+    input: { id: productId, status: "ACTIVE" }
+  });
+  const errors = data.productUpdate?.userErrors || [];
+  if (errors.length) throw new Error(errors.map(error => error.message).join("; "));
+  const publicationId = await discoverShopifyPublication(env);
+  if (!publicationId) throw new Error("Website checkout publication is not configured.");
+  await publishShopifyProduct(env, productId, publicationId);
+}
+
+function unpublishedMerchandise(error) {
+  return /merchandise/i.test(String(error?.message || ""))
+    && /not exist|not available|invalid/i.test(String(error?.message || ""));
+}
+
+async function createOrAddCart(env, action, cartId, line, mapping) {
+  const submit = () => action === "add" && cartId
+    ? addCartLine(env, cartId, line)
+    : createCart(env, line);
+  try {
+    return await submit();
+  } catch (error) {
+    if (!unpublishedMerchandise(error)) throw error;
+    await ensureCheckoutProductPublished(env, mapping);
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return submit();
+  }
 }
 
 async function validateCartLineQuantity(env, cart, lineId, requestedQuantity) {
@@ -88,9 +129,7 @@ export async function onRequestPost({ request, env }) {
       if (!productId || !size) return json({ error: "Choose an available size." }, 400);
       const mapping = await mappedVariant(env, productId, size, requestedQuantity);
       const line = lineInput(mapping.shopify_variant_id, requestedQuantity);
-      const cart = action === "add" && cartId
-        ? await addCartLine(env, cartId, line)
-        : await createCart(env, line);
+      const cart = await createOrAddCart(env, action, cartId, line, mapping);
       return json({ cart, checkout: action === "buy_now" });
     }
     if (action === "update") {
