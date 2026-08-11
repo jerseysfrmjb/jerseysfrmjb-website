@@ -43,6 +43,14 @@ const CART_REMOVE = `${CART_FRAGMENT}
     cartLinesRemove(cartId: $cartId, lineIds: $lineIds) { cart { ...JerseysFrmJBCart } userErrors { field message code } }
   }
 `;
+const CART_ATTRIBUTES_UPDATE = `${CART_FRAGMENT}
+  mutation JerseysFrmJBCartAttributesUpdate($cartId: ID!, $attributes: [AttributeInput!]!) {
+    cartAttributesUpdate(cartId: $cartId, attributes: $attributes) {
+      cart { ...JerseysFrmJBCart }
+      userErrors { field message code }
+    }
+  }
+`;
 
 function userError(payload) {
   const errors = payload?.userErrors || [];
@@ -85,9 +93,21 @@ export async function getCart(env, cartId, options = {}) {
 }
 
 export async function createCart(env, line, options = {}) {
-  const input = line ? { lines: [line] } : {};
-  const data = await shopifyGraphql(env, "storefront", CART_CREATE, { input }, options);
+  const { cartAttributes = [], ...requestOptions } = options;
+  const input = {
+    ...(line ? { lines: [line] } : {}),
+    ...(cartAttributes.length ? { attributes: cartAttributes } : {})
+  };
+  const data = await shopifyGraphql(env, "storefront", CART_CREATE, { input }, requestOptions);
   return cartResult(data, "cartCreate");
+}
+
+export async function updateCartAttributes(env, cartId, attributes, options = {}) {
+  const data = await shopifyGraphql(env, "storefront", CART_ATTRIBUTES_UPDATE, {
+    cartId,
+    attributes
+  }, options);
+  return cartResult(data, "cartAttributesUpdate");
 }
 
 export async function addCartLine(env, cartId, line, options = {}) {

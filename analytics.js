@@ -21,7 +21,10 @@
   let activeSeconds = 0;
   let sentEngagementSeconds = 0;
 
-  if (privacyOptOut) return;
+  if (privacyOptOut) {
+    window.JerseysAnalytics = Object.freeze({ disabled: true });
+    return;
+  }
 
   function randomId(prefix) {
     const random = globalThis.crypto?.randomUUID?.().replace(/-/g, "")
@@ -57,6 +60,7 @@
     const value = campaignSource || host;
     if (/google/.test(value)) return "Google";
     if (/bing/.test(value)) return "Bing";
+    if (/tiktok/.test(value)) return "TikTok";
     if (/pinterest/.test(value)) return "Pinterest";
     if (/facebook|fb\.com|m\.me/.test(value)) return "Facebook";
     if (/instagram/.test(value)) return "Instagram";
@@ -308,6 +312,11 @@
   window.JerseysAnalytics = Object.freeze({
     observeProducts,
     setupSearchTracking,
-    trackProductView
+    trackProductView,
+    commerceContext: () => ({
+      visitor_id: visitorId,
+      session_id: sessionId,
+      traffic_source: trafficSource
+    })
   });
 })(window, document);

@@ -108,8 +108,8 @@ async function prepareOrderLines(env, payload) {
         shopify_variant_id = excluded.shopify_variant_id,
         product_id = CASE WHEN shopify_order_lines.product_id IS NULL OR shopify_order_lines.product_id = '' THEN excluded.product_id ELSE shopify_order_lines.product_id END,
         size = CASE WHEN shopify_order_lines.size = '' THEN excluded.size ELSE shopify_order_lines.size END,
-        quantity = excluded.quantity,
-        unit_price = excluded.unit_price,
+        quantity = CASE WHEN shopify_order_lines.processing_status = 'processed' THEN shopify_order_lines.quantity ELSE excluded.quantity END,
+        unit_price = CASE WHEN shopify_order_lines.processing_status = 'processed' THEN shopify_order_lines.unit_price ELSE excluded.unit_price END,
         error = CASE WHEN shopify_order_lines.processing_status = 'processed' THEN shopify_order_lines.error ELSE excluded.error END,
         updated_at = CURRENT_TIMESTAMP
     `).bind(
@@ -188,17 +188,35 @@ async function processLine(env, order, line) {
 async function recordPurchaseEvent(env, payload) {
   const id = orderId(payload);
   const value = money(payload.subtotal_price);
+  const products = await env.DB.prepare(`
+    SELECT DISTINCT product_id FROM shopify_order_lines
+    WHERE shopify_order_id = ? AND processing_status = 'processed' AND product_id IS NOT NULL AND product_id <> ''
+    ORDER BY product_id
+  `).bind(id).all();
+  const productIds = (products.results || []).map(row => String(row.product_id)).filter(Boolean);
+  const attribution = payload.checkout_attribution || {};
   await env.DB.prepare(`
     INSERT OR IGNORE INTO shopify_commerce_events (
-      event_type, shopify_order_id, value, currency, dedupe_key
-    ) VALUES ('Purchase', ?, ?, ?, ?)
-  `).bind(id, value, String(payload.currency || "USD"), `purchase:${id}`).run();
+      event_type, session_id_hash, product_id, product_ids_json, shopify_order_id,
+      traffic_source, value, currency, dedupe_key
+    ) VALUES ('Purchase', ?, ?, ?, ?, ?, ?, ?, ?)
+  `).bind(
+    String(attribution.session_hash || ""),
+    productIds[0] || "",
+    JSON.stringify(productIds),
+    id,
+    String(attribution.traffic_source || "Other"),
+    value,
+    String(payload.currency || "USD"),
+    `purchase:${id}`
+  ).run();
 }
 
 export async function processSanitizedWebhook(env, topic, payload) {
   await upsertOrder(env, payload, topic);
   await recordRefunds(env, payload);
-  const paid = topic === "orders/paid" || String(payload.financial_status || "").toLowerCase() === "paid";
+  const paid = topic === "orders/paid"
+    || (topic === "orders/create" && String(payload.financial_status || "").toLowerCase() === "paid");
   if (!paid) return { processed: true, inventory_changed: false };
   await prepareOrderLines(env, payload);
   const id = orderId(payload);

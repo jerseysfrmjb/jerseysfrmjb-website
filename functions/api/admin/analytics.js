@@ -1,7 +1,9 @@
 import { ensureInventory } from "../_inventorySeed.js";
 import { ensureAnalyticsSchema } from "../_analyticsSchema.js";
+import { ensureShopifySchema } from "../shopify/_schema.js";
 import { inferCompetition, inferProductIdentity } from "../catalog/_products.js";
 import { adminConfigError, isAuthorized, json, unauthorized } from "./_auth.js";
+import { buildConversionFunnel } from "./_conversionFunnel.js";
 
 const RANGE_DAYS = { today: 0, "7d": 7, "30d": 30, all: null };
 const SUMMARY_SQL = `
@@ -228,6 +230,7 @@ async function requireAdmin(request, env) {
   if (!(await isAuthorized(request, env))) return unauthorized();
   await ensureInventory(env);
   await ensureAnalyticsSchema(env);
+  await ensureShopifySchema(env);
   return null;
 }
 
@@ -404,7 +407,69 @@ export async function onRequestGet({ request, env }) {
         WHERE occurred_at >= ? AND utm_source = 'facebook' AND utm_campaign <> ''
         GROUP BY utm_campaign, utm_content, inventory.name
         ORDER BY visitors DESC, page_views DESC, marketplace_clicks DESC
-        LIMIT 100`).bind(selectedCutoff)
+        LIMIT 100`).bind(selectedCutoff),
+      env.DB.prepare(`
+        SELECT event_type, COUNT(*) AS events
+        FROM shopify_commerce_events
+        WHERE occurred_at >= ?
+        GROUP BY event_type`).bind(selectedCutoff),
+      env.DB.prepare(`
+        SELECT
+          inventory.id,
+          inventory.name,
+          inventory.category,
+          (SELECT COUNT(*) FROM analytics_events AS views
+            WHERE views.event_type = 'product_view'
+              AND views.product_id = CAST(inventory.id AS TEXT)
+              AND views.occurred_at >= ?) AS views,
+          (SELECT COUNT(*) FROM shopify_commerce_events AS carts
+            WHERE carts.event_type = 'AddToCart'
+              AND carts.product_id = CAST(inventory.id AS TEXT)
+              AND carts.occurred_at >= ?) AS add_to_cart,
+          (SELECT COUNT(*) FROM shopify_commerce_events AS checkouts
+            WHERE checkouts.event_type = 'InitiateCheckout'
+              AND checkouts.occurred_at >= ?
+              AND (
+                checkouts.product_id = CAST(inventory.id AS TEXT)
+                OR EXISTS (
+                  SELECT 1 FROM json_each(
+                    CASE WHEN json_valid(checkouts.product_ids_json) THEN checkouts.product_ids_json ELSE '[]' END
+                  ) AS checkout_product
+                  WHERE CAST(checkout_product.value AS TEXT) = CAST(inventory.id AS TEXT)
+                )
+              )) AS checkout_started,
+          (SELECT COUNT(DISTINCT order_lines.shopify_order_id)
+            FROM shopify_order_lines AS order_lines
+            JOIN shopify_orders AS orders ON orders.shopify_order_id = order_lines.shopify_order_id
+            WHERE order_lines.product_id = CAST(inventory.id AS TEXT)
+              AND order_lines.processing_status = 'processed'
+              AND datetime(COALESCE(orders.paid_at, orders.created_at)) >= datetime(?)) AS purchases
+        FROM inventory
+        ORDER BY views DESC, purchases DESC, inventory.name`).bind(selectedCutoff, selectedCutoff, selectedCutoff, selectedCutoff),
+      env.DB.prepare(`
+        SELECT source,
+          SUM(views) AS views,
+          SUM(add_to_cart) AS add_to_cart,
+          SUM(checkout_started) AS checkout_started,
+          SUM(purchases) AS purchases
+        FROM (
+          SELECT traffic_source AS source,
+            COUNT(*) AS views, 0 AS add_to_cart, 0 AS checkout_started, 0 AS purchases
+          FROM analytics_events
+          WHERE event_type = 'product_view' AND occurred_at >= ?
+          GROUP BY traffic_source
+          UNION ALL
+          SELECT traffic_source AS source,
+            0 AS views,
+            SUM(CASE WHEN event_type = 'AddToCart' THEN 1 ELSE 0 END) AS add_to_cart,
+            SUM(CASE WHEN event_type = 'InitiateCheckout' THEN 1 ELSE 0 END) AS checkout_started,
+            SUM(CASE WHEN event_type = 'Purchase' THEN 1 ELSE 0 END) AS purchases
+          FROM shopify_commerce_events
+          WHERE occurred_at >= ?
+          GROUP BY traffic_source
+        )
+        GROUP BY source
+        ORDER BY views DESC, purchases DESC`).bind(selectedCutoff, selectedCutoff)
     ]);
 
     const products = productRows(detailResults[1]?.results || []);
@@ -434,6 +499,12 @@ export async function onRequestGet({ request, env }) {
       ? round((selectedSummary.marketplace_clicks / selectedSummary.product_views) * 100, 1)
       : 0;
     const attributedMarketplaceClicks = products.reduce((sum, product) => sum + product.clicks, 0);
+    const funnel = buildConversionFunnel({
+      productViews: selectedSummary.product_views,
+      commerce: detailResults[13]?.results || [],
+      products: detailResults[14]?.results || [],
+      sources: (detailResults[15]?.results || []).map(row => ({ ...row, source: row.source || "Other" }))
+    });
 
     return json({
       generated_at: now.toISOString(),
@@ -515,12 +586,13 @@ export async function onRequestGet({ request, env }) {
         visitors: number(row.visitors)
       })),
       entities,
-      recommendations: generateInsights({
+      funnel,
+      recommendations: [...funnel.recommendations, ...generateInsights({
         products,
         entities,
         sources,
         sourceComparison: detailResults[10]?.results || []
-      }),
+      })],
       integrations: {
         ga4_configured: /^G-[A-Z0-9]{6,20}$/.test(String(env.GA4_MEASUREMENT_ID || "G-P42JD6TLP3").trim().toUpperCase()),
         meta_pixel_preserved: true

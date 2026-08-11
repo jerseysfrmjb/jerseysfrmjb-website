@@ -79,16 +79,40 @@ export const SHOPIFY_SCHEMA_STATEMENTS = [
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     event_type TEXT NOT NULL CHECK (event_type IN ('AddToCart', 'ViewCart', 'InitiateCheckout', 'Purchase')),
     visitor_id TEXT NOT NULL DEFAULT '', session_id TEXT NOT NULL DEFAULT '',
+    session_id_hash TEXT NOT NULL DEFAULT '',
     product_id TEXT NOT NULL DEFAULT '', cart_id_hash TEXT NOT NULL DEFAULT '',
+    product_ids_json TEXT NOT NULL DEFAULT '[]', traffic_source TEXT NOT NULL DEFAULT 'Other',
     shopify_order_id TEXT NOT NULL DEFAULT '', value REAL, currency TEXT NOT NULL DEFAULT 'USD',
     dedupe_key TEXT NOT NULL DEFAULT '', occurred_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
-  "CREATE UNIQUE INDEX IF NOT EXISTS idx_shopify_commerce_events_dedupe ON shopify_commerce_events(dedupe_key) WHERE dedupe_key <> ''"
+  "CREATE UNIQUE INDEX IF NOT EXISTS idx_shopify_commerce_events_dedupe ON shopify_commerce_events(dedupe_key) WHERE dedupe_key <> ''",
+  "CREATE INDEX IF NOT EXISTS idx_shopify_commerce_events_type_time ON shopify_commerce_events(event_type, occurred_at DESC)"
+];
+
+const SHOPIFY_COLUMN_STATEMENTS = [
+  "ALTER TABLE shopify_commerce_events ADD COLUMN session_id_hash TEXT NOT NULL DEFAULT ''",
+  "ALTER TABLE shopify_commerce_events ADD COLUMN product_ids_json TEXT NOT NULL DEFAULT '[]'",
+  "ALTER TABLE shopify_commerce_events ADD COLUMN traffic_source TEXT NOT NULL DEFAULT 'Other'"
+];
+
+const SHOPIFY_POST_SCHEMA_STATEMENTS = [
+  "CREATE INDEX IF NOT EXISTS idx_shopify_commerce_events_source_time ON shopify_commerce_events(traffic_source, occurred_at DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_shopify_commerce_events_product_time ON shopify_commerce_events(product_id, occurred_at DESC)"
 ];
 
 export async function ensureShopifySchema(env) {
   if (!env?.DB) throw new Error("Missing DB D1 binding");
   for (const statement of SHOPIFY_SCHEMA_STATEMENTS) {
+    await env.DB.prepare(statement).run();
+  }
+  for (const statement of SHOPIFY_COLUMN_STATEMENTS) {
+    try {
+      await env.DB.prepare(statement).run();
+    } catch (error) {
+      if (!/duplicate column/i.test(String(error?.message || ""))) throw error;
+    }
+  }
+  for (const statement of SHOPIFY_POST_SCHEMA_STATEMENTS) {
     await env.DB.prepare(statement).run();
   }
 }

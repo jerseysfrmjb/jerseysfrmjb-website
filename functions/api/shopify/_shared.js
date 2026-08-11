@@ -217,6 +217,11 @@ function money(value) {
 export function sanitizeWebhookPayload(payload = {}) {
   const lineItems = Array.isArray(payload.line_items) ? payload.line_items : [];
   const refunds = Array.isArray(payload.refunds) ? payload.refunds : [];
+  const noteAttributes = Array.isArray(payload.note_attributes) ? payload.note_attributes : [];
+  const attribute = key => String(noteAttributes.find(item => String(item?.name || item?.key || "") === key)?.value || "").trim();
+  const sessionHash = attribute("_jfb_session");
+  const allowedSources = new Set(["Google", "Bing", "TikTok", "Instagram", "Facebook", "Pinterest", "Direct", "Other"]);
+  const attributedSource = attribute("_jfb_source");
   return {
     id: String(payload.id || ""),
     order_id: String(payload.order_id || payload.id || ""),
@@ -233,6 +238,10 @@ export function sanitizeWebhookPayload(payload = {}) {
     total_tax: money(payload.total_tax),
     cancelled_at: payload.cancelled_at || null,
     processed_at: payload.processed_at || payload.created_at || null,
+    checkout_attribution: {
+      session_hash: /^[a-f0-9]{64}$/i.test(sessionHash) ? sessionHash.toLowerCase() : "",
+      traffic_source: allowedSources.has(attributedSource) ? attributedSource : "Other"
+    },
     line_items: lineItems.map((line, index) => ({
       id: String(line.id || `${payload.id || "order"}-${index}`),
       variant_id: String(line.variant_id || ""),

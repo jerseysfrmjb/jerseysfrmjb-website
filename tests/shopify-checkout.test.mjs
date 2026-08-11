@@ -38,6 +38,7 @@ import {
   getCart,
   publicCart,
   removeCartLine,
+  updateCartAttributes,
   updateCartLine
 } from "../functions/api/shopify/_cart.js";
 import { onRequestPost as cartEndpoint } from "../functions/api/shopify/cart.js";
@@ -325,6 +326,8 @@ for (const operation of [
   [addCartLine, [env, rawCart.id, { merchandiseId: "variant", quantity: 1 }], "mutation JerseysFrmJBCartAdd", { data: { cartLinesAdd: { cart: rawCart, userErrors: [] } } }],
   [updateCartLine, [env, rawCart.id, rawCart.lines.nodes[0].id, 2], "mutation JerseysFrmJBCartUpdate", { data: { cartLinesUpdate: { cart: rawCart, userErrors: [] } } }],
   [removeCartLine, [env, rawCart.id, rawCart.lines.nodes[0].id], "mutation JerseysFrmJBCartRemove", { data: { cartLinesRemove: { cart: rawCart, userErrors: [] } } }]
+  ,
+  [updateCartAttributes, [env, rawCart.id, [{ key: "_jfb_source", value: "Direct" }]], "mutation JerseysFrmJBCartAttributesUpdate", { data: { cartAttributesUpdate: { cart: rawCart, userErrors: [] } } }]
 ]) {
   const [fn, args, expectedQuery, response] = operation;
   const capture = [];
@@ -333,6 +336,13 @@ for (const operation of [
   assert.match(capture[0].body.query, new RegExp(expectedQuery));
   assert.equal(capture[0].options.headers["X-Shopify-Storefront-Access-Token"], "storefront-test-token");
 }
+
+const attributedCartRequests = [];
+await createCart(env, { merchandiseId: "variant", quantity: 1 }, {
+  cartAttributes: [{ key: "_jfb_source", value: "TikTok" }],
+  fetchImpl: jsonFetch({ data: { cartCreate: { cart: rawCart, userErrors: [] } } }, 200, attributedCartRequests)
+});
+assert.deepEqual(attributedCartRequests[0].body.variables.input.attributes, [{ key: "_jfb_source", value: "TikTok" }]);
 
 const disabledCart = await cartEndpoint({
   request: new Request("https://jerseysfrmjb.com/api/shopify/cart", { method: "POST", body: "{}" }),
@@ -349,12 +359,16 @@ const cartDatabase = {
       async first() {
         return {
           id: singleSize.id,
+          product_id: singleSize.id,
           name: singleSize.title,
           sizes_json: JSON.stringify({ M: 2 }),
           shopify_product_id: "gid://shopify/Product/100",
           shopify_variant_id: "gid://shopify/ProductVariant/9",
           size: "M"
         };
+      },
+      async all() {
+        return { results: [{ product_id: singleSize.id, shopify_variant_id: "gid://shopify/ProductVariant/9" }] };
       }
     };
   }
@@ -409,12 +423,52 @@ try {
 assert.equal(storefrontAttempts, 2, "cart creation retries once after repairing publication");
 assert.equal(repairedCartRequests.some(request => request.query.includes("ActivateJerseysFrmJBCheckoutProduct")), true);
 assert.equal(repairedCartRequests.some(request => request.query.includes("PublishJerseysFrmJBProduct")), true);
-assert.equal(cartDatabaseCalls.length, 1, "publication repair performs no D1 inventory writes");
+assert.equal(cartDatabaseCalls.filter(sql => /FROM inventory/.test(sql)).length, 1, "publication repair performs no D1 inventory writes");
+
+const checkoutPreparationRequests = [];
+globalThis.fetch = async (url, options) => {
+  const request = JSON.parse(options.body);
+  checkoutPreparationRequests.push(request);
+  if (request.query.includes("query JerseysFrmJBCart")) {
+    return new Response(JSON.stringify({ data: { cart: rawCart } }));
+  }
+  if (request.query.includes("JerseysFrmJBCartAttributesUpdate")) {
+    return new Response(JSON.stringify({ data: { cartAttributesUpdate: { cart: rawCart, userErrors: [] } } }));
+  }
+  throw new Error(`Unexpected Shopify operation: ${request.query}`);
+};
+try {
+  const preparedCheckoutResponse = await cartEndpoint({
+    request: new Request("https://jerseysfrmjb.com/api/shopify/cart", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "prepare_checkout",
+        cart_id: rawCart.id,
+        session_id: "s_checkout_12345678",
+        traffic_source: "TikTok"
+      })
+    }),
+    env: { ...env, DB: cartDatabase, SHOPIFY_CHECKOUT_ENABLED: "true" }
+  });
+  assert.equal(preparedCheckoutResponse.status, 200);
+  const preparedCheckout = await preparedCheckoutResponse.json();
+  assert.equal(preparedCheckout.cart.lines[0].product_id, singleSize.id);
+} finally {
+  globalThis.fetch = originalFetch;
+}
+const attributionMutation = checkoutPreparationRequests.find(request => request.query.includes("JerseysFrmJBCartAttributesUpdate"));
+assert.equal(attributionMutation.variables.attributes.find(item => item.key === "_jfb_source").value, "TikTok");
+assert.match(attributionMutation.variables.attributes.find(item => item.key === "_jfb_session").value, /^[a-f0-9]{64}$/);
+assert.doesNotMatch(JSON.stringify(attributionMutation.variables), /s_checkout_12345678/);
 
 let staleCartAddAttempts = 0;
 let staleCartCreateAttempts = 0;
 globalThis.fetch = async (url, options) => {
   const request = JSON.parse(options.body);
+  if (request.query.includes("query JerseysFrmJBCart")) {
+    return new Response(JSON.stringify({ data: { cart: null } }));
+  }
   if (request.query.includes("JerseysFrmJBCartAdd")) {
     staleCartAddAttempts += 1;
     return new Response(JSON.stringify({ data: { cartLinesAdd: {
@@ -455,9 +509,58 @@ try {
 assert.equal(staleCartAddAttempts, 1);
 assert.equal(staleCartCreateAttempts, 1, "the selected jersey is retained in a newly created cart");
 
+let overstockMutationAttempted = false;
+const lastUnitDatabase = {
+  prepare() {
+    return {
+      bind() { return this; },
+      async first() {
+        return {
+          id: singleSize.id,
+          product_id: singleSize.id,
+          name: singleSize.title,
+          sizes_json: JSON.stringify({ M: 1 }),
+          shopify_product_id: "gid://shopify/Product/100",
+          shopify_variant_id: "gid://shopify/ProductVariant/9",
+          size: "M"
+        };
+      },
+      async all() {
+        return { results: [{ product_id: singleSize.id, shopify_variant_id: "gid://shopify/ProductVariant/9" }] };
+      }
+    };
+  }
+};
+globalThis.fetch = async (url, options) => {
+  const request = JSON.parse(options.body);
+  if (request.query.includes("query JerseysFrmJBCart")) {
+    return new Response(JSON.stringify({ data: { cart: rawCart } }));
+  }
+  if (request.query.includes("JerseysFrmJBCartAdd")) overstockMutationAttempted = true;
+  throw new Error(`Unexpected Shopify operation: ${request.query}`);
+};
+try {
+  const lastUnitResponse = await cartEndpoint({
+    request: new Request("https://jerseysfrmjb.com/api/shopify/cart", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "add", cart_id: rawCart.id, product_id: singleSize.id, size: "M", quantity: 1 })
+    }),
+    env: { ...env, DB: lastUnitDatabase, SHOPIFY_CHECKOUT_ENABLED: "true" }
+  });
+  assert.equal(lastUnitResponse.status, 502);
+  assert.match((await lastUnitResponse.json()).error, /quantity is no longer available/i);
+} finally {
+  globalThis.fetch = originalFetch;
+}
+assert.equal(overstockMutationAttempted, false, "adding the same final unit twice is blocked before Shopify mutation");
+
 let unavailableAttempts = 0;
 globalThis.fetch = async (url, options) => {
   const request = JSON.parse(options.body);
+  if (request.query.includes("query JerseysFrmJBCart")) {
+    return new Response(JSON.stringify({ data: { cart: rawCart } }));
+  }
   if (request.query.includes("JerseysFrmJBCartAdd")) {
     unavailableAttempts += 1;
     return new Response(JSON.stringify({ data: { cartLinesAdd: {
@@ -509,6 +612,9 @@ assert.equal(unavailableAttempts, 5, "publication repair allows Shopify time to 
 let delayedPublicationAttempts = 0;
 globalThis.fetch = async (url, options) => {
   const request = JSON.parse(options.body);
+  if (request.query.includes("query JerseysFrmJBCart")) {
+    return new Response(JSON.stringify({ data: { cart: rawCart } }));
+  }
   if (request.query.includes("JerseysFrmJBCartAdd")) {
     delayedPublicationAttempts += 1;
     if (delayedPublicationAttempts < 4) {

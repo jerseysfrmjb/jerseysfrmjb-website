@@ -515,8 +515,8 @@ export function renderSeoCollectionPage(products, kind, options = {}) {
   <meta name="twitter:description" content="${escapeHtml(description)}"><meta name="twitter:image" content="${escapeHtml(heroImage)}">
   <script type="application/ld+json">${jsonForHtml(schema)}</script>
   <script type="application/ld+json">${jsonForHtml(faqSchema(faqs))}</script>
-  <link rel="stylesheet" href="/styles.css?v=site-audit-1"><link rel="stylesheet" href="/design-preview.css?v=mobile-grid-2">
-  <script src="/meta-pixel.js?v=1" defer></script><script src="/analytics.js?v=operations-1" defer></script><script src="/storefront.js?v=site-audit-1" defer></script>
+  <link rel="stylesheet" href="/styles.css?v=checkout-audit-1"><link rel="stylesheet" href="/design-preview.css?v=mobile-grid-2">
+  <script src="/meta-pixel.js?v=1" defer></script><script src="/analytics.js?v=conversion-funnel-1" defer></script><script src="/storefront.js?v=site-audit-1" defer></script>
 </head>
 <body class="seo-collection-body">
   ${headerMarkup()}
@@ -534,7 +534,7 @@ export function renderSeoCollectionPage(products, kind, options = {}) {
 
 export function renderSeoNotFound(siteOrigin = DEFAULT_SITE_ORIGIN) {
   const origin = normalizeSiteOrigin(siteOrigin);
-  return `<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Jersey Collection Not Found | JerseysFrmJB</title><meta name="robots" content="noindex,follow"><link rel="canonical" href="${escapeHtml(`${origin}/shop-all`)}"><link rel="stylesheet" href="/styles.css?v=site-audit-1"><script src="/meta-pixel.js?v=1" defer></script><script src="/analytics.js?v=operations-1" defer></script><script src="/storefront.js?v=site-audit-1" defer></script></head><body class="product-page-body">${headerMarkup()}<main class="product-page-main"><section class="product-not-found"><span>Collection update</span><h1>That jersey collection is not available.</h1><p>Browse the current inventory to find another team, player, or competition.</p><a href="/shop-all">Browse Current Jerseys</a></section></main>${footerMarkup()}</body></html>`;
+  return `<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Jersey Collection Not Found | JerseysFrmJB</title><meta name="robots" content="noindex,follow"><link rel="canonical" href="${escapeHtml(`${origin}/shop-all`)}"><link rel="stylesheet" href="/styles.css?v=checkout-audit-1"><script src="/meta-pixel.js?v=1" defer></script><script src="/analytics.js?v=conversion-funnel-1" defer></script><script src="/storefront.js?v=site-audit-1" defer></script></head><body class="product-page-body">${headerMarkup()}<main class="product-page-main"><section class="product-not-found"><span>Collection update</span><h1>That jersey collection is not available.</h1><p>Browse the current inventory to find another team, player, or competition.</p><a href="/shop-all">Browse Current Jerseys</a></section></main>${footerMarkup()}</body></html>`;
 }
 
 export function entityLink(kind, name) {

@@ -595,6 +595,66 @@ function analyticsConversionFunnel(data = {}) {
     </section>`;
 }
 
+function analyticsShopifyFunnel(data = {}) {
+  const funnel = data.funnel?.summary || {};
+  const stages = [
+    ["Product View", funnel.views, funnel.view_to_cart_rate, "to Add to Cart"],
+    ["Add to Cart", funnel.add_to_cart, funnel.cart_to_checkout_rate, "to Checkout"],
+    ["Checkout Started", funnel.checkout_started, funnel.checkout_to_purchase_rate, "to Purchase"],
+    ["Purchase", funnel.purchases, funnel.overall_conversion_rate, "overall conversion"]
+  ];
+  return `
+    <section class="analytics-card analytics-funnel-card">
+      <header class="analytics-section-heading">
+        <div><span>Conversion Funnel</span><h3>Product View &rarr; Add to Cart &rarr; Checkout Started &rarr; Purchase</h3></div>
+        <div class="analytics-funnel-rate"><strong>${analyticsNumber(funnel.overall_conversion_rate, 1)}%</strong><small>view-to-purchase</small></div>
+      </header>
+      <div class="analytics-funnel analytics-checkout-funnel" aria-label="Shopify checkout conversion funnel">
+        ${stages.map(([label, value, rate, rateLabel], index) => `
+          ${index ? '<i aria-hidden="true">&rarr;</i>' : ""}
+          <article><span>${index + 1}</span><div><small>${escapeHtml(label)}</small><strong>${analyticsNumber(value)}</strong><p>${analyticsNumber(rate, 1)}% ${escapeHtml(rateLabel)}</p></div></article>`).join("")}
+      </div>
+      <p class="analytics-funnel-note">Event totals are privacy-safe and contain no customer, address, or payment details. Purchases count paid Shopify orders once, even when webhooks are retried.</p>
+    </section>`;
+}
+
+function analyticsFunnelTable(items = [], emptyMessage = "No funnel activity in this period.") {
+  if (!items.length) return analyticsEmpty(emptyMessage);
+  return `
+    <div class="analytics-table-wrap">
+      <table class="analytics-table analytics-funnel-table">
+        <thead><tr><th>Item</th><th>Views</th><th>Cart adds</th><th>Checkout</th><th>Purchases</th><th>View &rarr; Cart</th><th>Cart &rarr; Checkout</th><th>Checkout &rarr; Purchase</th><th>Overall</th></tr></thead>
+        <tbody>${items.map(item => `<tr>
+          <td>${escapeHtml(item.name || item.source || "Unknown")}</td>
+          <td>${analyticsNumber(item.views)}</td><td>${analyticsNumber(item.add_to_cart)}</td>
+          <td>${analyticsNumber(item.checkout_started)}</td><td>${analyticsNumber(item.purchases)}</td>
+          <td>${analyticsNumber(item.view_to_cart_rate, 1)}%</td><td>${analyticsNumber(item.cart_to_checkout_rate, 1)}%</td>
+          <td>${analyticsNumber(item.checkout_to_purchase_rate, 1)}%</td><td>${analyticsNumber(item.overall_conversion_rate, 1)}%</td>
+        </tr>`).join("")}</tbody>
+      </table>
+    </div>`;
+}
+
+function analyticsFunnelBreakdowns(data = {}) {
+  const funnel = data.funnel || {};
+  const lists = funnel.lists || {};
+  return `
+    <section class="analytics-card"><header><span>Product funnel</span><h3>Conversion by product</h3></header>${analyticsFunnelTable(funnel.products)}</section>
+    <section class="analytics-detail-grid analytics-funnel-breakdowns">
+      <article class="analytics-card"><header><span>Player</span><h3>Conversion by player</h3></header>${analyticsFunnelTable(funnel.players)}</article>
+      <article class="analytics-card"><header><span>Team / country</span><h3>Conversion by team or country</h3></header>${analyticsFunnelTable(funnel.teams)}</article>
+      <article class="analytics-card analytics-card-wide"><header><span>Traffic source</span><h3>Google, Bing, TikTok, social, direct, and other</h3></header>${analyticsFunnelTable(funnel.sources)}</article>
+    </section>
+    <section class="analytics-intelligence analytics-funnel-opportunities">
+      <article class="analytics-card"><header><span>Opportunity</span><h3>Most viewed with low Add-to-Cart</h3></header>${analyticsFunnelTable(lists.most_viewed_low_add)}</article>
+      <article class="analytics-card"><header><span>Checkout drop-off</span><h3>High Add-to-Cart, low checkout</h3></header>${analyticsFunnelTable(lists.high_add_low_checkout)}</article>
+      <article class="analytics-card"><header><span>Purchase drop-off</span><h3>High checkout-start, low purchase</h3></header>${analyticsFunnelTable(lists.high_checkout_low_purchase)}</article>
+      <article class="analytics-card"><header><span>Best products</span><h3>Highest-converting products</h3></header>${analyticsFunnelTable(lists.highest_converting)}</article>
+      <article class="analytics-card"><header><span>Best acquisition</span><h3>Highest-converting traffic sources</h3></header>${analyticsFunnelTable(lists.highest_converting_sources)}</article>
+      <article class="analytics-card"><header><span>Unconverted interest</span><h3>Products with views and zero purchases</h3></header>${analyticsFunnelTable(lists.views_zero_purchases)}</article>
+    </section>`;
+}
+
 function renderAnalytics() {
   if (!analyticsDashboard || !analyticsData) return;
   const data = analyticsData;
@@ -642,7 +702,8 @@ function renderAnalytics() {
       ].map(([label, value, note]) => `<article><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong><small>${escapeHtml(note)}</small></article>`).join("")}
     </section>
 
-    ${analyticsConversionFunnel(data)}
+    ${analyticsShopifyFunnel(data)}
+    ${analyticsFunnelBreakdowns(data)}
 
     <section class="analytics-chart-grid">
       <article class="analytics-card analytics-card-wide"><header><span>Traffic</span><h3>Daily visitors and page views</h3></header>${analyticsLineChart(data.daily, [{ key: "visitors", label: "Visitors" }, { key: "page_views", label: "Page views" }])}</article>
@@ -740,21 +801,19 @@ async function loadAnalytics() {
 
 function exportAnalyticsCsv() {
   if (!analyticsData?.products?.length) return;
+  const funnelByProduct = new Map((analyticsData.funnel?.products || []).map(item => [String(item.id), item]));
   const rows = [
-    ["Product ID", "Product", "Category", "Views", "Marketplace Clicks", "eBay Clicks", "Depop Clicks", "CTR", "Inventory", "Views Last 30 Days", "Last Viewed"],
-    ...analyticsData.products.map(item => [
-      item.id,
-      item.name,
-      item.category,
-      item.views,
-      item.clicks,
-      item.ebay_clicks,
-      item.depop_clicks,
-      `${item.ctr}%`,
-      item.quantity,
-      item.views_30d,
-      item.last_viewed_at
-    ])
+    ["Product ID", "Product", "Category", "Views", "Add to Cart", "Checkout Started", "Purchases", "View to Cart %", "Cart to Checkout %", "Checkout to Purchase %", "Overall Conversion %", "Marketplace Clicks", "eBay Clicks", "Depop Clicks", "Marketplace CTR", "Inventory", "Views Last 30 Days", "Last Viewed"],
+    ...analyticsData.products.map(item => {
+      const funnel = funnelByProduct.get(String(item.id)) || {};
+      return [
+        item.id, item.name, item.category, item.views, funnel.add_to_cart || 0,
+        funnel.checkout_started || 0, funnel.purchases || 0, funnel.view_to_cart_rate || 0,
+        funnel.cart_to_checkout_rate || 0, funnel.checkout_to_purchase_rate || 0,
+        funnel.overall_conversion_rate || 0, item.clicks, item.ebay_clicks, item.depop_clicks,
+        `${item.ctr}%`, item.quantity, item.views_30d, item.last_viewed_at
+      ];
+    })
   ];
   const blob = new Blob([rows.map(row => row.map(csvValue).join(",")).join("\n")], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);

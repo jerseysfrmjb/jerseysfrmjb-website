@@ -72,9 +72,10 @@ From an authenticated Cloudflare Wrangler session in the repository root, run ex
 
 ```powershell
 npx wrangler d1 execute jerseysfrmjb_inventory --remote --file=migrations/0016_shopify_checkout.sql
+npx wrangler d1 execute jerseysfrmjb_inventory --remote --file=migrations/0017_conversion_funnel.sql
 ```
 
-This migration adds Shopify mapping, sync, webhook, order, refund, and commerce-event tables. It does not enable syncing or checkout and does not change existing inventory quantities.
+These migrations add Shopify mapping, sync, webhook, order, refund, and privacy-safe conversion-event fields. They do not enable syncing or checkout and do not change existing inventory quantities.
 
 ## 5. Connection, IDs, and webhooks
 

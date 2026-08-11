@@ -1,4 +1,4 @@
-const STOREFRONT_STYLE_VERSION = "site-audit-1";
+const STOREFRONT_STYLE_VERSION = "checkout-audit-1";
 
 document.querySelectorAll('link[rel="stylesheet"][href*="styles.css"]').forEach(stylesheet => {
   const url = new URL(stylesheet.href, window.location.href);

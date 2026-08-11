@@ -2,7 +2,7 @@ import { ensureAnalyticsSchema } from "../_analyticsSchema.js";
 
 const EVENT_TYPES = new Set(["page_view", "product_view", "marketplace_click", "search", "engagement"]);
 const MARKETPLACES = new Set(["eBay", "Depop", "Facebook", "Instagram", "Pinterest", "Other"]);
-const TRAFFIC_SOURCES = new Set(["Google", "Bing", "Pinterest", "Facebook", "Instagram", "Direct", "Other"]);
+const TRAFFIC_SOURCES = new Set(["Google", "Bing", "TikTok", "Pinterest", "Facebook", "Instagram", "Direct", "Other"]);
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {

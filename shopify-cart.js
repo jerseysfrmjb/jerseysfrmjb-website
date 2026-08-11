@@ -2,8 +2,6 @@
   "use strict";
 
   const CART_KEY = "jfb_shopify_cart_id";
-  const VISITOR_KEY = "jfb_commerce_visitor";
-  const SESSION_KEY = "jfb_commerce_session";
   const REQUEST_TIMEOUT_MS = 15000;
 
   function ensureCartInterface() {
@@ -33,17 +31,11 @@
   let busy = false;
   let cartTrigger = null;
 
-  function identifier(key, session) {
+  function analyticsContext() {
     try {
-      const storage = session ? sessionStorage : localStorage;
-      let value = storage.getItem(key);
-      if (!value) {
-        value = crypto.randomUUID();
-        storage.setItem(key, value);
-      }
-      return value;
+      return window.JerseysAnalytics?.commerceContext?.() || null;
     } catch {
-      return "";
+      return null;
     }
   }
 
@@ -76,7 +68,7 @@
       response = await fetch("/api/shopify/cart", {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ ...body, ...(analyticsContext() || {}) }),
         signal: controller.signal
       });
     } catch (error) {
@@ -92,10 +84,11 @@
   }
 
   function commerceEvent(eventType, details = {}) {
+    const context = analyticsContext();
+    if (!context) return;
     const payload = {
       event_type: eventType,
-      visitor_id: identifier(VISITOR_KEY, false),
-      session_id: identifier(SESSION_KEY, true),
+      ...context,
       cart_id: cart?.id || cartId(),
       ...details
     };
@@ -107,7 +100,8 @@
     }).catch(() => {});
     const gaName = { AddToCart: "add_to_cart", ViewCart: "view_cart", InitiateCheckout: "begin_checkout" }[eventType];
     if (gaName && typeof window.gtag === "function") {
-      window.gtag("event", gaName, { currency: "USD", value: Number(details.value || 0), items: details.product_id ? [{ item_id: details.product_id }] : [] });
+      const productIds = [...new Set([details.product_id, ...(details.product_ids || [])].filter(Boolean))];
+      window.gtag("event", gaName, { currency: "USD", value: Number(details.value || 0), items: productIds.map(item_id => ({ item_id })) });
     }
     if (typeof window.fbq === "function") {
       if (eventType === "AddToCart") window.fbq("track", "AddToCart", { content_ids: details.product_id ? [details.product_id] : [], content_type: "product", currency: "USD", value: Number(details.value || 0) });
@@ -174,7 +168,7 @@
       saveCart(data.cart);
       commerceEvent("AddToCart", { product_id: card.dataset.productId, value: Number(card.dataset.productPrice || 0) });
       if (buyNow && data.cart?.checkout_url) {
-        commerceEvent("InitiateCheckout", { product_id: card.dataset.productId, value: data.cart.subtotal });
+        commerceEvent("InitiateCheckout", { product_id: card.dataset.productId, product_ids: [card.dataset.productId], value: data.cart.subtotal });
         window.location.assign(data.cart.checkout_url);
         return;
       }
@@ -206,9 +200,23 @@
       finally { busy = false; }
       return;
     }
-    if (event.target.closest("[data-shopify-checkout]") && cart?.checkout_url) {
-      commerceEvent("InitiateCheckout", { value: cart.subtotal });
-      window.location.assign(cart.checkout_url);
+    const checkout = event.target.closest("[data-shopify-checkout]");
+    if (checkout && cart?.checkout_url) {
+      if (busy) return;
+      busy = true;
+      checkout.disabled = true;
+      try {
+        const data = await api({ action: "prepare_checkout", cart_id: cartId() });
+        saveCart(data.cart);
+        const productIds = [...new Set((data.cart?.lines || []).map(item => item.product_id).filter(Boolean))];
+        commerceEvent("InitiateCheckout", { product_ids: productIds, value: data.cart?.subtotal || 0 });
+        window.location.assign(data.cart.checkout_url);
+      } catch (error) {
+        linesElement.insertAdjacentHTML("afterbegin", `<p class="shopify-cart-error">${escapeHtml(error.message)}</p>`);
+      } finally {
+        busy = false;
+        checkout.disabled = false;
+      }
     }
   });
 

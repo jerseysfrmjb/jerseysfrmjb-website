@@ -4880,6 +4880,19 @@
   gap: 10px;
 }
 
+.analytics-checkout-funnel {
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
+}
+
+.analytics-funnel-table {
+  min-width: 940px;
+}
+
+.analytics-funnel-breakdowns > .analytics-card,
+.analytics-funnel-opportunities > .analytics-card {
+  min-width: 0;
+}
+
 .analytics-funnel > i {
   align-self: center;
   color: var(--analytics-accent);

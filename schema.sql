@@ -490,8 +490,11 @@ CREATE TABLE IF NOT EXISTS shopify_commerce_events (
   event_type TEXT NOT NULL CHECK (event_type IN ('AddToCart', 'ViewCart', 'InitiateCheckout', 'Purchase')),
   visitor_id TEXT NOT NULL DEFAULT '',
   session_id TEXT NOT NULL DEFAULT '',
+  session_id_hash TEXT NOT NULL DEFAULT '',
   product_id TEXT NOT NULL DEFAULT '',
   cart_id_hash TEXT NOT NULL DEFAULT '',
+  product_ids_json TEXT NOT NULL DEFAULT '[]',
+  traffic_source TEXT NOT NULL DEFAULT 'Other',
   shopify_order_id TEXT NOT NULL DEFAULT '',
   value REAL,
   currency TEXT NOT NULL DEFAULT 'USD',
@@ -505,3 +508,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_shopify_commerce_events_dedupe
 
 CREATE INDEX IF NOT EXISTS idx_shopify_commerce_events_type_time
   ON shopify_commerce_events(event_type, occurred_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_shopify_commerce_events_source_time
+  ON shopify_commerce_events(traffic_source, occurred_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_shopify_commerce_events_product_time
+  ON shopify_commerce_events(product_id, occurred_at DESC);

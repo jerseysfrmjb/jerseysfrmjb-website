@@ -1,5 +1,5 @@
-import { addCartLine, createCart, getCart, removeCartLine, updateCartLine } from "./_cart.js";
-import { json, shopifyConfiguration, shopifyGraphql } from "./_shared.js";
+import { addCartLine, createCart, getCart, removeCartLine, updateCartAttributes, updateCartLine } from "./_cart.js";
+import { json, sha256, shopifyConfiguration, shopifyGraphql } from "./_shared.js";
 import { discoverShopifyPublication, normalizeSize, publishShopifyProduct } from "./_products.js";
 
 const ACTIVATE_PRODUCT_MUTATION = `
@@ -10,6 +10,7 @@ const ACTIVATE_PRODUCT_MUTATION = `
     }
   }
 `;
+const TRAFFIC_SOURCES = new Set(["Google", "Bing", "TikTok", "Instagram", "Facebook", "Pinterest", "Direct", "Other"]);
 
 function cleanId(value, limit = 500) {
   const result = String(value || "").trim();
@@ -19,6 +20,39 @@ function cleanId(value, limit = 500) {
 function quantity(value) {
   const number = Math.floor(Number(value));
   return Number.isFinite(number) && number > 0 && number <= 25 ? number : 1;
+}
+
+async function checkoutAttributes(body = {}) {
+  const sessionId = cleanId(body.session_id, 100);
+  const trafficSource = TRAFFIC_SOURCES.has(body.traffic_source) ? body.traffic_source : "Other";
+  if (!sessionId) return [];
+  return [
+    { key: "_jfb_session", value: await sha256(sessionId) },
+    { key: "_jfb_source", value: trafficSource }
+  ];
+}
+
+async function attachProductIds(env, cart) {
+  if (!cart?.lines?.length) return cart;
+  const variantIds = [...new Set(cart.lines.map(line => String(line.variant_id || "")).filter(Boolean))];
+  const candidates = [...new Set(variantIds.flatMap(id => [id, id.match(/(?:^|\/)(\d+)$/)?.[1] || ""]).filter(Boolean))];
+  const mappings = candidates.length
+    ? await env.DB.prepare(`
+        SELECT product_id, shopify_variant_id FROM shopify_variant_mappings
+        WHERE shopify_variant_id IN (${candidates.map(() => "?").join(", ")})
+      `).bind(...candidates).all()
+    : { results: [] };
+  const byVariant = new Map((mappings.results || []).map(row => [
+    String(row.shopify_variant_id || "").match(/(?:^|\/)(\d+)$/)?.[1] || String(row.shopify_variant_id || ""),
+    String(row.product_id || "")
+  ]));
+  return {
+    ...cart,
+    lines: cart.lines.map(line => {
+      const key = String(line.variant_id || "").match(/(?:^|\/)(\d+)$/)?.[1] || String(line.variant_id || "");
+      return { ...line, product_id: byVariant.get(key) || "" };
+    })
+  };
 }
 
 async function mappedVariant(env, productId, size, requestedQuantity) {
@@ -66,15 +100,15 @@ function staleCart(error) {
     && /does not exist|not found|invalid|expired/i.test(message);
 }
 
-async function createOrAddCart(env, action, cartId, line, mapping) {
+async function createOrAddCart(env, action, cartId, line, mapping, cartAttributes) {
   const submit = () => action === "add" && cartId
     ? addCartLine(env, cartId, line)
-    : createCart(env, line);
+    : createCart(env, line, { cartAttributes });
   try {
     return await submit();
   } catch (error) {
     if (action === "add" && cartId && staleCart(error)) {
-      return createCart(env, line);
+      return createCart(env, line, { cartAttributes });
     }
     if (!unpublishedMerchandise(error)) throw error;
     await ensureCheckoutProductPublished(env, mapping);
@@ -87,13 +121,43 @@ async function createOrAddCart(env, action, cartId, line, mapping) {
       } catch (nextError) {
         retryError = nextError;
         if (action === "add" && cartId && staleCart(nextError)) {
-          return createCart(env, line);
+          return createCart(env, line, { cartAttributes });
         }
         if (!unpublishedMerchandise(nextError)) throw nextError;
       }
     }
     throw retryError;
   }
+}
+
+async function validateCartQuantities(env, cart) {
+  const totals = new Map();
+  for (const line of cart?.lines || []) {
+    const variantId = String(line.variant_id || "");
+    const current = totals.get(variantId) || { line_id: line.id, quantity: 0 };
+    current.quantity += Math.max(0, Math.floor(Number(line.quantity || 0)));
+    totals.set(variantId, current);
+  }
+  for (const total of totals.values()) {
+    await validateCartLineQuantity(env, cart, total.line_id, total.quantity);
+  }
+}
+
+async function validateAddToCart(env, cartId, line, requestedQuantity) {
+  if (!cartId) return;
+  let existingCart;
+  try {
+    existingCart = await getCart(env, cartId);
+  } catch (error) {
+    if (staleCart(error)) return;
+    throw error;
+  }
+  if (!existingCart?.lines?.length) return;
+  const variantId = String(line.merchandiseId || "");
+  const sameVariant = existingCart.lines.find(item => String(item.variant_id || "") === variantId);
+  if (sameVariant) sameVariant.quantity += requestedQuantity;
+  else existingCart.lines.push({ id: `candidate:${variantId}`, variant_id: variantId, quantity: requestedQuantity });
+  await validateCartQuantities(env, existingCart);
 }
 
 async function validateCartLineQuantity(env, cart, lineId, requestedQuantity) {
@@ -142,7 +206,7 @@ export async function onRequestPost({ request, env }) {
     const cartId = cleanId(body.cart_id);
     if (action === "get") {
       if (!cartId) return json({ cart: null });
-      return json({ cart: await getCart(env, cartId) });
+      return json({ cart: await attachProductIds(env, await getCart(env, cartId)) });
     }
     if (action === "create" || action === "add" || action === "buy_now") {
       const productId = cleanId(body.product_id, 180);
@@ -151,8 +215,19 @@ export async function onRequestPost({ request, env }) {
       if (!productId || !size) return json({ error: "Choose an available size." }, 400);
       const mapping = await mappedVariant(env, productId, size, requestedQuantity);
       const line = lineInput(mapping.shopify_variant_id, requestedQuantity);
-      const cart = await createOrAddCart(env, action, cartId, line, mapping);
-      return json({ cart, checkout: action === "buy_now" });
+      if (action === "add") await validateAddToCart(env, cartId, line, requestedQuantity);
+      const attributes = await checkoutAttributes(body);
+      const cart = await createOrAddCart(env, action, cartId, line, mapping, attributes);
+      return json({ cart: await attachProductIds(env, cart), checkout: action === "buy_now" });
+    }
+    if (action === "prepare_checkout") {
+      if (!cartId) return json({ error: "Your cart is empty." }, 400);
+      let cart = await getCart(env, cartId);
+      if (!cart?.lines?.length) return json({ error: "Your cart is empty." }, 400);
+      await validateCartQuantities(env, cart);
+      const attributes = await checkoutAttributes(body);
+      if (attributes.length) cart = await updateCartAttributes(env, cartId, attributes);
+      return json({ cart: await attachProductIds(env, cart), checkout: true });
     }
     if (action === "update") {
       const lineId = cleanId(body.line_id);
@@ -160,17 +235,20 @@ export async function onRequestPost({ request, env }) {
       const requestedQuantity = Math.max(0, Math.min(25, Math.floor(Number(body.quantity || 0))));
       if (requestedQuantity > 0) {
         const existingCart = await getCart(env, cartId);
-        await validateCartLineQuantity(env, existingCart, lineId, requestedQuantity);
+        const projectedLine = existingCart?.lines?.find(item => item.id === lineId);
+        if (!projectedLine) throw new Error("That cart item is no longer available.");
+        projectedLine.quantity = requestedQuantity;
+        await validateCartQuantities(env, existingCart);
       }
       const cart = requestedQuantity === 0
         ? await removeCartLine(env, cartId, lineId)
         : await updateCartLine(env, cartId, lineId, requestedQuantity);
-      return json({ cart });
+      return json({ cart: await attachProductIds(env, cart) });
     }
     if (action === "remove") {
       const lineId = cleanId(body.line_id);
       if (!cartId || !lineId) return json({ error: "Cart line is required." }, 400);
-      return json({ cart: await removeCartLine(env, cartId, lineId) });
+      return json({ cart: await attachProductIds(env, await removeCartLine(env, cartId, lineId)) });
     }
     return json({ error: "Unsupported cart action." }, 400);
   } catch (error) {
