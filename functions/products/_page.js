@@ -714,7 +714,7 @@ export function renderProductPage(model) {
   <link rel="stylesheet" href="/design-preview.css?v=mobile-grid-2">
   <script src="/meta-pixel.js?v=1" defer></script>
   <script src="/analytics.js?v=conversion-funnel-1" defer></script>
-  <script src="/storefront.js?v=site-audit-1" defer></script>
+  <script src="/storefront.js?v=checkout-audit-1" defer></script>
   ${model.shopify?.available ? '<script src="/shopify-cart.js?v=checkout-audit-1" defer></script>' : ""}
 </head>
 <body class="product-page-body has-mobile-product-actions">
@@ -806,7 +806,7 @@ export function renderProductNotFound(siteOrigin = DEFAULT_SITE_ORIGIN) {
   <link rel="stylesheet" href="/design-preview.css?v=mobile-grid-2">
   <script src="/meta-pixel.js?v=1" defer></script>
   <script src="/analytics.js?v=conversion-funnel-1" defer></script>
-  <script src="/storefront.js?v=site-audit-1" defer></script>
+  <script src="/storefront.js?v=checkout-audit-1" defer></script>
 </head>
 <body class="product-page-body">
   ${headerMarkup()}
