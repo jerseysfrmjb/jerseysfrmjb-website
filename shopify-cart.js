@@ -4,6 +4,7 @@
   const CART_KEY = "jfb_shopify_cart_id";
   const VISITOR_KEY = "jfb_commerce_visitor";
   const SESSION_KEY = "jfb_commerce_session";
+  const REQUEST_TIMEOUT_MS = 15000;
 
   function ensureCartInterface() {
     const header = document.querySelector(".site-header");
@@ -18,7 +19,7 @@
       header?.insertAdjacentElement("afterend", banner);
     }
     if (!document.querySelector("[data-shopify-cart-drawer]")) {
-      document.body.insertAdjacentHTML("beforeend", '<aside class="shopify-cart-drawer" data-shopify-cart-drawer aria-hidden="true"><div class="shopify-cart-head"><div><span>Website cart</span><h2>Your jerseys</h2></div><button type="button" data-shopify-cart-close aria-label="Close cart">&times;</button></div><div data-shopify-cart-lines><p class="shopify-cart-empty">Your cart is empty.</p></div><div class="shopify-cart-footer" data-shopify-cart-footer hidden><p><span>Subtotal</span><strong data-shopify-cart-subtotal>$0.00</strong></p><button type="button" data-shopify-checkout>Continue to Secure Checkout</button><small>Payment and shipping details are entered securely on Shopify.</small></div></aside><button class="shopify-cart-backdrop" type="button" data-shopify-cart-close aria-label="Close cart" hidden></button>');
+      document.body.insertAdjacentHTML("beforeend", '<aside class="shopify-cart-drawer" data-shopify-cart-drawer role="dialog" aria-modal="true" aria-label="Shopping cart" aria-hidden="true"><div class="shopify-cart-head"><div><span>Website cart</span><h2>Your jerseys</h2></div><button type="button" data-shopify-cart-close aria-label="Close cart">&times;</button></div><div data-shopify-cart-lines><p class="shopify-cart-empty">Your cart is empty.</p></div><div class="shopify-cart-footer" data-shopify-cart-footer hidden><p><span>Subtotal</span><strong data-shopify-cart-subtotal>$0.00</strong></p><button type="button" data-shopify-checkout>Continue to Secure Checkout</button><small>Payment and shipping details are entered securely on Shopify.</small></div></aside><button class="shopify-cart-backdrop" type="button" data-shopify-cart-close aria-label="Close cart" hidden></button>');
     }
   }
 
@@ -30,6 +31,7 @@
   const countElements = [...document.querySelectorAll("[data-shopify-cart-count]")];
   let cart = null;
   let busy = false;
+  let cartTrigger = null;
 
   function identifier(key, session) {
     try {
@@ -67,11 +69,22 @@
   }
 
   async function api(body) {
-    const response = await fetch("/api/shopify/cart", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify(body)
-    });
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    let response;
+    try {
+      response = await fetch("/api/shopify/cart", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(body),
+        signal: controller.signal
+      });
+    } catch (error) {
+      if (error?.name === "AbortError") throw new Error("Secure checkout took too long to respond. Please try again.");
+      throw new Error("Could not reach secure checkout. Check your connection and try again.");
+    } finally {
+      window.clearTimeout(timeout);
+    }
     const data = await response.json().catch(() => ({}));
     if (data.clear_cart) saveCart(null);
     if (!response.ok) throw new Error(data.error || "Secure checkout is temporarily unavailable.");
@@ -125,11 +138,13 @@
 
   function openDrawer(track = true) {
     if (!drawer) return;
+    cartTrigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     drawer.setAttribute("aria-hidden", "false");
     drawer.classList.add("open");
     const backdrop = document.querySelector(".shopify-cart-backdrop");
     if (backdrop) backdrop.hidden = false;
     document.body.classList.add("shopify-cart-open");
+    drawer.querySelector("[data-shopify-cart-close]")?.focus();
     if (track) commerceEvent("ViewCart", { value: cart?.subtotal || 0 });
   }
 
@@ -139,6 +154,8 @@
     const backdrop = document.querySelector(".shopify-cart-backdrop");
     if (backdrop) backdrop.hidden = true;
     document.body.classList.remove("shopify-cart-open");
+    if (cartTrigger?.isConnected) cartTrigger.focus();
+    cartTrigger = null;
   }
 
   async function addProduct(card, buyNow) {
@@ -203,6 +220,10 @@
     try { saveCart((await api({ action: "update", cart_id: cartId(), line_id: line.dataset.cartLine, quantity: Number(input.value) })).cart); }
     catch (error) { linesElement.insertAdjacentHTML("afterbegin", `<p class="shopify-cart-error">${escapeHtml(error.message)}</p>`); }
     finally { busy = false; }
+  });
+
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && drawer?.classList.contains("open")) closeDrawer();
   });
 
   if (cartId()) api({ action: "get", cart_id: cartId() }).then(data => saveCart(data.cart)).catch(() => saveCart(null));

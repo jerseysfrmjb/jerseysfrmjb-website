@@ -42,7 +42,7 @@ assert.match(pixelSource, /__jerseysMetaPixelInitialized/);
 assert.match(storefrontSource, /data-meta-product="true"/);
 assert.match(storefrontSource, /JerseysMetaPixel\?\.observeProducts\(grid\)/);
 assert.match(storefrontSource, /JerseysMetaPixel\?\.trackProductView\(card\)/);
-assert.match(headers, /\/meta-pixel\.js\s+Cache-Control: no-store/);
+assert.match(headers, /\/meta-pixel\.js\s+Cache-Control: public, max-age=300, stale-while-revalidate=86400/);
 
 const csp = headers.match(/Content-Security-Policy:\s*([^\r\n]+)/i)?.[1] || "";
 if (csp) {

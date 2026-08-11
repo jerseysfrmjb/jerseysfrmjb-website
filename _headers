@@ -5,15 +5,15 @@
 /admin.js
   Cache-Control: no-store, no-cache, must-revalidate
 /storefront.js
-  Cache-Control: no-store, no-cache, must-revalidate
+  Cache-Control: public, max-age=300, stale-while-revalidate=86400
 /styles.css
-  Cache-Control: no-cache, must-revalidate
+  Cache-Control: public, max-age=300, stale-while-revalidate=86400
 
 /help-widget.css
-  Cache-Control: no-cache, must-revalidate
+  Cache-Control: public, max-age=300, stale-while-revalidate=86400
 /meta-pixel.js
-  Cache-Control: no-store, no-cache, must-revalidate
+  Cache-Control: public, max-age=300, stale-while-revalidate=86400
 /analytics.js
-  Cache-Control: no-store, no-cache, must-revalidate
+  Cache-Control: public, max-age=300, stale-while-revalidate=86400
 /api/*
   Cache-Control: no-store, no-cache, must-revalidate

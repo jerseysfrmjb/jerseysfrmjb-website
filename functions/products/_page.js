@@ -639,7 +639,7 @@ function footerMarkup() {
   <footer class="site-footer">
     <div class="footer-shell">
       <div class="footer-brand">
-        <img src="/assets/jerseysfrmjb-logo.jpg" alt="JerseysFrmJB logo">
+        <img src="/assets/jerseysfrmjb-logo.jpg" alt="JerseysFrmJB logo" width="120" height="120" loading="lazy" decoding="async">
         <a class="footer-main" href="/">JerseysFrmJB</a>
         <p>200+ Jerseys Sold</p>
         <p>Based in Maryland</p>
@@ -710,12 +710,12 @@ export function renderProductPage(model) {
   <script type="application/ld+json">${jsonForHtml(schema)}</script>
   <script type="application/ld+json">${jsonForHtml(breadcrumbs)}</script>
   <script type="application/ld+json">${jsonForHtml(faqSchema(faqs))}</script>
-  <link rel="stylesheet" href="/styles.css?v=product-layout-2">
+  <link rel="stylesheet" href="/styles.css?v=site-audit-1">
   <link rel="stylesheet" href="/design-preview.css?v=mobile-grid-2">
   <script src="/meta-pixel.js?v=1" defer></script>
   <script src="/analytics.js?v=operations-1" defer></script>
-  <script src="/storefront.js?v=filters-simplified-1" defer></script>
-  ${model.shopify?.available ? '<script src="/shopify-cart.js?v=sitewide-cart-1" defer></script>' : ""}
+  <script src="/storefront.js?v=site-audit-1" defer></script>
+  ${model.shopify?.available ? '<script src="/shopify-cart.js?v=site-audit-1" defer></script>' : ""}
 </head>
 <body class="product-page-body has-mobile-product-actions">
   ${headerMarkup(model)}
@@ -786,7 +786,7 @@ export function renderProductPage(model) {
   </main>
   ${mobileActionMarkup(model)}
   ${footerMarkup()}
-  ${model.shopify?.available ? '<aside class="shopify-cart-drawer" data-shopify-cart-drawer aria-hidden="true"><div class="shopify-cart-head"><div><span>Website cart</span><h2>Your jerseys</h2></div><button type="button" data-shopify-cart-close aria-label="Close cart">&times;</button></div><div data-shopify-cart-lines><p>Your cart is empty.</p></div><div class="shopify-cart-footer" data-shopify-cart-footer hidden><p><span>Subtotal</span><strong data-shopify-cart-subtotal>$0.00</strong></p><button type="button" data-shopify-checkout>Continue to Secure Checkout</button><small>Payment and shipping details are entered securely on Shopify.</small></div></aside><button class="shopify-cart-backdrop" type="button" data-shopify-cart-close aria-label="Close cart" hidden></button>' : ""}
+  ${model.shopify?.available ? '<aside class="shopify-cart-drawer" data-shopify-cart-drawer role="dialog" aria-modal="true" aria-label="Shopping cart" aria-hidden="true"><div class="shopify-cart-head"><div><span>Website cart</span><h2>Your jerseys</h2></div><button type="button" data-shopify-cart-close aria-label="Close cart">&times;</button></div><div data-shopify-cart-lines><p>Your cart is empty.</p></div><div class="shopify-cart-footer" data-shopify-cart-footer hidden><p><span>Subtotal</span><strong data-shopify-cart-subtotal>$0.00</strong></p><button type="button" data-shopify-checkout>Continue to Secure Checkout</button><small>Payment and shipping details are entered securely on Shopify.</small></div></aside><button class="shopify-cart-backdrop" type="button" data-shopify-cart-close aria-label="Close cart" hidden></button>' : ""}
 </body>
 </html>`;
 }
@@ -802,11 +802,11 @@ export function renderProductNotFound(siteOrigin = DEFAULT_SITE_ORIGIN) {
   <meta name="description" content="This jersey could not be found in the current JerseysFrmJB inventory.">
   <meta name="robots" content="noindex,follow">
   <link rel="canonical" href="${escapeHtml(`${origin}/shop-all`)}">
-  <link rel="stylesheet" href="/styles.css?v=product-layout-2">
+  <link rel="stylesheet" href="/styles.css?v=site-audit-1">
   <link rel="stylesheet" href="/design-preview.css?v=mobile-grid-2">
   <script src="/meta-pixel.js?v=1" defer></script>
   <script src="/analytics.js?v=operations-1" defer></script>
-  <script src="/storefront.js?v=filters-simplified-1" defer></script>
+  <script src="/storefront.js?v=site-audit-1" defer></script>
 </head>
 <body class="product-page-body">
   ${headerMarkup()}

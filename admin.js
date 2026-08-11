@@ -4961,6 +4961,26 @@ function shopifyStatusLabel(status = "") {
   })[status] || String(status || "Not mapped").replaceAll("_", " ");
 }
 
+function updateShopifyActionState({ busy = false } = {}) {
+  const configuration = shopifyData?.configuration || {};
+  const canSync = Boolean(configuration.sync_enabled && configuration.admin_configured);
+  const hasRetryableProducts = Boolean((shopifyData?.products || []).some(product => ["failed", "needs_review"].includes(product.sync_status)));
+  [previewShopify, previewShopifyAll, suggestShopifyPilot].filter(Boolean).forEach(button => {
+    button.disabled = busy;
+    button.toggleAttribute("aria-busy", busy);
+  });
+  [runShopify, syncShopifyAll].filter(Boolean).forEach(button => {
+    button.disabled = busy || !canSync;
+    button.toggleAttribute("aria-busy", busy);
+    button.title = canSync ? "" : "Enable Shopify sync and configure the Admin API before applying changes.";
+  });
+  if (retryShopifySync) {
+    retryShopifySync.disabled = busy || !canSync || !hasRetryableProducts;
+    retryShopifySync.toggleAttribute("aria-busy", busy);
+    retryShopifySync.title = canSync ? (hasRetryableProducts ? "" : "There are no failed Shopify products to retry.") : "Enable Shopify sync and configure the Admin API before retrying changes.";
+  }
+}
+
 function renderShopifyAdmin() {
   if (!shopifyData) return;
   const configuration = shopifyData.configuration || {};
@@ -4997,6 +5017,7 @@ function renderShopifyAdmin() {
       ? shopifyData.failed_events.map(event => `<article class="shopify-webhook-row"><div><strong>${escapeHtml(event.topic)}</strong><span>${escapeHtml(event.error || "Processing failed")}</span></div><button class="shop-button secondary-admin" type="button" data-shopify-retry-event="${escapeHtml(event.event_id)}">Retry</button></article>`).join("")
       : '<p class="empty-featured">No failed Shopify events.</p>';
   }
+  updateShopifyActionState();
 }
 
 function renderShopifySetupAudit(setup = {}) {
@@ -5086,6 +5107,11 @@ function renderShopifyPreview(data) {
 
 async function runShopifySync({ dryRun = true, scope = "selected", productIds = [] } = {}) {
   if (shopifyLoading) return;
+  if (!dryRun && !(shopifyData?.configuration?.sync_enabled && shopifyData?.configuration?.admin_configured)) {
+    if (shopifyAdminStatus) shopifyAdminStatus.textContent = "Shopify sync is safely disabled. Enable the sync flag and configure the Admin API before applying changes; dry-run previews remain available.";
+    updateShopifyActionState();
+    return;
+  }
   const ids = productIds.length ? productIds : [...selectedShopifyProducts];
   if (scope !== "all" && !ids.length) {
     if (shopifyAdminStatus) shopifyAdminStatus.textContent = "Select at least one product first.";
@@ -5096,8 +5122,7 @@ async function runShopifySync({ dryRun = true, scope = "selected", productIds = 
   const request = { dryRun, scope, productIds: ids };
   lastShopifyRequest = request;
   shopifyLoading = true;
-  const actionButtons = [previewShopify, runShopify, previewShopifyAll, syncShopifyAll, retryShopifySync, suggestShopifyPilot].filter(Boolean);
-  actionButtons.forEach(button => { button.disabled = true; button.setAttribute("aria-busy", "true"); });
+  updateShopifyActionState({ busy: true });
   if (shopifyPreviewResults) {
     shopifyPreviewResults.hidden = false;
     shopifyPreviewResults.innerHTML = `<div class="shopify-request-progress" role="status" aria-live="polite"><strong>${dryRun ? "Preparing safe dry-run preview" : "Preparing Shopify sync"}</strong><span>Reading ${scope === "all" ? "the live inventory" : `${ids.length} selected product${ids.length === 1 ? "" : "s"}`} and validating the request. No products will be created while dry-run mode is active.</span><i></i></div>`;
@@ -5120,7 +5145,7 @@ async function runShopifySync({ dryRun = true, scope = "selected", productIds = 
     }
   } finally {
     shopifyLoading = false;
-    actionButtons.forEach(button => { button.disabled = false; button.removeAttribute("aria-busy"); });
+    updateShopifyActionState();
   }
 }
 

@@ -1,4 +1,4 @@
-const STOREFRONT_STYLE_VERSION = "engagement-tools-1";
+const STOREFRONT_STYLE_VERSION = "site-audit-1";
 
 document.querySelectorAll('link[rel="stylesheet"][href*="styles.css"]').forEach(stylesheet => {
   const url = new URL(stylesheet.href, window.location.href);
@@ -20,7 +20,7 @@ function enhanceMobileDrawer() {
   drawer.dataset.enhanced = "true";
   drawer.insertAdjacentHTML("afterbegin", `
     <div class="drawer-brand">
-      <img src="/assets/jerseysfrmjb-logo.jpg" alt="JerseysFrmJB logo">
+      <img src="/assets/jerseysfrmjb-logo.jpg" alt="JerseysFrmJB logo" width="44" height="44" loading="lazy" decoding="async">
       <div>
         <strong>JerseysFrmJB</strong>
         <span>Football Jerseys</span>
@@ -53,6 +53,9 @@ function setDrawer(open) {
   backdrop.classList.toggle("open", open);
   drawer.setAttribute("aria-hidden", String(!open));
   toggle.setAttribute("aria-expanded", String(open));
+  document.body.classList.toggle("mobile-drawer-open", open);
+  if (open) closeButton?.focus();
+  else if (document.activeElement && drawer.contains(document.activeElement)) toggle.focus();
 }
 
 if (toggle && closeButton && backdrop) {
@@ -60,6 +63,9 @@ if (toggle && closeButton && backdrop) {
   toggle.addEventListener("click", () => setDrawer(true));
   closeButton.addEventListener("click", () => setDrawer(false));
   backdrop.addEventListener("click", () => setDrawer(false));
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && drawer.classList.contains("open")) setDrawer(false);
+  });
 }
 
 function escapeHtml(value = "") {
@@ -512,15 +518,11 @@ function filterSizeTokens(item) {
   return [...new Set(labels.filter(Boolean).map(label => tokenMap[label] || label.toLowerCase()))];
 }
 
-async function fetchSiteSettings() {
-  try {
-    const response = await fetch("/api/settings", { cache: "no-store", headers: { Accept: "application/json" } });
-    if (!response.ok) return {};
-    const data = await response.json();
-    return data.settings || {};
-  } catch (error) {
-    return {};
-  }
+let homepageInventoryRequest = null;
+
+function fetchHomepageInventory() {
+  if (!homepageInventoryRequest) homepageInventoryRequest = fetchInventory({ featured: "true" });
+  return homepageInventoryRequest;
 }
 
 function applyHomepageBanner(message = "") {
@@ -549,7 +551,9 @@ function applyHomepageStat(message = "") {
 }
 
 async function loadSiteSettings() {
-  const settings = await fetchSiteSettings();
+  if (!document.querySelector(".restock-banner, .ticker-line, .brand-stats, [data-featured-grid]")) return;
+  const data = await fetchHomepageInventory();
+  const settings = data.settings || {};
   applyHomepageBanner(settings.homepage_banner_message || "");
   applyHomepageTicker(settings.homepage_ticker_message || "");
   applyHomepageStat(settings.homepage_stat_message || "");
@@ -557,25 +561,40 @@ async function loadSiteSettings() {
 
 loadSiteSettings();
 
+async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
 async function fetchInventory(params = {}) {
   const query = new URLSearchParams(params);
   const apiUrl = `/api/inventory${query.toString() ? `?${query}` : ""}`;
   try {
-    const response = await fetch(apiUrl, { cache: "no-store", headers: { Accept: "application/json" } });
+    const response = await fetchWithTimeout(apiUrl, { cache: "no-store", headers: { Accept: "application/json" } });
     if (!response.ok) throw new Error("API unavailable");
     return await response.json();
   } catch (error) {
-    const fallback = await fetch("data/inventory.json", { cache: "no-store", headers: { Accept: "application/json" } });
-    const data = await fallback.json();
-    let items = data.items || [];
-    if (params.category) items = items.filter(item => item.category === params.category);
-    if (params.featured === "true") {
-      items = items
-        .filter(item => item.featured)
-        .sort((a, b) => Number(a.featured_order || 999) - Number(b.featured_order || 999));
-      return { items };
+    try {
+      const fallback = await fetchWithTimeout("/data/inventory.json", { cache: "no-store", headers: { Accept: "application/json" } }, 5000);
+      if (!fallback.ok) throw new Error("Fallback inventory unavailable");
+      const data = await fallback.json();
+      let items = data.items || [];
+      if (params.category) items = items.filter(item => item.category === params.category);
+      if (params.featured === "true") {
+        items = items
+          .filter(item => item.featured)
+          .sort((a, b) => Number(a.featured_order || 999) - Number(b.featured_order || 999));
+        return { items };
+      }
+      return { items: sortInventory(items) };
+    } catch (fallbackError) {
+      return { items: [], settings: {}, error: "Inventory is temporarily unavailable. Please refresh in a moment." };
     }
-    return { items: sortInventory(items) };
   }
 }
 
@@ -930,6 +949,10 @@ async function renderInventoryGrids() {
   await Promise.all(grids.map(async grid => {
     const params = grid.dataset.category ? { category: grid.dataset.category } : {};
     const data = await fetchInventory(params);
+    if (data.error) {
+      grid.innerHTML = `<p class="inventory-error" role="alert">${escapeHtml(data.error)}</p>`;
+      return;
+    }
     const items = sortInventory(data.items || []);
     items.forEach(item => STOREFRONT_PRODUCTS.set(String(item.id), item));
     grid.innerHTML = items.map(renderProductCard).join("");
@@ -948,7 +971,11 @@ async function renderInventoryGrids() {
 async function renderFeaturedGrid() {
   const grid = document.querySelector("[data-featured-grid]");
   if (!grid) return;
-  const data = await fetchInventory({ featured: "true" });
+  const data = await fetchHomepageInventory();
+  if (data.error) {
+    grid.innerHTML = `<p class="inventory-error" role="alert">${escapeHtml(data.error)}</p>`;
+    return;
+  }
   const items = [...(data.items || [])]
     .filter(item => item.featured)
     .sort((a, b) => Number(a.featured_order || 999) - Number(b.featured_order || 999))
@@ -958,16 +985,6 @@ async function renderFeaturedGrid() {
   window.JerseysMetaPixel?.observeProducts(grid);
   window.JerseysAnalytics?.observeProducts(grid);
   window.JerseysFavorites?.refresh();
-}
-
-async function renderHomepageStats() {
-  const stats = document.querySelector(".brand-stats");
-  if (!stats) return;
-  const data = await fetchInventory();
-  const availableProducts = (data.items || []).filter(isAvailable).length;
-  const inventoryTotal = (data.items || []).reduce((sum, item) => sum + totalQuantity(item), 0);
-  const statCards = [...stats.querySelectorAll("div")];
-  if (statCards[2] && availableProducts) statCards[2].querySelector("small")?.remove();
 }
 
 function formatFeedbackDate(value = "") {
@@ -1013,7 +1030,7 @@ async function loadMarketplaceFeedback(marketplace) {
   }
 
   try {
-    const response = await fetch(`/api/${marketplace}-feedback`, {
+    const response = await fetchWithTimeout(`/api/${marketplace}-feedback`, {
       cache: "no-store",
       headers: { Accept: "application/json" }
     });
@@ -1045,7 +1062,6 @@ async function renderMarketplaceFeedback() {
 initProductLightbox();
 renderInventoryGrids();
 renderFeaturedGrid();
-renderHomepageStats();
 renderMarketplaceFeedback().finally(() => {
   initSliders();
   initReviewLightbox();
@@ -1135,7 +1151,7 @@ function createFavoritesManager() {
   const root = document.createElement("div");
   root.className = "favorites-widget";
   root.innerHTML = `
-    <button class="favorites-launcher" type="button" aria-expanded="false"><span aria-hidden="true">&#9825;</span><b>Saved Jerseys</b><small data-favorites-count>0</small></button>
+    <button class="favorites-launcher" type="button" aria-label="Open saved jerseys" aria-expanded="false"><span aria-hidden="true">&#9825;</span><b>Saved Jerseys</b><small data-favorites-count>0</small></button>
     <div class="favorites-overlay" data-favorites-overlay hidden></div>
     <section class="favorites-panel" aria-label="Saved jerseys" hidden>
       <header><div><span>Your shortlist</span><h2>Saved Jerseys</h2></div><button type="button" data-favorites-close aria-label="Close saved jerseys">&times;</button></header>
@@ -1242,7 +1258,7 @@ function createHelpWidget() {
   if (!document.querySelector('link[data-help-widget-style]')) {
     const widgetStyle = document.createElement("link");
     widgetStyle.rel = "stylesheet";
-    widgetStyle.href = "/help-widget.css?v=product-actions-1";
+    widgetStyle.href = "/help-widget.css?v=site-audit-1";
     widgetStyle.dataset.helpWidgetStyle = "";
     document.head.appendChild(widgetStyle);
   }
