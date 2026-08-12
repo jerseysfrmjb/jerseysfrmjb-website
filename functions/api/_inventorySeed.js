@@ -13,16 +13,26 @@ export const seedInventory = {
           "alt": "Lionel Messi Argentina 2026 World Cup home jersey back"
         }
       ],
-      "size": "Medium",
+      "size": "M",
       "price": 55,
+      "platform_prices": {
+        "Depop": 55,
+        "eBay": 55
+      },
       "category": "world",
       "name": "Lionel Messi #10 | Argentina 2026 World Cup Home",
-      "quantity": 1,
+      "quantity": 2,
       "links": {
         "depop": "https://www.depop.com/jerseysfrmjb/",
         "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
       },
-      "featured": false
+      "featured": true,
+      "featured_order": 2,
+      "sizes": {
+        "M": 2
+      },
+      "new_arrival": true,
+      "date_added": "2026-07-22"
     },
     {
       "sort_order": 20,
@@ -37,16 +47,25 @@ export const seedInventory = {
           "alt": "Cristiano Ronaldo Portugal 2026 World Cup home jersey back"
         }
       ],
-      "size": "Medium",
+      "size": "M",
       "price": 55,
+      "platform_prices": {
+        "Depop": 55,
+        "eBay": 55
+      },
       "category": "world",
       "name": "Cristiano Ronaldo #7 | Portugal 2026 World Cup Home",
-      "quantity": 1,
+      "quantity": 4,
       "links": {
         "depop": "https://www.depop.com/jerseysfrmjb/",
         "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
       },
-      "featured": false
+      "featured": false,
+      "sizes": {
+        "M": 4
+      },
+      "new_arrival": true,
+      "date_added": "2026-08-12"
     },
     {
       "sort_order": 30,
@@ -61,16 +80,25 @@ export const seedInventory = {
           "alt": "Jude Bellingham England 2026 World Cup away jersey back"
         }
       ],
-      "size": "Medium",
+      "size": "M",
       "price": 55,
+      "platform_prices": {
+        "Depop": 50,
+        "eBay": 55
+      },
       "category": "world",
       "name": "Jude Bellingham #10 | England 2026 World Cup Away",
-      "quantity": 1,
+      "quantity": 2,
       "links": {
         "depop": "https://www.depop.com/jerseysfrmjb/",
         "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
       },
-      "featured": false
+      "featured": false,
+      "sizes": {
+        "M": 2
+      },
+      "new_arrival": true,
+      "date_added": "2026-07-22"
     },
     {
       "sort_order": 40,
@@ -85,16 +113,26 @@ export const seedInventory = {
           "alt": "Lamine Yamal Spain 2026 World Cup home jersey back"
         }
       ],
-      "size": "Medium",
+      "size": "M",
       "price": 55,
+      "platform_prices": {
+        "Depop": 55,
+        "eBay": 55
+      },
       "category": "world",
       "name": "Lamine Yamal #19 | Spain 2026 World Cup Home",
-      "quantity": 1,
+      "quantity": 2,
       "links": {
         "depop": "https://www.depop.com/jerseysfrmjb/",
         "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
       },
-      "featured": false
+      "featured": true,
+      "featured_order": 3,
+      "sizes": {
+        "M": 2
+      },
+      "new_arrival": true,
+      "date_added": "2026-07-22"
     },
     {
       "sort_order": 50,
@@ -135,6 +173,10 @@ export const seedInventory = {
       ],
       "size": "Small & Medium",
       "price": 55,
+      "platform_prices": {
+        "Depop": 50,
+        "eBay": 55
+      },
       "category": "world",
       "name": "Florian Wirtz #17 | Germany 2026 World Cup Home",
       "quantity": 2,
@@ -142,7 +184,7 @@ export const seedInventory = {
         "depop": "https://www.depop.com/jerseysfrmjb/",
         "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
       },
-      "featured": true
+      "featured": false
     },
     {
       "sort_order": 70,
@@ -159,6 +201,10 @@ export const seedInventory = {
       ],
       "size": "Medium",
       "price": 55,
+      "platform_prices": {
+        "Depop": 50,
+        "eBay": 55
+      },
       "category": "world",
       "name": "Neymar Jr #10 | Brazil 2026 World Cup Home",
       "quantity": 1,
@@ -183,6 +229,10 @@ export const seedInventory = {
       ],
       "size": "Medium",
       "price": 55,
+      "platform_prices": {
+        "Depop": 50,
+        "eBay": 55
+      },
       "category": "world",
       "name": "Michael Olise #11 | France 2026 World Cup Home",
       "quantity": 0,
@@ -205,16 +255,21 @@ export const seedInventory = {
           "alt": "Erling Haaland Norway 2026 World Cup home jersey back"
         }
       ],
-      "size": "Medium",
+      "size": "M",
       "price": 55,
       "category": "world",
       "name": "Erling Haaland #9 | Norway 2026 World Cup Home",
-      "quantity": 0,
+      "quantity": 4,
       "links": {
         "depop": "https://www.depop.com/jerseysfrmjb/",
         "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
       },
-      "featured": false
+      "featured": false,
+      "sizes": {
+        "M": 4
+      },
+      "new_arrival": true,
+      "date_added": "2026-08-05"
     },
     {
       "sort_order": 95,
@@ -256,16 +311,27 @@ export const seedInventory = {
           "alt": "Kylian Mbappe France 2026 World Cup home jersey back"
         }
       ],
-      "size": "Medium",
+      "size": "M, 4XL",
       "price": 55,
+      "platform_prices": {
+        "Depop": 50,
+        "eBay": 55
+      },
       "category": "world",
       "name": "Kylian Mbappe #10 | France 2026 World Cup Home",
-      "quantity": 0,
+      "quantity": 3,
       "links": {
         "depop": "https://www.depop.com/jerseysfrmjb/",
         "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
       },
-      "featured": false
+      "featured": true,
+      "featured_order": 1,
+      "sizes": {
+        "M": 2,
+        "4XL": 1
+      },
+      "new_arrival": true,
+      "date_added": "2026-07-22"
     },
     {
       "sort_order": 110,
@@ -400,16 +466,25 @@ export const seedInventory = {
           "alt": "Raul Mexico 2026 World Cup third black jersey back"
         }
       ],
-      "size": "Large",
+      "size": "L",
       "price": 55,
+      "platform_prices": {
+        "Depop": 50,
+        "eBay": 55
+      },
       "category": "world",
       "name": "Raul #9 | Mexico 2026 World Cup Third (Black)",
-      "quantity": 0,
+      "quantity": 2,
       "links": {
         "depop": "https://www.depop.com/jerseysfrmjb/",
         "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
       },
-      "featured": false
+      "featured": false,
+      "sizes": {
+        "L": 2
+      },
+      "new_arrival": true,
+      "date_added": "2026-07-22"
     },
     {
       "sort_order": 170,
@@ -424,16 +499,25 @@ export const seedInventory = {
           "alt": "Lamine Yamal Spain 2026 World Cup away jersey back"
         }
       ],
-      "size": "Medium",
+      "size": "2XL",
       "price": 55,
+      "platform_prices": {
+        "Depop": 50,
+        "eBay": 55
+      },
       "category": "world",
       "name": "Lamine Yamal #19 | Spain 2026 World Cup Away",
-      "quantity": 0,
+      "quantity": 1,
       "links": {
         "depop": "https://www.depop.com/jerseysfrmjb/",
         "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
       },
-      "featured": false
+      "featured": false,
+      "sizes": {
+        "2XL": 1
+      },
+      "new_arrival": true,
+      "date_added": "2026-07-22"
     },
     {
       "sort_order": 180,
@@ -450,6 +534,10 @@ export const seedInventory = {
       ],
       "size": "Medium",
       "price": 55,
+      "platform_prices": {
+        "Depop": 50,
+        "eBay": 55
+      },
       "category": "world",
       "name": "Christian Pulisic #10 | USA 2026 World Cup Away",
       "quantity": 0,
@@ -472,12 +560,14 @@ export const seedInventory = {
           "alt": "Jude Bellingham England 2026 World Cup home jersey back"
         }
       ],
-      "size": "Medium",
-      "sizes": {},
+      "size": "M",
+      "sizes": {
+        "M": 4
+      },
       "price": 55,
       "category": "world",
       "name": "Jude Bellingham #10 | England 2026 World Cup Home",
-      "quantity": 0,
+      "quantity": 4,
       "links": {
         "depop": "https://www.depop.com/jerseysfrmjb/",
         "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
@@ -485,7 +575,7 @@ export const seedInventory = {
       "featured": false,
       "featured_order": 0,
       "new_arrival": true,
-      "date_added": "2026-07-22"
+      "date_added": "2026-08-05"
     },
     {
       "sort_order": 187,
@@ -500,12 +590,19 @@ export const seedInventory = {
           "alt": "Mexico 2026 World Cup white jersey with no name or number back"
         }
       ],
-      "size": "Large, XL",
-      "sizes": {},
+      "size": "L, XL",
+      "sizes": {
+        "XL": 2,
+        "L": 1
+      },
       "price": 55,
+      "platform_prices": {
+        "Depop": 45,
+        "eBay": 50
+      },
       "category": "world",
       "name": "No Name/No Number | Mexico 2026 World Cup White",
-      "quantity": 0,
+      "quantity": 3,
       "links": {
         "depop": "https://www.depop.com/jerseysfrmjb/",
         "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
@@ -554,6 +651,10 @@ export const seedInventory = {
       ],
       "size": "Medium",
       "price": 55,
+      "platform_prices": {
+        "Depop": 50,
+        "eBay": 55
+      },
       "category": "world",
       "name": "Luis Diaz #7 | Colombia 2026 World Cup Home",
       "quantity": 0,
@@ -578,6 +679,10 @@ export const seedInventory = {
       ],
       "size": "Medium",
       "price": 55,
+      "platform_prices": {
+        "Depop": 45,
+        "eBay": 50
+      },
       "category": "world",
       "name": "No Name/No Number | Japan 2026 World Cup Home",
       "quantity": 0,
@@ -602,6 +707,10 @@ export const seedInventory = {
       ],
       "size": "Medium",
       "price": 55,
+      "platform_prices": {
+        "Depop": 50,
+        "eBay": 55
+      },
       "category": "world",
       "name": "Achraf Hakimi #2 | Morocco 2026 World Cup Away",
       "quantity": 0,
@@ -624,12 +733,18 @@ export const seedInventory = {
           "alt": "Raphinha Barcelona 26/27 home jersey front"
         }
       ],
-      "size": "Medium",
-      "sizes": {},
+      "size": "M",
+      "sizes": {
+        "M": 2
+      },
       "price": 40,
+      "platform_prices": {
+        "Depop": 50,
+        "eBay": 55
+      },
       "category": "club",
       "name": "Raphinha #11 | Barcelona 26/27 Home Kit",
-      "quantity": 0,
+      "quantity": 2,
       "links": {
         "depop": "https://www.depop.com/jerseysfrmjb/",
         "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
@@ -652,12 +767,18 @@ export const seedInventory = {
           "alt": "Lamine Yamal Barcelona 26/27 home jersey front"
         }
       ],
-      "size": "Medium",
-      "sizes": {},
+      "size": "M",
+      "sizes": {
+        "M": 2
+      },
       "price": 40,
+      "platform_prices": {
+        "Depop": 50,
+        "eBay": 55
+      },
       "category": "club",
       "name": "Lamine Yamal #10 | Barcelona 26/27 Home Kit",
-      "quantity": 0,
+      "quantity": 2,
       "links": {
         "depop": "https://www.depop.com/jerseysfrmjb/",
         "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
@@ -680,12 +801,18 @@ export const seedInventory = {
           "alt": "Kylian Mbappe Real Madrid 26/27 home jersey front"
         }
       ],
-      "size": "Medium",
-      "sizes": {},
+      "size": "M",
+      "sizes": {
+        "M": 2
+      },
       "price": 40,
+      "platform_prices": {
+        "Depop": 50,
+        "eBay": 55
+      },
       "category": "club",
       "name": "Kylian Mbappe #10 | Real Madrid 26/27 Home Kit",
-      "quantity": 0,
+      "quantity": 2,
       "links": {
         "depop": "https://www.depop.com/jerseysfrmjb/",
         "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
@@ -708,12 +835,18 @@ export const seedInventory = {
           "alt": "Jude Bellingham Real Madrid 26/27 home jersey front"
         }
       ],
-      "size": "Medium",
-      "sizes": {},
+      "size": "M",
+      "sizes": {
+        "M": 2
+      },
       "price": 40,
+      "platform_prices": {
+        "Depop": 50,
+        "eBay": 55
+      },
       "category": "club",
       "name": "Jude Bellingham #5 | Real Madrid 26/27 Home Kit",
-      "quantity": 0,
+      "quantity": 2,
       "links": {
         "depop": "https://www.depop.com/jerseysfrmjb/",
         "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
@@ -769,7 +902,7 @@ export const seedInventory = {
         "depop": "https://www.depop.com/jerseysfrmjb/",
         "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
       },
-      "featured": true
+      "featured": false
     },
     {
       "sort_order": 260,
@@ -832,12 +965,18 @@ export const seedInventory = {
           "alt": "Liverpool 25/26 home jersey with no name or number back"
         }
       ],
-      "size": "Medium",
-      "sizes": {},
+      "size": "M",
+      "sizes": {
+        "M": 1
+      },
       "price": 40,
+      "platform_prices": {
+        "Depop": 40,
+        "eBay": 45
+      },
       "category": "club",
       "name": "No Name/No Number | Liverpool 25/26 Home Kit",
-      "quantity": 0,
+      "quantity": 1,
       "links": {
         "depop": "https://www.depop.com/jerseysfrmjb/",
         "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
@@ -860,12 +999,18 @@ export const seedInventory = {
           "alt": "Manchester United 25/26 home jersey with no name or number back"
         }
       ],
-      "size": "Medium",
-      "sizes": {},
+      "size": "M",
+      "sizes": {
+        "M": 1
+      },
       "price": 40,
+      "platform_prices": {
+        "Depop": 40,
+        "eBay": 45
+      },
       "category": "club",
       "name": "No Name/No Number | Manchester United 25/26 Home Kit",
-      "quantity": 0,
+      "quantity": 1,
       "links": {
         "depop": "https://www.depop.com/jerseysfrmjb/",
         "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
@@ -921,7 +1066,7 @@ export const seedInventory = {
         "depop": "https://www.depop.com/jerseysfrmjb/",
         "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
       },
-      "featured": true
+      "featured": false
     },
     {
       "sort_order": 320,
@@ -960,20 +1105,388 @@ export const seedInventory = {
           "alt": "Ronaldo Manchester United 2007/08 short sleeve jersey back"
         }
       ],
-      "size": "Medium",
+      "size": "M",
       "price": 55,
+      "platform_prices": {
+        "Depop": 55,
+        "eBay": 55
+      },
       "category": "retro",
       "name": "Ronaldo #7 2007/08 Manchester United Away Short Sleeve",
-      "quantity": 0,
+      "quantity": 2,
       "links": {
         "depop": "https://www.depop.com/jerseysfrmjb/",
         "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
       },
-      "featured": false
+      "featured": false,
+      "sizes": {
+        "M": 2
+      },
+      "new_arrival": true,
+      "date_added": "2026-08-12"
+    },
+    {
+      "sort_order": 340,
+      "id": "club-real-madrid-bellingham-away-2627",
+      "photos": [
+        {
+          "src": "assets/inventory/club-real-madrid-bellingham-away-2627-front.jpg",
+          "alt": "Jude Bellingham Real Madrid 26/27 away jersey front"
+        },
+        {
+          "src": "assets/inventory/club-real-madrid-bellingham-away-2627-back.jpg",
+          "alt": "Jude Bellingham Real Madrid 26/27 away jersey back"
+        }
+      ],
+      "size": "M",
+      "sizes": {
+        "M": 2
+      },
+      "price": 40,
+      "category": "club",
+      "name": "Jude Bellingham #5 | Real Madrid 26/27 Away Kit",
+      "quantity": 2,
+      "links": {
+        "depop": "https://www.depop.com/jerseysfrmjb/",
+        "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
+      },
+      "featured": false,
+      "featured_order": 0,
+      "new_arrival": true,
+      "date_added": "2026-08-12"
+    },
+    {
+      "sort_order": 350,
+      "id": "club-psg-dembele-home-2627",
+      "photos": [
+        {
+          "src": "assets/inventory/club-psg-dembele-home-2627-front.jpg",
+          "alt": "Ousmane Dembele PSG 26/27 home jersey front"
+        },
+        {
+          "src": "assets/inventory/club-psg-dembele-home-2627-back.jpg",
+          "alt": "Ousmane Dembele PSG 26/27 home jersey back"
+        }
+      ],
+      "size": "M",
+      "sizes": {
+        "M": 2
+      },
+      "price": 40,
+      "category": "club",
+      "name": "Ousmane Dembele #10 | PSG 26/27 Home Kit",
+      "quantity": 2,
+      "links": {
+        "depop": "https://www.depop.com/jerseysfrmjb/",
+        "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
+      },
+      "featured": false,
+      "featured_order": 0,
+      "new_arrival": true,
+      "date_added": "2026-08-12"
+    },
+    {
+      "sort_order": 360,
+      "id": "club-arsenal-saka-home-2627",
+      "photos": [
+        {
+          "src": "assets/inventory/club-arsenal-saka-home-2627-front.jpg",
+          "alt": "Bukayo Saka Arsenal 26/27 home jersey front"
+        },
+        {
+          "src": "assets/inventory/club-arsenal-saka-home-2627-back.jpg",
+          "alt": "Bukayo Saka Arsenal 26/27 home jersey back"
+        }
+      ],
+      "size": "M",
+      "sizes": {
+        "M": 2
+      },
+      "price": 40,
+      "category": "club",
+      "name": "Bukayo Saka #7 | Arsenal 26/27 Home Kit",
+      "quantity": 2,
+      "links": {
+        "depop": "https://www.depop.com/jerseysfrmjb/",
+        "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
+      },
+      "featured": false,
+      "featured_order": 0,
+      "new_arrival": true,
+      "date_added": "2026-08-12"
+    },
+    {
+      "sort_order": 370,
+      "id": "retro-england-beckham-home-9901",
+      "photos": [
+        {
+          "src": "assets/inventory/retro-england-beckham-home-9901-front.jpg",
+          "alt": "David Beckham England 1999-2001 home jersey front"
+        },
+        {
+          "src": "assets/inventory/retro-england-beckham-home-9901-back.jpg",
+          "alt": "David Beckham England 1999-2001 home jersey back"
+        }
+      ],
+      "size": "M",
+      "sizes": {
+        "M": 2
+      },
+      "price": 50,
+      "category": "retro",
+      "name": "David Beckham #7 | England 1999-2001 Home",
+      "quantity": 2,
+      "links": {
+        "depop": "https://www.depop.com/jerseysfrmjb/",
+        "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
+      },
+      "featured": false,
+      "featured_order": 0,
+      "new_arrival": true,
+      "date_added": "2026-08-12"
+    },
+    {
+      "sort_order": 380,
+      "id": "retro-barcelona-cactus-jack",
+      "photos": [
+        {
+          "src": "assets/inventory/retro-barcelona-cactus-jack-front.jpg",
+          "alt": "Barcelona x Cactus Jack jersey front"
+        },
+        {
+          "src": "assets/inventory/retro-barcelona-cactus-jack-back.jpg",
+          "alt": "Barcelona x Cactus Jack jersey back"
+        }
+      ],
+      "size": "M",
+      "sizes": {
+        "M": 2
+      },
+      "price": 50,
+      "category": "retro",
+      "name": "Barcelona x Cactus Jack Jersey",
+      "quantity": 2,
+      "links": {
+        "depop": "https://www.depop.com/jerseysfrmjb/",
+        "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
+      },
+      "featured": false,
+      "featured_order": 0,
+      "new_arrival": true,
+      "date_added": "2026-08-12"
+    },
+    {
+      "sort_order": 390,
+      "id": "retro-brazil-ronaldo-home-1998",
+      "photos": [
+        {
+          "src": "assets/inventory/retro-brazil-ronaldo-home-1998-front.jpg",
+          "alt": "Ronaldo Brazil 1998 home jersey front"
+        },
+        {
+          "src": "assets/inventory/retro-brazil-ronaldo-home-1998-back.jpg",
+          "alt": "Ronaldo Brazil 1998 home jersey back"
+        }
+      ],
+      "size": "M",
+      "sizes": {
+        "M": 2
+      },
+      "price": 50,
+      "category": "retro",
+      "name": "Ronaldo #9 | Brazil 1998 Home",
+      "quantity": 2,
+      "links": {
+        "depop": "https://www.depop.com/jerseysfrmjb/",
+        "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
+      },
+      "featured": false,
+      "featured_order": 0,
+      "new_arrival": true,
+      "date_added": "2026-08-12"
+    },
+    {
+      "sort_order": 400,
+      "id": "retro-juventus-pogba-pink-1516",
+      "photos": [
+        {
+          "src": "assets/inventory/retro-juventus-pogba-pink-1516-front.jpg",
+          "alt": "Paul Pogba Juventus 2015/16 pink jersey front"
+        },
+        {
+          "src": "assets/inventory/retro-juventus-pogba-pink-1516-back.jpg",
+          "alt": "Paul Pogba Juventus 2015/16 pink jersey back"
+        }
+      ],
+      "size": "M",
+      "sizes": {
+        "M": 2
+      },
+      "price": 50,
+      "category": "retro",
+      "name": "Paul Pogba #10 | Juventus 2015/16 Pink",
+      "quantity": 2,
+      "links": {
+        "depop": "https://www.depop.com/jerseysfrmjb/",
+        "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
+      },
+      "featured": false,
+      "featured_order": 0,
+      "new_arrival": true,
+      "date_added": "2026-08-12"
+    },
+    {
+      "sort_order": 410,
+      "id": "retro-france-zidane-home-2006",
+      "photos": [
+        {
+          "src": "assets/inventory/retro-france-zidane-home-2006-front.jpg",
+          "alt": "Zinedine Zidane France 2006 home jersey front"
+        },
+        {
+          "src": "assets/inventory/retro-france-zidane-home-2006-back.jpg",
+          "alt": "Zinedine Zidane France 2006 home jersey back"
+        }
+      ],
+      "size": "M",
+      "sizes": {
+        "M": 2
+      },
+      "price": 50,
+      "category": "retro",
+      "name": "Zinedine Zidane #10 | France 2006 Home",
+      "quantity": 2,
+      "links": {
+        "depop": "https://www.depop.com/jerseysfrmjb/",
+        "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
+      },
+      "featured": false,
+      "featured_order": 0,
+      "new_arrival": true,
+      "date_added": "2026-08-12"
+    },
+    {
+      "sort_order": 420,
+      "id": "retro-brazil-ronaldinho-home-2002",
+      "photos": [
+        {
+          "src": "assets/inventory/retro-brazil-ronaldinho-home-2002-front.jpg",
+          "alt": "Ronaldinho Brazil 2002 home jersey front"
+        },
+        {
+          "src": "assets/inventory/retro-brazil-ronaldinho-home-2002-back.jpg",
+          "alt": "Ronaldinho Brazil 2002 home jersey back"
+        }
+      ],
+      "size": "M",
+      "sizes": {
+        "M": 2
+      },
+      "price": 50,
+      "category": "retro",
+      "name": "Ronaldinho #11 | Brazil 2002 Home",
+      "quantity": 2,
+      "links": {
+        "depop": "https://www.depop.com/jerseysfrmjb/",
+        "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
+      },
+      "featured": false,
+      "featured_order": 0,
+      "new_arrival": true,
+      "date_added": "2026-08-12"
+    },
+    {
+      "sort_order": 430,
+      "id": "retro-chelsea-hazard-home-1415",
+      "photos": [
+        {
+          "src": "assets/inventory/retro-chelsea-hazard-home-1415-front.jpg",
+          "alt": "Eden Hazard Chelsea 2014/15 home jersey front"
+        },
+        {
+          "src": "assets/inventory/retro-chelsea-hazard-home-1415-back.jpg",
+          "alt": "Eden Hazard Chelsea 2014/15 home jersey back"
+        }
+      ],
+      "size": "M",
+      "sizes": {
+        "M": 2
+      },
+      "price": 50,
+      "category": "retro",
+      "name": "Eden Hazard #10 | Chelsea 2014/15 Home",
+      "quantity": 2,
+      "links": {
+        "depop": "https://www.depop.com/jerseysfrmjb/",
+        "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
+      },
+      "featured": false,
+      "featured_order": 0,
+      "new_arrival": true,
+      "date_added": "2026-08-12"
+    },
+    {
+      "sort_order": 440,
+      "id": "retro-arsenal-henry-home-0506",
+      "photos": [
+        {
+          "src": "assets/inventory/retro-arsenal-henry-home-0506-front.jpg",
+          "alt": "Thierry Henry Arsenal 2005/06 home jersey front"
+        },
+        {
+          "src": "assets/inventory/retro-arsenal-henry-home-0506-back.jpg",
+          "alt": "Thierry Henry Arsenal 2005/06 home jersey back"
+        }
+      ],
+      "size": "M",
+      "sizes": {
+        "M": 2
+      },
+      "price": 50,
+      "category": "retro",
+      "name": "Thierry Henry #14 | Arsenal 2005/06 Home",
+      "quantity": 2,
+      "links": {
+        "depop": "https://www.depop.com/jerseysfrmjb/",
+        "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
+      },
+      "featured": false,
+      "featured_order": 0,
+      "new_arrival": true,
+      "date_added": "2026-08-12"
+    },
+    {
+      "sort_order": 450,
+      "id": "retro-ac-milan-kaka-home-0607-long",
+      "photos": [
+        {
+          "src": "assets/inventory/retro-ac-milan-kaka-home-0607-front.jpg",
+          "alt": "Kaka AC Milan 2006/07 home long sleeve jersey front"
+        },
+        {
+          "src": "assets/inventory/retro-ac-milan-kaka-home-0607-back.jpg",
+          "alt": "Kaka AC Milan 2006/07 home long sleeve jersey back"
+        }
+      ],
+      "size": "M",
+      "sizes": {
+        "M": 2
+      },
+      "price": 55,
+      "category": "retro",
+      "name": "Kaka #22 | AC Milan 2006/07 Home Long Sleeve",
+      "quantity": 2,
+      "links": {
+        "depop": "https://www.depop.com/jerseysfrmjb/",
+        "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
+      },
+      "featured": false,
+      "featured_order": 0,
+      "new_arrival": true,
+      "date_added": "2026-08-12"
     }
   ]
 };
-
 export const schemaStatements = [
   `CREATE TABLE IF NOT EXISTS inventory (
     id TEXT PRIMARY KEY,
@@ -1352,5 +1865,10 @@ export async function ensureInventory(env) {
     { id: "world-england-bellingham-home", size: "M", quantity: 4, newArrival: true, dateAdded: "2026-08-05" },
     { id: "world-norway-haaland-home", size: "M", quantity: 4, newArrival: true, dateAdded: "2026-08-05" },
     { id: "world-cape-verde-vozinha-goalkeeper", size: "M", fallbackSize: "M", quantity: 0, newArrival: false, dateAdded: "2026-08-05" }
+  ]);
+
+  await applyOneTimeRestock(env, "august_2026_jersey_drop_28", [
+    { id: "world-portugal-ronaldo-home", size: "M", quantity: 2 },
+    { id: "retro-ronaldo-united-short-0708", size: "M", quantity: 2 }
   ]);
 }
