@@ -55,14 +55,14 @@ export const seedInventory = {
       },
       "category": "world",
       "name": "Cristiano Ronaldo #7 | Portugal 2026 World Cup Home",
-      "quantity": 4,
+      "quantity": 2,
       "links": {
         "depop": "https://www.depop.com/jerseysfrmjb/",
         "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
       },
       "featured": false,
       "sizes": {
-        "M": 4
+        "M": 2
       },
       "new_arrival": true,
       "date_added": "2026-08-12"
@@ -1867,8 +1867,8 @@ export async function ensureInventory(env) {
     { id: "world-cape-verde-vozinha-goalkeeper", size: "M", fallbackSize: "M", quantity: 0, newArrival: false, dateAdded: "2026-08-05" }
   ]);
 
-  await applyOneTimeRestock(env, "august_2026_jersey_drop_28", [
-    { id: "world-portugal-ronaldo-home", size: "M", quantity: 2 },
-    { id: "retro-ronaldo-united-short-0708", size: "M", quantity: 2 }
+  await applyOneTimeStockSet(env, "august_2026_jersey_drop_28", [
+    { id: "world-portugal-ronaldo-home", size: "M", quantity: 2, newArrival: true, dateAdded: "2026-08-12" },
+    { id: "retro-ronaldo-united-short-0708", size: "M", quantity: 2, newArrival: true, dateAdded: "2026-08-12" }
   ]);
 }

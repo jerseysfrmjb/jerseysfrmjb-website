@@ -1,6 +1,6 @@
 -- Adds the 28 Medium jerseys received in the August 2026 drop.
 -- The 12 photographed designs are new products (two each). The existing
--- Portugal and Manchester United Ronaldo products receive two more each.
+-- Portugal and Manchester United Ronaldo products are set to two each.
 
 INSERT OR IGNORE INTO inventory (id, category, name, size, sizes_json, price, quantity, featured, featured_order, new_arrival, date_added, sort_order, photos, links) VALUES
 ('club-real-madrid-bellingham-away-2627', 'club', 'Jude Bellingham #5 | Real Madrid 26/27 Away Kit', 'M', '{"M":2}', 40, 2, 0, 0, 1, '2026-08-12', 340, '[{"src":"assets/inventory/club-real-madrid-bellingham-away-2627-front.jpg","alt":"Jude Bellingham Real Madrid 26/27 away jersey front"},{"src":"assets/inventory/club-real-madrid-bellingham-away-2627-back.jpg","alt":"Jude Bellingham Real Madrid 26/27 away jersey back"}]', '{"depop":"https://www.depop.com/jerseysfrmjb/","ebay":"https://www.ebay.com/usr/jerseysfrmjb"}'),
@@ -17,8 +17,8 @@ INSERT OR IGNORE INTO inventory (id, category, name, size, sizes_json, price, qu
 ('retro-ac-milan-kaka-home-0607-long', 'retro', 'Kaka #22 | AC Milan 2006/07 Home Long Sleeve', 'M', '{"M":2}', 55, 2, 0, 0, 1, '2026-08-12', 450, '[{"src":"assets/inventory/retro-ac-milan-kaka-home-0607-front.jpg","alt":"Kaka AC Milan 2006/07 home long sleeve jersey front"},{"src":"assets/inventory/retro-ac-milan-kaka-home-0607-back.jpg","alt":"Kaka AC Milan 2006/07 home long sleeve jersey back"}]', '{"depop":"https://www.depop.com/jerseysfrmjb/","ebay":"https://www.ebay.com/usr/jerseysfrmjb"}');
 
 UPDATE inventory
-SET sizes_json = json_set(COALESCE(NULLIF(sizes_json, ''), '{}'), '$.M', CAST(COALESCE(json_extract(COALESCE(NULLIF(sizes_json, ''), '{}'), '$.M'), 0) AS INTEGER) + 2),
-    quantity = quantity + 2,
+SET sizes_json = json_set(COALESCE(NULLIF(sizes_json, ''), '{}'), '$.M', 2),
+    quantity = 2,
     new_arrival = 1,
     date_added = '2026-08-12',
     updated_at = CURRENT_TIMESTAMP

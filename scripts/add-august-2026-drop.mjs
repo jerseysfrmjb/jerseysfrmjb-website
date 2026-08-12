@@ -49,9 +49,8 @@ for (const id of ["world-portugal-ronaldo-home", "retro-ronaldo-united-short-070
   const product = inventory.items.find(item => item.id === id);
   if (!product) throw new Error(`Missing existing Ronaldo product: ${id}`);
   if (product.date_added !== "2026-08-12") {
-    const currentMedium = Number(product.sizes?.M || product.quantity || 0);
     product.size = "M";
-    product.sizes = { ...(product.sizes || {}), M: currentMedium + 2 };
+    product.sizes = { ...(product.sizes || {}), M: 2 };
     product.quantity = Object.values(product.sizes).reduce((sum, quantity) => sum + Number(quantity || 0), 0);
     product.new_arrival = true;
     product.date_added = "2026-08-12";
