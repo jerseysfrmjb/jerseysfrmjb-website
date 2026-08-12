@@ -301,24 +301,24 @@ function collectionIntroduction(products, kind, name) {
   const variant = [...name].reduce((sum, character) => sum + character.charCodeAt(0), 0) % 3;
   if (kind === "teams") {
     const variants = [
-      `Explore the current ${name} jersey selection, led by ${designs}. ${players ? `Featured names include ${players}. ` : ""}Open each permanent product page for photos, available sizes, and marketplace options.`,
-      `Find ${name} shirts from ${seasons || "recent and classic seasons"} in the live JerseysFrmJB inventory. The collection currently includes ${designs}${players ? ` and designs associated with ${players}` : ""}, with individual pages for sizing and marketplace links.`,
+      `Explore the current ${name} jersey selection, led by ${designs}. ${players ? `Featured names include ${players}. ` : ""}Open each permanent product page for photos, available sizes, and secure Shopify checkout.`,
+      `Find ${name} shirts from ${seasons || "recent and classic seasons"} in the live JerseysFrmJB inventory. The collection currently includes ${designs}${players ? ` and designs associated with ${players}` : ""}, with individual pages for sizing and secure website checkout.`,
       `${name} supporters can browse ${designs} in this inventory-backed collection. ${players ? `The available lineup features ${players}. ` : ""}Every jersey links to its own page with front and back photos, size availability, and current buying options.`
     ];
     return variants[variant];
   }
   if (kind === "players") {
     const variants = [
-      `Browse ${name} jerseys connected with ${teams || "club and international football"}, including ${designs}. Compare front and back photos, available sizes, and current Depop or eBay options on each jersey page.`,
-      `The live ${name} collection currently features ${designs}${teams ? ` across ${teams}` : ""}. Use the permanent product links to check sizing, photos, and active marketplace listings.`,
-      `Shop the current ${name} selection from ${seasons || "featured football seasons"}: ${designs}. Each matching jersey has a dedicated page with team details, available sizes, imagery, and marketplace links.`
+      `Browse ${name} jerseys connected with ${teams || "club and international football"}, including ${designs}. Compare front and back photos, available sizes, and secure Shopify checkout on each jersey page.`,
+      `The live ${name} collection currently features ${designs}${teams ? ` across ${teams}` : ""}. Use the permanent product links to check sizing, photos, and secure website checkout.`,
+      `Shop the current ${name} selection from ${seasons || "featured football seasons"}: ${designs}. Each matching jersey has a dedicated page with team details, available sizes, imagery, and current buying options.`
     ];
     return variants[variant];
   }
   const variants = [
     `Shop jerseys connected with the ${name}, including ${designs}. The live selection features ${teams || "international teams"}${players ? ` and players such as ${players}` : ""}, with direct links to each matching jersey page.`,
-    `Explore the ${name} through current JerseysFrmJB inventory such as ${designs}. Browse teams including ${teams || "international sides"} and open each product page for photos, sizing, and marketplace options.`,
-    `The ${name} collection brings together ${designs}${players ? `, featuring ${players}` : ""}. Inventory-backed product pages show every matching jersey, available size, and active marketplace link.`
+    `Explore the ${name} through current JerseysFrmJB inventory such as ${designs}. Browse teams including ${teams || "international sides"} and open each product page for photos, sizing, and secure Shopify checkout.`,
+    `The ${name} collection brings together ${designs}${players ? `, featuring ${players}` : ""}. Inventory-backed product pages show every matching jersey, available size, and current buying options.`
   ];
   return variants[variant];
 }
@@ -332,7 +332,7 @@ function collectionFaqs(kind, name) {
     },
     {
       question: "Where is payment completed?",
-      answer: "JerseysFrmJB product pages link to the active marketplace listing. Payment and checkout are completed on Depop or eBay, not directly on this website."
+      answer: "Available jerseys can be purchased directly through JerseysFrmJB using secure Shopify checkout. Depop and eBay remain available when their listings are linked."
     }
   ];
 }
@@ -515,8 +515,8 @@ export function renderSeoCollectionPage(products, kind, options = {}) {
   <meta name="twitter:description" content="${escapeHtml(description)}"><meta name="twitter:image" content="${escapeHtml(heroImage)}">
   <script type="application/ld+json">${jsonForHtml(schema)}</script>
   <script type="application/ld+json">${jsonForHtml(faqSchema(faqs))}</script>
-  <link rel="stylesheet" href="/styles.css?v=checkout-audit-1"><link rel="stylesheet" href="/design-preview.css?v=mobile-grid-2">
-  <script src="/meta-pixel.js?v=1" defer></script><script src="/analytics.js?v=conversion-funnel-1" defer></script><script src="/storefront.js?v=checkout-audit-1" defer></script>
+  <link rel="stylesheet" href="/styles.css?v=checkout-promo-1"><link rel="stylesheet" href="/design-preview.css?v=mobile-grid-2">
+  <script src="/meta-pixel.js?v=1" defer></script><script src="/analytics.js?v=conversion-funnel-1" defer></script><script src="/storefront.js?v=checkout-promo-1" defer></script>
 </head>
 <body class="seo-collection-body">
   ${headerMarkup()}
@@ -534,7 +534,7 @@ export function renderSeoCollectionPage(products, kind, options = {}) {
 
 export function renderSeoNotFound(siteOrigin = DEFAULT_SITE_ORIGIN) {
   const origin = normalizeSiteOrigin(siteOrigin);
-  return `<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Jersey Collection Not Found | JerseysFrmJB</title><meta name="robots" content="noindex,follow"><link rel="canonical" href="${escapeHtml(`${origin}/shop-all`)}"><link rel="stylesheet" href="/styles.css?v=checkout-audit-1"><script src="/meta-pixel.js?v=1" defer></script><script src="/analytics.js?v=conversion-funnel-1" defer></script><script src="/storefront.js?v=checkout-audit-1" defer></script></head><body class="product-page-body">${headerMarkup()}<main class="product-page-main"><section class="product-not-found"><span>Collection update</span><h1>That jersey collection is not available.</h1><p>Browse the current inventory to find another team, player, or competition.</p><a href="/shop-all">Browse Current Jerseys</a></section></main>${footerMarkup()}</body></html>`;
+  return `<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Jersey Collection Not Found | JerseysFrmJB</title><meta name="robots" content="noindex,follow"><link rel="canonical" href="${escapeHtml(`${origin}/shop-all`)}"><link rel="stylesheet" href="/styles.css?v=checkout-promo-1"><script src="/meta-pixel.js?v=1" defer></script><script src="/analytics.js?v=conversion-funnel-1" defer></script><script src="/storefront.js?v=checkout-promo-1" defer></script></head><body class="product-page-body">${headerMarkup()}<main class="product-page-main"><section class="product-not-found"><span>Collection update</span><h1>That jersey collection is not available.</h1><p>Browse the current inventory to find another team, player, or competition.</p><a href="/shop-all">Browse Current Jerseys</a></section></main>${footerMarkup()}</body></html>`;
 }
 
 export function entityLink(kind, name) {
