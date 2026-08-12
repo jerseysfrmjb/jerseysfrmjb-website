@@ -1,4 +1,4 @@
-const STOREFRONT_STYLE_VERSION = "checkout-audit-1";
+const STOREFRONT_STYLE_VERSION = "checkout-promo-1";
 
 document.querySelectorAll('link[rel="stylesheet"][href*="styles.css"]').forEach(stylesheet => {
   const url = new URL(stylesheet.href, window.location.href);
@@ -482,11 +482,11 @@ function renderWebsiteCheckout(item = {}, available = true) {
   return `
     <section class="website-checkout-card" aria-label="Buy this jersey directly from JerseysFrmJB">
       <div class="website-checkout-heading">
-        <span>Secure website checkout</span>
+        <span>Secure Shopify checkout</span>
         ${formattedPrice ? `<strong>${escapeHtml(formattedPrice)}</strong>` : ""}
       </div>
-      <p>Choose an available size, add it to your cart, and check out securely.</p>
-      <a href="${escapeHtml(productDetailsUrl(item.id))}"><span>Choose Size &amp; Add to Cart</span><span aria-hidden="true">&rarr;</span></a>
+      <p>Choose an available size, then use the website cart or Buy It Now.</p>
+      <a href="${escapeHtml(productDetailsUrl(item.id))}"><span>Choose Size &amp; Buy</span><span aria-hidden="true">&rarr;</span></a>
     </section>`;
 }
 
@@ -634,7 +634,7 @@ function renderProductCard(item) {
       <p class="notice category-notice">${escapeHtml(categoryLabel(item.category))}</p>
       ${available ? "" : '<p class="notice sold">Out of Stock</p>'}
       <h2><a class="product-title-link" href="${escapeHtml(productDetailsUrl(item.id))}">${escapeHtml(item.name)}</a></h2>
-      <a class="product-details-button" href="${escapeHtml(productDetailsUrl(item.id))}" aria-label="View jersey details for ${escapeHtml(item.name)}">View Jersey Details <span aria-hidden="true">&rarr;</span></a>
+      <a class="product-details-button" href="${escapeHtml(productDetailsUrl(item.id))}" aria-label="${available ? "Choose a size for" : "View jersey details for"} ${escapeHtml(item.name)}">${available ? "Choose Size" : "View Jersey Details"} <span aria-hidden="true">&rarr;</span></a>
       <p data-card-size>${escapeHtml(sizes)}</p>
       ${renderWebsiteCheckout(item, available)}
       ${renderPlatformAvailability(item, available)}
@@ -652,7 +652,7 @@ function renderFeaturedCard(item, index) {
       <div class="featured-copy">
         <span>FEATURED JERSEY ${String(index + 1).padStart(2, "0")}</span>
         <h3><a class="product-title-link" href="${escapeHtml(productDetailsUrl(item.id))}">${escapeHtml(item.name)}</a></h3>
-        <a class="product-details-button" href="${escapeHtml(productDetailsUrl(item.id))}" aria-label="View jersey details for ${escapeHtml(item.name)}">View Jersey Details <span aria-hidden="true">&rarr;</span></a>
+        <a class="product-details-button" href="${escapeHtml(productDetailsUrl(item.id))}" aria-label="Choose a size for ${escapeHtml(item.name)}">Choose Size <span aria-hidden="true">&rarr;</span></a>
         <div class="featured-meta"><p>${escapeHtml(available ? displaySize(item) : "Sold out")}</p></div>
         ${renderWebsiteCheckout(item, available)}
         ${renderPlatformAvailability(item, available)}
@@ -941,6 +941,11 @@ function setupFilters(filterGroup, cards) {
   });
   sizeSelect?.addEventListener("change", apply);
   searchInput?.addEventListener("input", apply);
+  const requestedStock = new URLSearchParams(window.location.search).get("stock");
+  if (requestedStock === "available" || requestedStock === "sold-out") {
+    const requestedButton = stockButtons.find(button => (button.dataset.stockFilter || button.dataset.filter) === requestedStock);
+    if (requestedButton) setActive(stockButtons, requestedButton);
+  }
   apply();
 }
 
@@ -977,11 +982,13 @@ async function renderFeaturedGrid() {
     return;
   }
   const items = [...(data.items || [])]
-    .filter(item => item.featured)
+    .filter(item => item.featured && isAvailable(item))
     .sort((a, b) => Number(a.featured_order || 999) - Number(b.featured_order || 999))
     .slice(0, 3);
   items.forEach(item => STOREFRONT_PRODUCTS.set(String(item.id), item));
-  grid.innerHTML = items.map(renderFeaturedCard).join("");
+  grid.innerHTML = items.length
+    ? items.map(renderFeaturedCard).join("")
+    : '<p class="inventory-empty">New jerseys are coming soon. Check back for the next available drop.</p>';
   window.JerseysMetaPixel?.observeProducts(grid);
   window.JerseysAnalytics?.observeProducts(grid);
   window.JerseysFavorites?.refresh();

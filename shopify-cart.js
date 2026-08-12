@@ -13,7 +13,7 @@
       const banner = document.createElement("section");
       banner.className = "site-checkout-banner";
       banner.setAttribute("aria-label", "Website checkout available");
-      banner.innerHTML = '<div><span aria-hidden="true">&#10003;</span><p><strong>Shop directly on JerseysFrmJB</strong><small>Choose a size, add jerseys to your cart, and check out securely.</small></p></div><button type="button" data-shopify-cart-open>View Cart <span data-shopify-cart-count>0</span></button>';
+      banner.innerHTML = '<div><span aria-hidden="true">&#10003;</span><p><strong>Secure Shopify checkout is live</strong><small>Only available sizes are shown. Fast payment and shipping available.</small></p></div><button type="button" data-shopify-cart-open>View Cart <span data-shopify-cart-count>0</span></button>';
       header?.insertAdjacentElement("afterend", banner);
     }
     if (!document.querySelector("[data-shopify-cart-drawer]")) {

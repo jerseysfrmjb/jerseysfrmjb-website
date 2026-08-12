@@ -782,6 +782,11 @@ assert.equal(pageModel.shopify.enabled, true);
 const pageHtml = renderProductPage(pageModel);
 assert.match(pageHtml, /data-shopify-add/);
 assert.match(pageHtml, /Continue to Secure Checkout/);
+assert.match(pageHtml, /id="website-checkout"/);
+assert.match(pageHtml, /aria-label="Website checkout options"/);
+assert.match(pageHtml, /href="#website-checkout">Choose Size/);
+assert.match(pageHtml, /data-shopify-cart-open>Cart <b data-shopify-cart-count>0<\/b>/);
+assert.match(pageHtml, /Payment and shipping details are handled securely by Shopify/);
 assert.match(pageHtml, /"name":"Website checkout"/);
 assert.doesNotMatch(pageHtml, /2 remaining|quantity[^a-z]/i, "exact D1 quantities stay out of product HTML");
 
@@ -802,10 +807,13 @@ assert.doesNotMatch(cartSource, /pilot_enabled/, "mapped Shopify products no lon
 assert.match(clientSource, /AddToCart/);
 assert.match(clientSource, /InitiateCheckout/);
 assert.match(clientSource, /localStorage/);
-assert.match(clientSource, /Shop directly on JerseysFrmJB/);
+assert.match(clientSource, /Secure Shopify checkout is live/);
+assert.match(clientSource, /Only available sizes are shown/);
 assert.doesNotMatch(clientSource, /SHOPIFY_(ADMIN|STOREFRONT|WEBHOOK)/);
-assert.match(storefrontSource, /Choose Size &amp; Add to Cart/);
-assert.match(storefrontSource, /Secure website checkout/);
+assert.match(storefrontSource, /Choose Size &amp; Buy/);
+assert.match(storefrontSource, /Secure Shopify checkout/);
+assert.match(storefrontSource, /requestedStock === "available"/);
+assert.match(storefrontSource, /item\.featured && isAvailable\(item\)/);
 assert.match(productPageSource, /if \(shopify\.checkout\) await ensureShopifySchema/);
 
 console.log("Shopify checkout integration tests passed:");

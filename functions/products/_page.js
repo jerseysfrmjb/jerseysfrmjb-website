@@ -449,7 +449,7 @@ function productFaqs(model) {
     },
     {
       question: "How should I choose a jersey size?",
-      answer: "Use the JerseysFrmJB size guide and compare its measurements before opening the marketplace listing."
+      answer: "Use the JerseysFrmJB size guide and compare its measurements before choosing a size for checkout."
     },
     {
       question: "Where is checkout completed?",
@@ -463,14 +463,15 @@ function productFaqs(model) {
 function shopifyCheckoutMarkup(model) {
   if (!model.available || !model.shopify?.enabled) return "";
   return `
-    <section class="shopify-checkout-card" data-shopify-product data-product-id="${escapeHtml(model.id)}" data-product-name="${escapeHtml(model.title)}" data-product-price="${escapeHtml(model.shopify.price.toFixed(2))}">
-      <div class="product-section-heading"><span>Website checkout</span><h2>$${escapeHtml(model.shopify.price.toFixed(2))}</h2></div>
-      <p>Choose your size and purchase securely right here on JerseysFrmJB.</p>
+    <section class="shopify-checkout-card" id="website-checkout" data-shopify-product data-product-id="${escapeHtml(model.id)}" data-product-name="${escapeHtml(model.title)}" data-product-price="${escapeHtml(model.shopify.price.toFixed(2))}">
+      <div class="product-section-heading"><span>Secure Shopify checkout</span><h2>$${escapeHtml(model.shopify.price.toFixed(2))}</h2></div>
+      <p>Choose an available size, then add it to your website cart or buy it now.</p>
       <label><span>Size</span><select data-shopify-size required><option value="">Choose a size</option>${model.shopify.sizes.map(size => `<option value="${escapeHtml(size.name)}">${escapeHtml(size.label)}</option>`).join("")}</select></label>
       <div class="shopify-checkout-actions">
         <button type="button" data-shopify-add>Add to Cart</button>
-        <button type="button" data-shopify-buy-now>Buy Now</button>
+        <button type="button" data-shopify-buy-now>Buy It Now</button>
       </div>
+      <small class="shopify-security-note">Payment and shipping details are handled securely by Shopify.</small>
       <p class="shopify-checkout-status" data-shopify-status role="status"></p>
     </section>`;
 }
@@ -584,6 +585,17 @@ function mobileActionMarkup(model) {
       <aside class="product-mobile-action-bar" aria-label="Restock this jersey">
         <div class="product-mobile-action-intro"><span>Currently sold out</span><strong>Want this jersey?</strong></div>
         <button class="product-mobile-request-button" type="button" data-open-help data-help-request-type="restock_request">Request a Restock</button>
+      </aside>`;
+  }
+
+  if (model.shopify?.enabled) {
+    return `
+      <aside class="product-mobile-action-bar product-mobile-shopify-bar" aria-label="Website checkout options">
+        <div class="product-mobile-action-intro"><span>Secure Shopify checkout</span><strong>$${escapeHtml(model.shopify.price.toFixed(2))}</strong></div>
+        <nav aria-label="Buy this jersey through the website">
+          <a class="product-mobile-marketplace-button product-mobile-checkout-button" href="#website-checkout">Choose Size</a>
+          <button class="product-mobile-marketplace-button product-mobile-cart-button" type="button" data-shopify-cart-open>Cart <b data-shopify-cart-count>0</b></button>
+        </nav>
       </aside>`;
   }
 
@@ -710,12 +722,12 @@ export function renderProductPage(model) {
   <script type="application/ld+json">${jsonForHtml(schema)}</script>
   <script type="application/ld+json">${jsonForHtml(breadcrumbs)}</script>
   <script type="application/ld+json">${jsonForHtml(faqSchema(faqs))}</script>
-  <link rel="stylesheet" href="/styles.css?v=checkout-audit-1">
+  <link rel="stylesheet" href="/styles.css?v=checkout-promo-1">
   <link rel="stylesheet" href="/design-preview.css?v=mobile-grid-2">
   <script src="/meta-pixel.js?v=1" defer></script>
   <script src="/analytics.js?v=conversion-funnel-1" defer></script>
-  <script src="/storefront.js?v=checkout-audit-1" defer></script>
-  ${model.shopify?.available ? '<script src="/shopify-cart.js?v=checkout-audit-1" defer></script>' : ""}
+  <script src="/storefront.js?v=checkout-promo-1" defer></script>
+  ${model.shopify?.available ? '<script src="/shopify-cart.js?v=checkout-promo-1" defer></script>' : ""}
 </head>
 <body class="product-page-body has-mobile-product-actions">
   ${headerMarkup(model)}
@@ -802,11 +814,11 @@ export function renderProductNotFound(siteOrigin = DEFAULT_SITE_ORIGIN) {
   <meta name="description" content="This jersey could not be found in the current JerseysFrmJB inventory.">
   <meta name="robots" content="noindex,follow">
   <link rel="canonical" href="${escapeHtml(`${origin}/shop-all`)}">
-  <link rel="stylesheet" href="/styles.css?v=checkout-audit-1">
+  <link rel="stylesheet" href="/styles.css?v=checkout-promo-1">
   <link rel="stylesheet" href="/design-preview.css?v=mobile-grid-2">
   <script src="/meta-pixel.js?v=1" defer></script>
   <script src="/analytics.js?v=conversion-funnel-1" defer></script>
-  <script src="/storefront.js?v=checkout-audit-1" defer></script>
+  <script src="/storefront.js?v=checkout-promo-1" defer></script>
 </head>
 <body class="product-page-body">
   ${headerMarkup()}
