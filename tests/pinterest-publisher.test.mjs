@@ -89,6 +89,11 @@ assert.doesNotMatch(queueSource, /customer_photos|homepage_photos/i, "queue neve
 assert.match(migration, /UNIQUE INDEX[\s\S]*dedupe_key[\s\S]*WHERE allow_duplicate = 0/i);
 assert.match(publishSource, /if \(!mode\.can_publish\)/);
 assert.match(publishSource, /Pinterest did not return a Pin ID/);
+assert.equal(
+  (publishSource.match(/is_standard:\s*true/g) || []).length,
+  2,
+  "queued and direct image Pins explicitly use Pinterest's standard image format"
+);
 assert.match(statusSource, /Production publishing is locked/);
 for (const board of [
   "New Arrivals",

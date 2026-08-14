@@ -73,7 +73,8 @@ export async function onRequestPost(context) {
           alt_text: cleanText(`${queued.product_name} jersey product image`, 500),
           media_source: {
             source_type: "image_url",
-            url: queued.image_url
+            url: queued.image_url,
+            is_standard: true
           }
         })
       });
@@ -127,7 +128,8 @@ export async function onRequestPost(context) {
         alt_text: cleanText(photo?.alt || `${product.name} jersey`, 500),
         media_source: {
           source_type: "image_url",
-          url: imageUrl
+          url: imageUrl,
+          is_standard: true
         }
       })
     });
