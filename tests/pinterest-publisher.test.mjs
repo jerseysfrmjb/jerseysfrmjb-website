@@ -8,6 +8,7 @@ import {
   containsExactStockCount,
   pinterestDedupeKey
 } from "../functions/api/admin/pinterest/_queue.js";
+import { pinterestImageMediaSource } from "../functions/api/admin/pinterest/publish.js";
 
 const workspace = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = async (...parts) => readFile(path.join(workspace, ...parts), "utf8");
@@ -77,6 +78,18 @@ const firstKey = await pinterestDedupeKey(club.id, imageUrl, "barcelona-board");
 assert.equal(firstKey, await pinterestDedupeKey(club.id, imageUrl, "barcelona-board"));
 assert.notEqual(firstKey, await pinterestDedupeKey(club.id, imageUrl, "la-liga-board"));
 
+const jpegBytes = Uint8Array.from([0xff, 0xd8, 0xff, 0xd9]);
+const mediaSource = await pinterestImageMediaSource(imageUrl, async () => new Response(jpegBytes, {
+  status: 200,
+  headers: { "Content-Type": "image/jpeg" }
+}));
+assert.deepEqual(mediaSource, {
+  source_type: "image_base64",
+  content_type: "image/jpeg",
+  data: Buffer.from(jpegBytes).toString("base64"),
+  is_standard: true
+});
+
 const queueSource = await source("functions", "api", "admin", "pinterest", "_queue.js");
 const publishSource = await source("functions", "api", "admin", "pinterest", "publish.js");
 const statusSource = await source("functions", "api", "admin", "pinterest", "status.js");
@@ -90,9 +103,9 @@ assert.match(migration, /UNIQUE INDEX[\s\S]*dedupe_key[\s\S]*WHERE allow_duplica
 assert.match(publishSource, /if \(!mode\.can_publish\)/);
 assert.match(publishSource, /Pinterest did not return a Pin ID/);
 assert.equal(
-  (publishSource.match(/is_standard:\s*true/g) || []).length,
-  2,
-  "queued and direct image Pins explicitly use Pinterest's standard image format"
+  (publishSource.match(/pinterestImageMediaSource\(/g) || []).length,
+  3,
+  "the helper and both publishing paths use the validated base64 image format"
 );
 assert.match(statusSource, /Production publishing is locked/);
 for (const board of [

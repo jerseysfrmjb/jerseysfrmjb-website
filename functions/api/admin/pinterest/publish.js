@@ -38,6 +38,34 @@ function productImage(env, photo) {
   return url.toString();
 }
 
+export async function pinterestImageMediaSource(imageUrl, fetchImage = fetch) {
+  const response = await fetchImage(imageUrl, { headers: { Accept: "image/jpeg,image/png" } });
+  if (!response.ok) {
+    throw new Error(`Pinterest image could not be loaded (${response.status}).`);
+  }
+  const contentType = String(response.headers.get("content-type") || "")
+    .split(";", 1)[0]
+    .trim()
+    .toLowerCase();
+  if (!/^(?:image\/jpeg|image\/png)$/.test(contentType)) {
+    throw new Error("Pinterest images must be JPEG or PNG files.");
+  }
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  if (!bytes.length || bytes.length > 5 * 1024 * 1024) {
+    throw new Error("Pinterest images must be between 1 byte and 5 MB.");
+  }
+  let binary = "";
+  for (let offset = 0; offset < bytes.length; offset += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+  }
+  return {
+    source_type: "image_base64",
+    content_type: contentType,
+    data: btoa(binary),
+    is_standard: true
+  };
+}
+
 export async function onRequestPost(context) {
   let queueId = 0;
   try {
@@ -71,11 +99,7 @@ export async function onRequestPost(context) {
           description: queued.description,
           link: queued.product_url,
           alt_text: cleanText(`${queued.product_name} jersey product image`, 500),
-          media_source: {
-            source_type: "image_url",
-            url: queued.image_url,
-            is_standard: true
-          }
+          media_source: await pinterestImageMediaSource(queued.image_url)
         })
       });
       const pinId = String(data.id || "");
@@ -126,11 +150,7 @@ export async function onRequestPost(context) {
         description,
         link: productLink(context.env, product.id),
         alt_text: cleanText(photo?.alt || `${product.name} jersey`, 500),
-        media_source: {
-          source_type: "image_url",
-          url: imageUrl,
-          is_standard: true
-        }
+        media_source: await pinterestImageMediaSource(imageUrl)
       })
     });
 
