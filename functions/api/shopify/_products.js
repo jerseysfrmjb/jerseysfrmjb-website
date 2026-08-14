@@ -1,4 +1,5 @@
 import {
+  buildJerseyDescription,
   categoryLabel,
   extractSeason,
   inferCompetition,
@@ -136,21 +137,16 @@ export function buildShopifyProduct(row = {}, options = {}) {
     edition,
     jerseyClass === "fan" ? "Fan Version" : jerseyClass === "retro_long" ? "Retro Long Sleeve" : "Retro Short Sleeve"
   ].map(cleanTag).filter(Boolean);
-  const description = [
-    `${title} from JerseysFrmJB.`,
-    identity.player ? `Featuring ${identity.player}.` : "",
-    identity.team_country ? `${identity.team_country} jersey.` : "",
-    season ? `${season} season.` : "",
-    edition ? `${edition.replace(/^./, character => character.toUpperCase())} design.` : "",
-    variants.length ? `Available size options: ${variants.map(variant => variant.sizeLabel).join(", ")}.` : "",
-    "Secure checkout, shipping, and order management are provided by Shopify."
-  ].filter(Boolean).join(" ");
+  const description = buildJerseyDescription(row, {
+    identity,
+    availableSizes: variants.map(variant => variant.size)
+  });
   const productUrl = productLandingUrl(id, siteOrigin);
   return {
     id,
     title,
     description,
-    descriptionHtml: `<p>${description.replace(/[&<>]/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[character])}</p>`,
+    descriptionHtml: `<p>${description.replace(/[&<>]/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[character]).replace(/\n/g, "<br>")}</p>`,
     websitePrice,
     productUrl,
     identity,

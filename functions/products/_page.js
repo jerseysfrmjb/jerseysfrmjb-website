@@ -1,4 +1,5 @@
 import {
+  buildJerseyDescription,
   extractSeason,
   inferCompetition,
   inferProductIdentity,
@@ -215,19 +216,6 @@ function synchronizedMarketplacePrices(row) {
   };
 }
 
-function productDescription(row, identity, category, availableSizes, available) {
-  const details = [
-    row.name,
-    category.label,
-    identity.team_country,
-    identity.player ? `Player: ${identity.player}` : "",
-    available
-      ? `Available sizes: ${availableSizes.map(size => size.label).join(", ")}`
-      : "Currently sold out"
-  ].filter(Boolean);
-  return `${details.join(". ")}. Browse current marketplace availability from JerseysFrmJB.`;
-}
-
 export function buildProductPageModel(row = {}, options = {}) {
   const id = String(row.id || "").trim();
   const title = String(row.name || "").trim();
@@ -263,7 +251,10 @@ export function buildProductPageModel(row = {}, options = {}) {
     }];
   });
   const canonicalUrl = productLandingUrl(id, siteOrigin);
-  const description = productDescription(row, identity, category, availableSizes, available);
+  const description = buildJerseyDescription(row, {
+    identity,
+    availableSizes: availableSizes.map(size => size.name)
+  });
   const metaPrice = selectedMetaPrice(row);
   const shopifyVariants = parseJson(row.shopify_variants_json, []);
   const mappedSizes = new Set((Array.isArray(shopifyVariants) ? shopifyVariants : [])

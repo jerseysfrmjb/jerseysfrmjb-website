@@ -134,6 +134,12 @@ assert.equal(singleSize.variants[0].quantity, 2);
 assert.equal(singleSize.variants[0].sku, "JFB-CLUB-BARCELONA-YAMAL-HOME-2627-M");
 assert.match(singleSize.productUrl, /\/products\/club-barcelona-yamal-home-2627$/);
 assert.equal(singleSize.photos.length, 2);
+assert.match(singleSize.description, /Lamine Yamal #10 \| Barcelona 26\/27 Home Kit/);
+assert.match(singleSize.description, /Size: Medium/);
+assert.match(singleSize.description, /Lamine Yamal 10 name set/);
+assert.match(singleSize.description, /• Fan version/);
+assert.match(singleSize.description, /📦 Fast shipping/);
+assert.match(singleSize.descriptionHtml, /<br>/);
 
 const baseFallback = buildShopifyProduct(row({ website_price: null, base_price: 44 }));
 assert.equal(baseFallback.websitePrice, 44, "base price is the checkout fallback");

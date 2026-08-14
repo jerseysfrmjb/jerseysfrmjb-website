@@ -292,14 +292,54 @@ export function productLandingUrl(productId, siteOrigin = DEFAULT_SITE_ORIGIN) {
 }
 
 function productDescription(row, identity, availableSizes) {
-  const details = [
-    row.name,
-    categoryLabel(row.category),
-    identity.team_country,
-    identity.player ? `Player: ${identity.player}` : "",
-    availableSizes.length ? `Available sizes: ${availableSizes.join(", ")}` : "Currently sold out"
-  ].filter(Boolean);
-  return details.join(". ") + ".";
+  return buildJerseyDescription(row, { identity, availableSizes });
+}
+
+const PATCH_DETAILS = [
+  [/kaka.*ac milan.*2006\/07/i, "UCL patches"],
+  [/ronaldo.*manchester united.*2007\/08/i, "BARCLAYS patches"],
+  [/henry.*arsenal.*2005\/06/i, "BARCLAYS patches"],
+  [/hazard.*chelsea.*2014\/15/i, "BARCLAYS patches"],
+  [/pogba.*juventus.*2015\/16/i, "UCL patches"],
+  [/cristiano ronaldo.*portugal/i, "World Cup patches"],
+  [/salah.*liverpool.*2025\/26/i, "Gold Premier League patches"],
+  [/saka.*arsenal.*2026\/27/i, "Gold Premier League patches"],
+  [/dembele.*psg.*2026\/27/i, "UCL patches"]
+];
+
+function patchDetails(title = "") {
+  return PATCH_DETAILS.find(([pattern]) => pattern.test(title))?.[1] || "";
+}
+
+function titleNumber(title = "") {
+  return String(title).match(/#(\d+)\b/)?.[1] || "";
+}
+
+export function buildJerseyDescription(row = {}, options = {}) {
+  const title = String(row.name || options.title || "").replace(/\s+/g, " ").trim();
+  const identity = options.identity || inferProductIdentity(title);
+  const availableSizes = Array.isArray(options.availableSizes) ? options.availableSizes : [];
+  const sizeLabels = availableSizes.map(size => {
+    const value = String(size || "").trim();
+    return ({ S: "Small", M: "Medium", L: "Large", XL: "Extra Large" }[value] || value);
+  }).filter(Boolean);
+  const number = titleNumber(title);
+  const bullets = [];
+  if (identity.player && number) bullets.push(`${identity.player} ${number} name set`);
+  const patch = patchDetails(title);
+  if (patch) bullets.push(patch);
+  if (/long\s*sleeve|longsleeve/i.test(title)) bullets.push("Long sleeve");
+  bullets.push(row.category === "retro" ? "Retro fan version" : "Fan version");
+  bullets.push("Excellent condition");
+  return [
+    title,
+    "",
+    `Size: ${sizeLabels.length ? sizeLabels.join(", ") : "Available sizes vary"}`,
+    "",
+    ...bullets.map(bullet => `• ${bullet}`),
+    "",
+    "📦 Fast shipping"
+  ].join("\n");
 }
 
 export function buildCatalogProducts(rows = [], options = {}) {

@@ -117,6 +117,9 @@ assert.equal(facebookProduct.google_product_category, "Apparel & Accessories > C
 assert.equal(facebookProduct.age_group, "adult");
 assert.equal(facebookProduct.gender, "unisex");
 assert.equal(facebookProduct.canonical_link, facebookProduct.link);
+assert.match(facebookProduct.description, /Size: Medium/);
+assert.match(facebookProduct.description, /• Fan version/);
+assert.match(facebookProduct.description, /📦 Fast shipping/);
 assert.match(facebookProduct.image_link, /front\.jpg\?v=/);
 assert.match(facebookProduct.additional_image_link, /back\.jpg\?v=/);
 
