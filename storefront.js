@@ -76,7 +76,15 @@ const INVENTORY_IMAGE_REVISIONS = new Map([
   ["assets/inventory/club-real-front.jpg", "20260726-2"],
   ["assets/inventory/club-real-back.jpg", "20260726-2"],
   ["assets/inventory/club-city-front.jpg", "20260726-2"],
-  ["assets/inventory/club-city-back.jpg", "20260726-2"]
+  ["assets/inventory/club-city-back.jpg", "20260726-2"],
+  ["assets/inventory/club-dortmund-front.jpg", "20260814"],
+  ["assets/inventory/club-dortmund-back.jpg", "20260814"],
+  ["assets/inventory/club-dortmund-front-v2.jpg", "20260814"],
+  ["assets/inventory/club-dortmund-back-v2.jpg", "20260814"],
+  ["assets/inventory/retro-ronaldo-short-front.jpg", "20260814"],
+  ["assets/inventory/retro-ronaldo-short-back.jpg", "20260814"],
+  ["assets/inventory/retro-ronaldo-short-front-v2.jpg", "20260814"],
+  ["assets/inventory/retro-ronaldo-short-back-v2.jpg", "20260814"]
 ]);
 
 function inventoryImageSrc(src = "") {
@@ -95,8 +103,10 @@ function responsiveInventoryImage(src = "", alt = "", options = {}) {
   const extra = options.fetchpriority ? ` fetchpriority="${escapeHtml(options.fetchpriority)}"` : "";
   if (!match) return `<img src="${escapeHtml(original)}" alt="${escapeHtml(alt)}" title="${escapeHtml(alt)}" width="1280" height="1280" loading="${escapeHtml(loading)}" decoding="async"${extra}>`;
   const base = `/assets/inventory/responsive/${match[1]}`;
+  const revision = INVENTORY_IMAGE_REVISIONS.get(normalized);
+  const responsiveImage = width => `${base}-${width}.webp${revision ? `?v=${revision}` : ""}`;
   return `<picture>
-    <source type="image/webp" srcset="${escapeHtml(base)}-480.webp 480w, ${escapeHtml(base)}-900.webp 900w" sizes="${escapeHtml(options.sizes || "(max-width: 540px) 50vw, (max-width: 900px) 50vw, 440px")}">
+    <source type="image/webp" srcset="${escapeHtml(responsiveImage(480))} 480w, ${escapeHtml(responsiveImage(900))} 900w" sizes="${escapeHtml(options.sizes || "(max-width: 540px) 50vw, (max-width: 900px) 50vw, 440px")}">
     <img src="${escapeHtml(original)}" alt="${escapeHtml(alt)}" title="${escapeHtml(alt)}" width="1280" height="1280" loading="${escapeHtml(loading)}" decoding="async"${extra}>
   </picture>`;
 }
