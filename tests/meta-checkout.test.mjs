@@ -51,6 +51,27 @@ try {
   assert.equal(response.headers.get("Location"), rawCart.checkoutUrl);
   assert.equal(requests.filter(request => request.query.includes("JerseysFrmJBCartCreate")).length, 1);
   assert.equal(requests.some(request => request.variables.input.lines[0].merchandiseId === "gid://shopify/ProductVariant/1"), true);
+
+  const legacyEnv = {
+    ...env,
+    DB: {
+      prepare(sql) {
+        return {
+          bind() { return this; },
+          async first() {
+            if (/JOIN shopify_product_mappings/.test(sql)) return { product_id: "legacy-dortmund", shopify_product_id: "gid://shopify/Product/2", shopify_variant_id: "gid://shopify/ProductVariant/2", size: "M", inventory_size: "Medium ?? Player Version", inventory_quantity: 1, sizes_json: "{}" };
+            return { id: "legacy-dortmund", size: "Medium ?? Player Version", quantity: 1, sizes_json: "{}" };
+          },
+          async all() { return { results: [] }; }
+        };
+      }
+    }
+  };
+  const legacyResponse = await checkoutEndpoint({
+    request: new Request("https://jerseysfrmjb.com/checkout?products=legacy-dortmund:1"),
+    env: legacyEnv
+  });
+  assert.equal(legacyResponse.status, 302);
 } finally {
   globalThis.fetch = originalFetch;
 }

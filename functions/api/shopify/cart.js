@@ -22,6 +22,20 @@ function quantity(value) {
   return Number.isFinite(number) && number > 0 && number <= 25 ? number : 1;
 }
 
+function availableSizeQuantity(row, size) {
+  let sizes = {};
+  try { sizes = JSON.parse(row?.sizes_json || "{}"); } catch { sizes = {}; }
+  const explicit = Math.max(0, Math.floor(Number(sizes[size] || 0)));
+  if (explicit > 0) return explicit;
+  // Older D1 rows stored a single legacy label in `size` and left
+  // `sizes_json` empty. Preserve those rows without inventing stock.
+  const fallbackLabel = row?.inventory_size ?? row?.size;
+  const fallbackQuantity = row?.inventory_quantity ?? row?.quantity;
+  return normalizeSize(fallbackLabel) === size
+    ? Math.max(0, Math.floor(Number(fallbackQuantity || 0)))
+    : 0;
+}
+
 async function checkoutAttributes(body = {}) {
   const sessionId = cleanId(body.session_id, 100);
   const trafficSource = TRAFFIC_SOURCES.has(body.traffic_source) ? body.traffic_source : "Other";
@@ -57,7 +71,8 @@ async function attachProductIds(env, cart) {
 
 async function mappedVariant(env, productId, size, requestedQuantity) {
   const row = await env.DB.prepare(`
-    SELECT inventory.id, inventory.name, inventory.sizes_json,
+    SELECT inventory.id, inventory.name,
+      inventory.size AS inventory_size, inventory.quantity AS inventory_quantity, inventory.sizes_json,
       product_mappings.shopify_product_id,
       variant_mappings.shopify_variant_id, variant_mappings.size
     FROM inventory
@@ -68,9 +83,7 @@ async function mappedVariant(env, productId, size, requestedQuantity) {
     LIMIT 1
   `).bind(size, productId).first();
   if (!row?.shopify_variant_id || !row.shopify_product_id) throw new Error("Website checkout is not mapped for this jersey and size yet.");
-  let sizes = {};
-  try { sizes = JSON.parse(row.sizes_json || "{}"); } catch { sizes = {}; }
-  const available = Math.max(0, Math.floor(Number(sizes[size] || 0)));
+  const available = availableSizeQuantity(row, size);
   if (!available) throw new Error("That size is sold out.");
   if (requestedQuantity > available) throw new Error("The requested quantity is no longer available.");
   return row;
@@ -164,7 +177,8 @@ async function validateCartLineQuantity(env, cart, lineId, requestedQuantity) {
   const line = cart?.lines?.find(item => item.id === lineId);
   if (!line?.variant_id) throw new Error("That cart item is no longer available.");
   const mapping = await env.DB.prepare(`
-    SELECT variant_mappings.product_id, variant_mappings.size, inventory.sizes_json
+    SELECT variant_mappings.product_id, variant_mappings.size,
+      inventory.size AS inventory_size, inventory.quantity AS inventory_quantity, inventory.sizes_json
     FROM shopify_variant_mappings AS variant_mappings
     JOIN shopify_product_mappings AS product_mappings
       ON product_mappings.product_id = variant_mappings.product_id
@@ -176,9 +190,11 @@ async function validateCartLineQuantity(env, cart, lineId, requestedQuantity) {
   if (!mapping?.product_id) {
     throw new Error("That cart item is no longer mapped for website checkout.");
   }
-  let sizes = {};
-  try { sizes = JSON.parse(mapping.sizes_json || "{}"); } catch { sizes = {}; }
-  const available = Math.max(0, Math.floor(Number(sizes[mapping.size] || 0)));
+  const available = availableSizeQuantity({
+    size: mapping.inventory_size,
+    quantity: mapping.inventory_quantity,
+    sizes_json: mapping.sizes_json
+  }, mapping.size);
   if (requestedQuantity > available) throw new Error("The requested quantity is no longer available.");
 }
 

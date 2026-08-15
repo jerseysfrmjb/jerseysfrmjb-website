@@ -1,4 +1,5 @@
 import { onRequestPost as shopifyCartEndpoint } from "./api/shopify/cart.js";
+import { normalizeSize } from "./api/shopify/_products.js";
 
 const SIZE_PREFERENCE = ["M", "S", "L", "XL", "2XL", "3XL", "4XL"];
 const MAX_LINES = 50;
@@ -63,7 +64,8 @@ function availableSizes(row) {
     .map(([size]) => String(size).trim().toUpperCase())
     .filter(Boolean);
   if (!available.length && row?.size && Number(row.quantity || 0) > 0) {
-    available.push(String(row.size).trim().toUpperCase());
+    const fallback = normalizeSize(row.size);
+    if (fallback) available.push(fallback);
   }
   return available;
 }
