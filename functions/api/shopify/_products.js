@@ -25,6 +25,15 @@ const SIZE_WORDS = [
   ["M", /\bm\b|\bmedium\b/i], ["S", /\bs\b|\bsmall\b/i]
 ];
 
+// Keep Shopify's remote media URL changing when a photo is replaced in-place.
+// The inventory row remains the D1 source of truth, while the version query
+// forces Shopify to fetch the refreshed binary instead of reusing its cached
+// copy of the old URL.
+const PHOTO_REFRESH_PRODUCTS = new Set([
+  "retro-ronaldo-united-short-0708",
+  "club-dortmund-away-2425"
+]);
+
 function parseJson(value, fallback) {
   try { return JSON.parse(value || ""); } catch { return fallback; }
 }
@@ -87,6 +96,13 @@ function absoluteHttps(value, siteOrigin) {
   }
 }
 
+function refreshPhotoUrl(productId, source) {
+  const normalized = String(source || "").replace(/^\/+/, "");
+  if (!PHOTO_REFRESH_PRODUCTS.has(String(productId || "").trim())) return source;
+  if (!/^assets\/inventory\/(?:retro-ronaldo-short|club-dortmund)-(?:front|back)\.jpg$/i.test(normalized)) return source;
+  return `${source}${String(source).includes("?") ? "&" : "?"}v=20260814`;
+}
+
 export function buildShopifyProduct(row = {}, options = {}) {
   const siteOrigin = String(options.siteOrigin || "https://jerseysfrmjb.com").replace(/\/$/, "");
   const id = String(row.id || "").trim();
@@ -105,7 +121,7 @@ export function buildShopifyProduct(row = {}, options = {}) {
   const jerseyClass = classification(row, title);
   const photos = (Array.isArray(row.photos) ? row.photos : parseJson(row.photos, []))
     .map(photo => ({
-      url: absoluteHttps(photo?.src, siteOrigin),
+      url: absoluteHttps(refreshPhotoUrl(id, photo?.src), siteOrigin),
       alt: String(photo?.alt || `${title} jersey`).trim().slice(0, 250)
     }))
     .filter(photo => photo.url);
