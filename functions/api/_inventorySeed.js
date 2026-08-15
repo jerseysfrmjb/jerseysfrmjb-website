@@ -933,11 +933,11 @@ export const seedInventory = {
       "id": "club-dortmund-away-2425",
       "photos": [
         {
-          "src": "assets/inventory/club-dortmund-front-v2.jpg",
+          "src": "assets/inventory/club-dortmund-front.jpg",
           "alt": "Borussia Dortmund 24/25 away jersey front"
         },
         {
-          "src": "assets/inventory/club-dortmund-back-v2.jpg",
+          "src": "assets/inventory/club-dortmund-back.jpg",
           "alt": "Borussia Dortmund 24/25 away jersey back"
         }
       ],
@@ -1097,11 +1097,11 @@ export const seedInventory = {
       "id": "retro-ronaldo-united-short-0708",
       "photos": [
         {
-          "src": "assets/inventory/retro-ronaldo-short-front-v2.jpg",
+          "src": "assets/inventory/retro-ronaldo-short-front.jpg",
           "alt": "Ronaldo Manchester United 2007/08 short sleeve jersey front"
         },
         {
-          "src": "assets/inventory/retro-ronaldo-short-back-v2.jpg",
+          "src": "assets/inventory/retro-ronaldo-short-back.jpg",
           "alt": "Ronaldo Manchester United 2007/08 short sleeve jersey back"
         }
       ],
@@ -1888,6 +1888,23 @@ export async function ensureInventory(env) {
       replacements: [
         { from: "assets/inventory/club-dortmund-front.jpg", to: "assets/inventory/club-dortmund-front-v2.jpg" },
         { from: "assets/inventory/club-dortmund-back.jpg", to: "assets/inventory/club-dortmund-back-v2.jpg" }
+      ]
+    }
+  ]);
+
+  await applyOneTimePhotoCorrections(env, "stabilize_ronaldo_dortmund_photo_paths_2026_08_14", [
+    {
+      id: "retro-ronaldo-united-short-0708",
+      replacements: [
+        { from: "assets/inventory/retro-ronaldo-short-front-v2.jpg", to: "assets/inventory/retro-ronaldo-short-front.jpg" },
+        { from: "assets/inventory/retro-ronaldo-short-back-v2.jpg", to: "assets/inventory/retro-ronaldo-short-back.jpg" }
+      ]
+    },
+    {
+      id: "club-dortmund-away-2425",
+      replacements: [
+        { from: "assets/inventory/club-dortmund-front-v2.jpg", to: "assets/inventory/club-dortmund-front.jpg" },
+        { from: "assets/inventory/club-dortmund-back-v2.jpg", to: "assets/inventory/club-dortmund-back.jpg" }
       ]
     }
   ]);
