@@ -1648,6 +1648,41 @@ async function applyOneTimeProductCorrections(env, key, corrections) {
     ON CONFLICT(key) DO UPDATE SET value = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP`).run();
 }
 
+async function applyOneTimePhotoCorrections(env, key, corrections) {
+  const existing = await env.DB.prepare("SELECT value FROM site_settings WHERE key = ?").bind(key).first();
+  if (existing?.value === "applied") return;
+
+  for (const correction of corrections) {
+    const row = await env.DB.prepare("SELECT photos FROM inventory WHERE id = ?").bind(correction.id).first();
+    if (!row) continue;
+
+    let photos = [];
+    try {
+      const parsedPhotos = JSON.parse(row.photos || "[]");
+      photos = Array.isArray(parsedPhotos) ? parsedPhotos : [];
+    } catch {
+      photos = [];
+    }
+
+    const correctedPhotos = photos.map(photo => {
+      const source = String(photo?.src || "");
+      const replacement = correction.replacements.find(item => item.from === source);
+      return replacement ? { ...photo, src: replacement.to } : photo;
+    });
+
+    await env.DB.prepare(
+      "UPDATE inventory SET photos = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+    ).bind(JSON.stringify(correctedPhotos), correction.id).run();
+  }
+
+  await env.DB.prepare(`INSERT INTO site_settings (key, value, updated_at)
+    VALUES (?, 'applied', CURRENT_TIMESTAMP)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP`).bind(key).run();
+  await env.DB.prepare(`INSERT INTO site_settings (key, value, updated_at)
+    VALUES ('inventory_updated_at', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ON CONFLICT(key) DO UPDATE SET value = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP`).run();
+}
+
 async function applyOneTimeSettingTextCorrections(env, key, corrections) {
   const existing = await env.DB.prepare("SELECT value FROM site_settings WHERE key = ?").bind(key).first();
   if (existing?.value === "applied") return;
@@ -1837,6 +1872,23 @@ export async function ensureInventory(env) {
       name: "Jude Bellingham #5 | Real Madrid 26/27 Home Kit",
       from: "25/26",
       to: "26/27"
+    }
+  ]);
+
+  await applyOneTimePhotoCorrections(env, "refresh_ronaldo_dortmund_photos_2026_08_14", [
+    {
+      id: "retro-ronaldo-united-short-0708",
+      replacements: [
+        { from: "assets/inventory/retro-ronaldo-short-front.jpg", to: "assets/inventory/retro-ronaldo-short-front-v2.jpg" },
+        { from: "assets/inventory/retro-ronaldo-short-back.jpg", to: "assets/inventory/retro-ronaldo-short-back-v2.jpg" }
+      ]
+    },
+    {
+      id: "club-dortmund-away-2425",
+      replacements: [
+        { from: "assets/inventory/club-dortmund-front.jpg", to: "assets/inventory/club-dortmund-front-v2.jpg" },
+        { from: "assets/inventory/club-dortmund-back.jpg", to: "assets/inventory/club-dortmund-back-v2.jpg" }
+      ]
     }
   ]);
 
