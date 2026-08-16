@@ -147,7 +147,20 @@ export async function onRequestGet({ request, env }) {
   try {
     const cart = await createShopifyCart(env, request, parsed.lines, url);
     const checkoutUrl = shopifyCheckoutRedirect(cart?.checkout_url);
-    if (!checkoutUrl) return errorResponse(502, "Secure checkout did not return a valid destination.");
+    if (!checkoutUrl) {
+      if (url.searchParams.get("debug") === "1") {
+        const rawCheckout = String(cart?.checkout_url || "");
+        let detail = `raw=${rawCheckout ? "present" : "empty"}`;
+        try {
+          const parsed = new URL(rawCheckout);
+          detail += ` protocol=${parsed.protocol} host=${parsed.hostname} path=${parsed.pathname.startsWith("/checkouts/") ? "checkout" : "other"}`;
+        } catch {
+          detail += " parse=failed";
+        }
+        return errorResponse(502, `Secure checkout did not return a valid destination (${detail}).`);
+      }
+      return errorResponse(502, "Secure checkout did not return a valid destination.");
+    }
     return new Response(null, {
       status: 302,
       headers: {
