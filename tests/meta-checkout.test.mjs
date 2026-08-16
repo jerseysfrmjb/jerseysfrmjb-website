@@ -30,11 +30,12 @@ const env = {
 
 const originalFetch = globalThis.fetch;
 const requests = [];
+let checkoutCart = rawCart;
 globalThis.fetch = async (url, options) => {
   const body = JSON.parse(options.body);
   requests.push(body);
   if (body.query.includes("JerseysFrmJBCartCreate")) {
-    return new Response(JSON.stringify({ data: { cartCreate: { cart: rawCart, userErrors: [] } } }));
+    return new Response(JSON.stringify({ data: { cartCreate: { cart: checkoutCart, userErrors: [] } } }));
   }
   if (body.query.includes("JerseysFrmJBCartAdd")) {
     return new Response(JSON.stringify({ data: { cartLinesAdd: { cart: { ...rawCart, totalQuantity: 2 }, userErrors: [] } } }));
@@ -51,6 +52,17 @@ try {
   assert.equal(response.headers.get("Location"), rawCart.checkoutUrl);
   assert.equal(requests.filter(request => request.query.includes("JerseysFrmJBCartCreate")).length, 1);
   assert.equal(requests.some(request => request.variables.input.lines[0].merchandiseId === "gid://shopify/ProductVariant/1"), true);
+
+  checkoutCart = {
+    ...rawCart,
+    checkoutUrl: "https://jerseysfrmjb.myshopify.com/cart/c/meta-cart"
+  };
+  const cartPathResponse = await checkoutEndpoint({
+    request: new Request("https://jerseysfrmjb.com/checkout?products=retro-test:1&source=facebook"),
+    env
+  });
+  assert.equal(cartPathResponse.status, 302);
+  assert.equal(cartPathResponse.headers.get("Location"), checkoutCart.checkoutUrl);
 
   const legacyEnv = {
     ...env,
