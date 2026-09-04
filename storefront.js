@@ -646,8 +646,8 @@ function renderProductCard(item) {
       <h2><a class="product-title-link" href="${escapeHtml(productDetailsUrl(item.id))}">${escapeHtml(item.name)}</a></h2>
       <a class="product-details-button" href="${escapeHtml(productDetailsUrl(item.id))}" aria-label="${available ? "Choose a size for" : "View jersey details for"} ${escapeHtml(item.name)}">${available ? "Choose Size" : "View Jersey Details"} <span aria-hidden="true">&rarr;</span></a>
       <p data-card-size>${escapeHtml(sizes)}</p>
-      ${renderWebsiteCheckout(item, available)}
       ${renderPlatformAvailability(item, available)}
+      ${renderWebsiteCheckout(item, available)}
     </article>`;
 }
 
@@ -664,8 +664,8 @@ function renderFeaturedCard(item, index) {
         <h3><a class="product-title-link" href="${escapeHtml(productDetailsUrl(item.id))}">${escapeHtml(item.name)}</a></h3>
         <a class="product-details-button" href="${escapeHtml(productDetailsUrl(item.id))}" aria-label="Choose a size for ${escapeHtml(item.name)}">Choose Size <span aria-hidden="true">&rarr;</span></a>
         <div class="featured-meta"><p>${escapeHtml(available ? displaySize(item) : "Sold out")}</p></div>
-        ${renderWebsiteCheckout(item, available)}
         ${renderPlatformAvailability(item, available)}
+        ${renderWebsiteCheckout(item, available)}
       </div>
     </article>`;
 }

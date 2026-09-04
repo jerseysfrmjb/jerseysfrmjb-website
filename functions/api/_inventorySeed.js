@@ -969,10 +969,10 @@ export const seedInventory = {
       "sizes": {
         "M": 1
       },
-      "price": 40,
+      "price": 50,
       "platform_prices": {
-        "Depop": 40,
-        "eBay": 45
+        "Depop": 45,
+        "eBay": 50
       },
       "category": "club",
       "name": "No Name/No Number | Liverpool 25/26 Home Kit",
@@ -1531,6 +1531,19 @@ seedInventory.items.push(
     featured: false, featured_order: 0, new_arrival: true, date_added: "2026-09-04"
   },
   {
+    sort_order: 525,
+    id: "club-liverpool-white-blank",
+    photos: [
+      { src: "assets/inventory/club-liverpool-white-ekitike-22-front.jpg", alt: "Liverpool white jersey front" },
+      { src: "assets/inventory/club-liverpool-white-blank-back.jpg", alt: "Liverpool white no-name jersey back" }
+    ],
+    size: "M", sizes: { M: 1 }, price: 50,
+    platform_prices: { eBay: 50, Depop: 45 }, category: "club",
+    name: "No Name/No Number | Liverpool White Jersey", quantity: 1,
+    links: { depop: "https://www.depop.com/jerseysfrmjb/", ebay: "https://www.ebay.com/usr/jerseysfrmjb" },
+    featured: false, featured_order: 0, new_arrival: true, date_added: "2026-09-04"
+  },
+  {
     sort_order: 530,
     id: "club-bayern-olise-home-17",
     photos: [
@@ -1544,27 +1557,15 @@ seedInventory.items.push(
     featured: false, featured_order: 0, new_arrival: true, date_added: "2026-09-04"
   },
   {
-    sort_order: 540,
-    id: "club-chelsea-blue-blank",
-    photos: [
-      { src: "assets/inventory/club-chelsea-blue-blank-front.jpg", alt: "Chelsea blue jersey front" }
-    ],
-    size: "M", sizes: { M: 1 }, price: 50,
-    platform_prices: { eBay: 50, Depop: 45 }, category: "club",
-    name: "No Name/No Number | Chelsea Blue Jersey", quantity: 1,
-    links: { depop: "https://www.depop.com/jerseysfrmjb/", ebay: "https://www.ebay.com/usr/jerseysfrmjb" },
-    featured: false, featured_order: 0, new_arrival: true, date_added: "2026-09-04"
-  },
-  {
     sort_order: 550,
     id: "club-chelsea-palmer-10",
     photos: [
       { src: "assets/inventory/club-chelsea-palmer-10-front.jpg", alt: "Palmer Chelsea blue jersey front" },
       { src: "assets/inventory/club-chelsea-palmer-10-back.jpg", alt: "Palmer Chelsea blue jersey back" }
     ],
-    size: "M", sizes: { M: 1 }, price: 55,
+    size: "M", sizes: { M: 2 }, price: 55,
     platform_prices: { eBay: 55, Depop: 50 }, category: "club",
-    name: "Palmer #10 | Chelsea Blue Jersey", quantity: 1,
+    name: "Palmer #10 | Chelsea Blue Jersey", quantity: 2,
     links: { depop: "https://www.depop.com/jerseysfrmjb/", ebay: "https://www.ebay.com/usr/jerseysfrmjb" },
     featured: false, featured_order: 0, new_arrival: true, date_added: "2026-09-04"
   },
@@ -1726,6 +1727,22 @@ async function applyOneTimeStockSet(env, key, lines) {
        SET sizes_json = ?, size = ?, quantity = ?, new_arrival = ?, date_added = ?, updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`
     ).bind(JSON.stringify(sizes), label, quantity, line.newArrival ? 1 : 0, line.dateAdded || "", line.id).run();
+  }
+
+  await env.DB.prepare(`INSERT INTO site_settings (key, value, updated_at)
+    VALUES (?, 'applied', CURRENT_TIMESTAMP)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP`).bind(key).run();
+  await env.DB.prepare(`INSERT INTO site_settings (key, value, updated_at)
+    VALUES ('inventory_updated_at', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ON CONFLICT(key) DO UPDATE SET value = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP`).run();
+}
+
+async function applyOneTimeInventoryCleanup(env, key, ids) {
+  const existing = await env.DB.prepare("SELECT value FROM site_settings WHERE key = ?").bind(key).first();
+  if (existing?.value === "applied") return;
+
+  for (const id of ids) {
+    await env.DB.prepare("DELETE FROM inventory WHERE id = ?").bind(id).run();
   }
 
   await env.DB.prepare(`INSERT INTO site_settings (key, value, updated_at)
@@ -1977,6 +1994,11 @@ export async function ensureInventory(env) {
     ).bind(item.id, platform, price))
   );
   if (platformPriceStatements.length) await env.DB.batch(platformPriceStatements);
+
+  await applyOneTimeInventoryCleanup(env, "remove_incorrect_chelsea_and_duplicate_liverpool_blank_2026_09_04", ["club-chelsea-blue-blank", "club-liverpool-red-blank"]);
+  await applyOneTimeStockSet(env, "set_palmer_pair_stock_2026_09_04", [
+    { id: "club-chelsea-palmer-10", size: "M", quantity: 2, newArrival: true, dateAdded: "2026-09-04" }
+  ]);
 
   await applyOneTimeProductCorrections(env, "correct_club_seasons_2026_07_30", [
     {

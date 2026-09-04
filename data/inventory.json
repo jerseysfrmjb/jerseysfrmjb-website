@@ -969,10 +969,10 @@
       "sizes": {
         "M": 1
       },
-      "price": 40,
+      "price": 50,
       "platform_prices": {
-        "Depop": 40,
-        "eBay": 45
+        "Depop": 45,
+        "eBay": 50
       },
       "category": "club",
       "name": "No Name/No Number | Liverpool 25/26 Home Kit",
@@ -1588,6 +1588,40 @@
       "date_added": "2026-09-04"
     },
     {
+      "sort_order": 525,
+      "id": "club-liverpool-white-blank",
+      "photos": [
+        {
+          "src": "assets/inventory/club-liverpool-white-ekitike-22-front.jpg",
+          "alt": "Liverpool white jersey front"
+        },
+        {
+          "src": "assets/inventory/club-liverpool-white-blank-back.jpg",
+          "alt": "Liverpool white no-name jersey back"
+        }
+      ],
+      "size": "M",
+      "sizes": {
+        "M": 1
+      },
+      "price": 50,
+      "platform_prices": {
+        "eBay": 50,
+        "Depop": 45
+      },
+      "category": "club",
+      "name": "No Name/No Number | Liverpool White Jersey",
+      "quantity": 1,
+      "links": {
+        "depop": "https://www.depop.com/jerseysfrmjb/",
+        "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
+      },
+      "featured": false,
+      "featured_order": 0,
+      "new_arrival": true,
+      "date_added": "2026-09-04"
+    },
+    {
       "sort_order": 530,
       "id": "club-bayern-olise-home-17",
       "photos": [
@@ -1622,36 +1656,6 @@
       "date_added": "2026-09-04"
     },
     {
-      "sort_order": 540,
-      "id": "club-chelsea-blue-blank",
-      "photos": [
-        {
-          "src": "assets/inventory/club-chelsea-blue-blank-front.jpg",
-          "alt": "Chelsea blue jersey front"
-        }
-      ],
-      "size": "M",
-      "sizes": {
-        "M": 1
-      },
-      "price": 50,
-      "platform_prices": {
-        "eBay": 50,
-        "Depop": 45
-      },
-      "category": "club",
-      "name": "No Name/No Number | Chelsea Blue Jersey",
-      "quantity": 1,
-      "links": {
-        "depop": "https://www.depop.com/jerseysfrmjb/",
-        "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
-      },
-      "featured": false,
-      "featured_order": 0,
-      "new_arrival": true,
-      "date_added": "2026-09-04"
-    },
-    {
       "sort_order": 550,
       "id": "club-chelsea-palmer-10",
       "photos": [
@@ -1666,7 +1670,7 @@
       ],
       "size": "M",
       "sizes": {
-        "M": 1
+        "M": 2
       },
       "price": 55,
       "platform_prices": {
@@ -1675,7 +1679,7 @@
       },
       "category": "club",
       "name": "Palmer #10 | Chelsea Blue Jersey",
-      "quantity": 1,
+      "quantity": 2,
       "links": {
         "depop": "https://www.depop.com/jerseysfrmjb/",
         "ebay": "https://www.ebay.com/usr/jerseysfrmjb"

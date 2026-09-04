@@ -547,6 +547,7 @@ function marketplaceMarkup(model) {
         <span>Marketplace checkout</span>
         <h2 id="marketplace-heading">Available on</h2>
       </div>
+      <p class="product-marketplace-primary-note">Depop is our primary purchase option. eBay is also available.</p>
       <div class="product-marketplace-list">
         ${model.marketplaces.map(marketplace => {
           let action = "";
@@ -579,7 +580,8 @@ function mobileActionMarkup(model) {
       </aside>`;
   }
 
-  if (model.shopify?.enabled) {
+  const activeMarketplaces = model.marketplaces.filter(marketplace => marketplace.link);
+  if (model.shopify?.enabled && !activeMarketplaces.length) {
     return `
       <aside class="product-mobile-action-bar product-mobile-shopify-bar" aria-label="Website checkout options">
         <div class="product-mobile-action-intro"><span>Secure Shopify checkout</span><strong>$${escapeHtml(model.shopify.price.toFixed(2))}</strong></div>
@@ -590,7 +592,6 @@ function mobileActionMarkup(model) {
       </aside>`;
   }
 
-  const activeMarketplaces = model.marketplaces.filter(marketplace => marketplace.link);
   if (!activeMarketplaces.length) {
     return `
       <aside class="product-mobile-action-bar" aria-label="Ask about this jersey">
@@ -601,10 +602,11 @@ function mobileActionMarkup(model) {
 
   return `
     <aside class="product-mobile-action-bar" aria-label="Marketplace purchase options">
-      <div class="product-mobile-action-intro"><span>Secure marketplace checkout</span><strong>${activeMarketplaces.length === 1 ? `Available on ${escapeHtml(activeMarketplaces[0].name)}` : "Choose a marketplace"}</strong></div>
+      <div class="product-mobile-action-intro"><span>Depop is our primary marketplace</span><strong>${activeMarketplaces.length === 1 ? `Available on ${escapeHtml(activeMarketplaces[0].name)}` : "Choose a marketplace"}</strong></div>
       <nav aria-label="Buy this jersey">
         ${activeMarketplaces.map(marketplace => `<a class="platform-buy-button product-mobile-marketplace-button" href="${escapeHtml(marketplace.link)}" target="_blank" rel="noopener" data-analytics-product-id="${escapeHtml(model.id)}" data-analytics-product-name="${escapeHtml(model.title)}" data-analytics-marketplace="${escapeHtml(marketplace.name)}"><span>Buy on ${escapeHtml(marketplace.name)}</span>${marketplace.price === null ? "" : `<b>$${escapeHtml(marketplace.priceDisplay)}</b>`}</a>`).join("")}
       </nav>
+      ${model.shopify?.enabled ? '<div class="product-mobile-secondary-checkout" aria-label="Website checkout options"><a class="product-mobile-marketplace-button product-mobile-checkout-button" href="#website-checkout">Choose Size</a><button class="product-mobile-marketplace-button product-mobile-cart-button" type="button" data-shopify-cart-open>Cart <b data-shopify-cart-count>0</b></button></div>' : ""}
     </aside>`;
 }
 
@@ -765,9 +767,9 @@ export function renderProductPage(model) {
           </div>
           ${model.available ? `<ul>${stockMarkup}</ul>` : ""}
         </section>
-        ${shopifyCheckoutMarkup(model)}
         ${marketplaceMarkup(model)}
-        ${model.available && model.marketplaces.length ? `<p class="product-checkout-note">${model.shopify?.enabled ? "Purchase securely through JerseysFrmJB above, or use an available marketplace listing." : "Purchases are completed securely on the selected marketplace. JerseysFrmJB does not process checkout on this page."}</p>` : ""}
+        ${shopifyCheckoutMarkup(model)}
+        ${model.available && model.marketplaces.length ? `<p class="product-checkout-note">${model.shopify?.enabled ? "Depop is our primary purchase option. eBay and secure website checkout remain available below." : "Purchases are completed securely on the selected marketplace. JerseysFrmJB does not process checkout on this page."}</p>` : ""}
       </section>
     </article>
     <section class="product-page-support">
