@@ -1487,6 +1487,127 @@ export const seedInventory = {
     }
   ]
 };
+
+// Supplemental September 2026 drop. Kept separate from the generated seed
+// snapshot so future inventory exports do not overwrite these new records.
+seedInventory.items.push(
+  {
+    sort_order: 500,
+    id: "club-barcelona-purple-black-blank",
+    photos: [
+      { src: "assets/inventory/club-barcelona-purple-black-blank-front.jpg", alt: "Barcelona black and purple jersey front" },
+      { src: "assets/inventory/club-barcelona-purple-black-blank-back.jpg", alt: "Barcelona black and purple jersey back" }
+    ],
+    size: "M", sizes: { M: 1 }, price: 50,
+    platform_prices: { eBay: 50, Depop: 45 }, category: "club",
+    name: "No Name/No Number | Barcelona Black & Purple Jersey", quantity: 1,
+    links: { depop: "https://www.depop.com/jerseysfrmjb/", ebay: "https://www.ebay.com/usr/jerseysfrmjb" },
+    featured: false, featured_order: 0, new_arrival: true, date_added: "2026-09-04"
+  },
+  {
+    sort_order: 510,
+    id: "club-manchester-united-blue-blank",
+    photos: [
+      { src: "assets/inventory/club-manchester-united-blue-blank-front.jpg", alt: "Manchester United blue jersey front" },
+      { src: "assets/inventory/club-manchester-united-blue-blank-back.jpg", alt: "Manchester United blue jersey back" }
+    ],
+    size: "M", sizes: { M: 1 }, price: 50,
+    platform_prices: { eBay: 50, Depop: 45 }, category: "club",
+    name: "No Name/No Number | Manchester United Blue Jersey", quantity: 1,
+    links: { depop: "https://www.depop.com/jerseysfrmjb/", ebay: "https://www.ebay.com/usr/jerseysfrmjb" },
+    featured: false, featured_order: 0, new_arrival: true, date_added: "2026-09-04"
+  },
+  {
+    sort_order: 520,
+    id: "club-liverpool-white-ekitike-22",
+    photos: [
+      { src: "assets/inventory/club-liverpool-white-ekitike-22-front.jpg", alt: "Ekitike Liverpool white jersey front" },
+      { src: "assets/inventory/club-liverpool-white-ekitike-22-back.jpg", alt: "Ekitike Liverpool white jersey back" }
+    ],
+    size: "M", sizes: { M: 1 }, price: 55,
+    platform_prices: { eBay: 55, Depop: 50 }, category: "club",
+    name: "Ekitike #22 | Liverpool White Jersey", quantity: 1,
+    links: { depop: "https://www.depop.com/jerseysfrmjb/", ebay: "https://www.ebay.com/usr/jerseysfrmjb" },
+    featured: false, featured_order: 0, new_arrival: true, date_added: "2026-09-04"
+  },
+  {
+    sort_order: 530,
+    id: "club-bayern-olise-home-17",
+    photos: [
+      { src: "assets/inventory/club-bayern-olise-home-17-front.jpg", alt: "Olise Bayern Munich red jersey front" },
+      { src: "assets/inventory/club-bayern-olise-home-17-back.jpg", alt: "Olise Bayern Munich red jersey back" }
+    ],
+    size: "M", sizes: { M: 1 }, price: 55,
+    platform_prices: { eBay: 55, Depop: 50 }, category: "club",
+    name: "Olise #17 | Bayern Munich Home Jersey", quantity: 1,
+    links: { depop: "https://www.depop.com/jerseysfrmjb/", ebay: "https://www.ebay.com/usr/jerseysfrmjb" },
+    featured: false, featured_order: 0, new_arrival: true, date_added: "2026-09-04"
+  },
+  {
+    sort_order: 540,
+    id: "club-chelsea-blue-blank",
+    photos: [
+      { src: "assets/inventory/club-chelsea-blue-blank-front.jpg", alt: "Chelsea blue jersey front" }
+    ],
+    size: "M", sizes: { M: 1 }, price: 50,
+    platform_prices: { eBay: 50, Depop: 45 }, category: "club",
+    name: "No Name/No Number | Chelsea Blue Jersey", quantity: 1,
+    links: { depop: "https://www.depop.com/jerseysfrmjb/", ebay: "https://www.ebay.com/usr/jerseysfrmjb" },
+    featured: false, featured_order: 0, new_arrival: true, date_added: "2026-09-04"
+  },
+  {
+    sort_order: 550,
+    id: "club-chelsea-palmer-10",
+    photos: [
+      { src: "assets/inventory/club-chelsea-palmer-10-front.jpg", alt: "Palmer Chelsea blue jersey front" },
+      { src: "assets/inventory/club-chelsea-palmer-10-back.jpg", alt: "Palmer Chelsea blue jersey back" }
+    ],
+    size: "M", sizes: { M: 1 }, price: 55,
+    platform_prices: { eBay: 55, Depop: 50 }, category: "club",
+    name: "Palmer #10 | Chelsea Blue Jersey", quantity: 1,
+    links: { depop: "https://www.depop.com/jerseysfrmjb/", ebay: "https://www.ebay.com/usr/jerseysfrmjb" },
+    featured: false, featured_order: 0, new_arrival: true, date_added: "2026-09-04"
+  },
+  {
+    sort_order: 560,
+    id: "club-liverpool-red-ekitike-22",
+    photos: [
+      { src: "assets/inventory/club-liverpool-red-ekitike-22-front.jpg", alt: "Ekitike Liverpool red jersey front" },
+      { src: "assets/inventory/club-liverpool-red-ekitike-22-back.jpg", alt: "Ekitike Liverpool red jersey back" }
+    ],
+    size: "M", sizes: { M: 1 }, price: 55,
+    platform_prices: { eBay: 55, Depop: 50 }, category: "club",
+    name: "Ekitike #22 | Liverpool Red Jersey", quantity: 1,
+    links: { depop: "https://www.depop.com/jerseysfrmjb/", ebay: "https://www.ebay.com/usr/jerseysfrmjb" },
+    featured: false, featured_order: 0, new_arrival: true, date_added: "2026-09-04"
+  },
+  {
+    sort_order: 570,
+    id: "club-arsenal-rice-41",
+    photos: [
+      { src: "assets/inventory/club-arsenal-rice-41-front.jpg", alt: "Rice Arsenal red jersey front" },
+      { src: "assets/inventory/club-arsenal-rice-41-back.jpg", alt: "Rice Arsenal red jersey back" }
+    ],
+    size: "M", sizes: { M: 1 }, price: 55,
+    platform_prices: { eBay: 55, Depop: 50 }, category: "club",
+    name: "Rice #41 | Arsenal Home Jersey", quantity: 1,
+    links: { depop: "https://www.depop.com/jerseysfrmjb/", ebay: "https://www.ebay.com/usr/jerseysfrmjb" },
+    featured: false, featured_order: 0, new_arrival: true, date_added: "2026-09-04"
+  },
+  {
+    sort_order: 580,
+    id: "club-manchester-united-fernandes-8",
+    photos: [
+      { src: "assets/inventory/club-manchester-united-fernandes-8-front.jpg", alt: "B. Fernandes Manchester United red jersey front" },
+      { src: "assets/inventory/club-manchester-united-fernandes-8-back.jpg", alt: "B. Fernandes Manchester United red jersey back" }
+    ],
+    size: "M", sizes: { M: 1 }, price: 55,
+    platform_prices: { eBay: 55, Depop: 50 }, category: "club",
+    name: "B. Fernandes #8 | Manchester United Home Jersey", quantity: 1,
+    links: { depop: "https://www.depop.com/jerseysfrmjb/", ebay: "https://www.ebay.com/usr/jerseysfrmjb" },
+    featured: false, featured_order: 0, new_arrival: true, date_added: "2026-09-04"
+  }
+);
 export const schemaStatements = [
   `CREATE TABLE IF NOT EXISTS inventory (
     id TEXT PRIMARY KEY,
@@ -1847,6 +1968,15 @@ export async function ensureInventory(env) {
   ));
 
   if (statements.length) await env.DB.batch(statements);
+
+  const platformPriceStatements = seedInventory.items.flatMap(item =>
+    Object.entries(item.platform_prices || {}).map(([platform, price]) => env.DB.prepare(
+      `INSERT INTO product_platform_prices (product_id, platform, price, updated_at)
+       VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+       ON CONFLICT(product_id, platform) DO UPDATE SET price = excluded.price, updated_at = CURRENT_TIMESTAMP`
+    ).bind(item.id, platform, price))
+  );
+  if (platformPriceStatements.length) await env.DB.batch(platformPriceStatements);
 
   await applyOneTimeProductCorrections(env, "correct_club_seasons_2026_07_30", [
     {
