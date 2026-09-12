@@ -34,6 +34,7 @@ function enhanceMobileDrawer() {
     "World Cup Jerseys": "\u25CE",
     "Retro Jerseys": "\u21BA",
     "Club Jerseys": "\u25A6",
+    "Kids Kits": "\u25C7",
     "Size Guide": "\u25A3",
     Contact: "\u2709"
   };
@@ -142,7 +143,7 @@ function focusRequestedCatalogProduct(grid) {
 function totalQuantity(item) {
   const sizes = item?.sizes || {};
   const sizeTotal = Object.values(sizes).reduce((sum, qty) => sum + Math.max(0, Math.floor(Number(qty || 0))), 0);
-  return sizeTotal || Math.max(0, Math.floor(Number(item?.quantity || 0)));
+  return sizeTotal || Math.max(0, Math.floor(Number(item?.quantity || 0))) || (item?.available ? 1 : 0);
 }
 
 function isAvailable(item) {
@@ -189,12 +190,13 @@ function sortInventory(items) {
 
 function activeSizes(item) {
   const sizes = item?.sizes || {};
-  const order = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"];
+  const order = ["24", "S", "M", "L", "XL", "2XL", "3XL", "4XL"];
   return order.filter(size => Number(sizes[size]) > 0);
 }
 
 function sizeLabel(value = "") {
   const normalized = String(value).trim().toLowerCase();
+  if (normalized === "24" || normalized === "kids 24") return "Kids 24";
   if (normalized === "s" || normalized === "small") return "Small";
   if (normalized === "m" || normalized === "medium") return "Medium";
   if (normalized === "l" || normalized === "large") return "Large";
@@ -205,6 +207,7 @@ function sizeLabel(value = "") {
 function sizeLabelsFromText(value = "") {
   const text = String(value).toLowerCase();
   const labels = [];
+  if (/\b24\b/.test(text)) labels.push("Kids 24");
   if (/\b(s|small)\b/.test(text)) labels.push("Small");
   if (/\b(m|medium)\b/.test(text)) labels.push("Medium");
   if (/\b(l|large)\b/.test(text)) labels.push("Large");
@@ -361,7 +364,7 @@ function highlightCardTitle(card, query = "") {
 }
 
 function categoryLabel(category = "") {
-  return { world: "World Cup", club: "Club", retro: "Retro" }[category] || category;
+  return { world: "World Cup", club: "Club", retro: "Retro", kids: "Kids Kits" }[category] || category;
 }
 
 const PUBLIC_MARKETPLACES = [
@@ -521,7 +524,7 @@ function sizeTokens(value = "") {
 function filterSizeTokens(item) {
   const active = activeSizes(item);
   if (active.length) {
-    return [...new Set(active.map(size => ({ S: "small", M: "medium", L: "large", XL: "xl", "2XL": "2xl", "3XL": "3xl", "4XL": "4xl" }[size] || String(size).toLowerCase())))];
+    return [...new Set(active.map(size => ({ "24": "kids 24", S: "small", M: "medium", L: "large", XL: "xl", "2XL": "2xl", "3XL": "3xl", "4XL": "4xl" }[size] || String(size).toLowerCase())))];
   }
   const labels = sizeLabelsFromText(item?.size || displaySize(item));
   const tokenMap = { Small: "small", Medium: "medium", Large: "large", "XL+": "xl" };
@@ -642,6 +645,7 @@ function renderProductCard(item) {
         <div class="product-controls"><button data-prev type="button" aria-label="Previous photo">&lsaquo;</button><div class="slider-dots"></div><button data-next type="button" aria-label="Next photo">&rsaquo;</button></div>
       </div>
       <p class="notice category-notice">${escapeHtml(categoryLabel(item.category))}</p>
+      ${item.category === "kids" ? '<p class="kit-included">Matching socks included</p>' : ""}
       ${available ? "" : '<p class="notice sold">Out of Stock</p>'}
       <h2><a class="product-title-link" href="${escapeHtml(productDetailsUrl(item.id))}">${escapeHtml(item.name)}</a></h2>
       <a class="product-details-button" href="${escapeHtml(productDetailsUrl(item.id))}" aria-label="${available ? "Choose a size for" : "View jersey details for"} ${escapeHtml(item.name)}">${available ? "Choose Size" : "View Jersey Details"} <span aria-hidden="true">&rarr;</span></a>
@@ -835,6 +839,7 @@ function setupFilters(filterGroup, cards) {
 
   if (sizeSelect) {
     const options = [
+      ["kids 24", "Kids 24"],
       ["small", "Small"],
       ["medium", "Medium"],
       ["large", "Large"],
@@ -848,7 +853,7 @@ function setupFilters(filterGroup, cards) {
 
   container?.querySelector("[data-advanced-filters]")?.remove();
   function selectedSizeLabel(value) {
-    return { small: "Small", medium: "Medium", large: "Large", xl: "XL", "2xl": "2XL", "3xl": "3XL", "4xl": "4XL", "xl+": "XL+" }[value] || "";
+    return { "kids 24": "Kids 24", small: "Small", medium: "Medium", large: "Large", xl: "XL", "2xl": "2XL", "3xl": "3XL", "4xl": "4XL", "xl+": "XL+" }[value] || "";
   }
 
   function setActive(buttons, selected) {

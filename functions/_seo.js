@@ -8,8 +8,9 @@ import {
 } from "./api/catalog/_products.js";
 
 const DEFAULT_SITE_ORIGIN = "https://jerseysfrmjb.com";
-const SIZE_ORDER = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"];
+const SIZE_ORDER = ["24", "S", "M", "L", "XL", "2XL", "3XL", "4XL"];
 const SIZE_LABELS = {
+  "24": "Kids 24",
   S: "Small",
   M: "Medium",
   L: "Large",
@@ -137,6 +138,7 @@ function marketplaceUrl(value, hosts) {
 function categoryDetails(category = "") {
   if (category === "world") return { label: "International Team Jerseys", href: "/worldcup-jerseys" };
   if (category === "retro") return { label: "Retro Jerseys", href: "/retro-jerseys" };
+  if (category === "kids") return { label: "Kids Kits", href: "/kids-kits" };
   return { label: "Club Jerseys", href: "/club-jerseys" };
 }
 
@@ -467,6 +469,7 @@ function headerMarkup() {
         <a href="/">Home</a><a href="/shop-all">Shop All</a>
         <a href="/worldcup-jerseys">World Cup Jerseys</a><a href="/retro-jerseys">Retro Jerseys</a>
         <a href="/club-jerseys">Club Jerseys</a><a href="/size-guide">Size Guide</a>
+        <a href="/kids-kits">Kids Kits</a>
       </nav>
     </header>
     <aside class="drawer" aria-hidden="true">
@@ -474,6 +477,7 @@ function headerMarkup() {
       <a href="/">Home</a><a href="/shop-all">Shop All</a>
       <a href="/worldcup-jerseys">World Cup Jerseys</a><a href="/retro-jerseys">Retro Jerseys</a>
       <a href="/club-jerseys">Club Jerseys</a><a href="/size-guide">Size Guide</a>
+      <a href="/kids-kits">Kids Kits</a>
     </aside><div class="drawer-backdrop"></div>`;
 }
 
@@ -482,7 +486,7 @@ function footerMarkup() {
     <footer class="site-footer"><div class="footer-shell">
       <div class="footer-brand"><img src="/assets/jerseysfrmjb-logo.jpg" alt="JerseysFrmJB logo" width="120" height="120" loading="lazy"><a class="footer-main" href="/">JerseysFrmJB</a><p>200+ Jerseys Sold</p><p>Based in Maryland</p></div>
       <nav class="footer-links" aria-label="Footer navigation">
-        <section><h3>Shop</h3><a href="/shop-all">Shop All</a><a href="/worldcup-jerseys">World Cup Jerseys</a><a href="/club-jerseys">Club Jerseys</a><a href="/retro-jerseys">Retro Jerseys</a></section>
+        <section><h3>Shop</h3><a href="/shop-all">Shop All</a><a href="/worldcup-jerseys">World Cup Jerseys</a><a href="/club-jerseys">Club Jerseys</a><a href="/retro-jerseys">Retro Jerseys</a><a href="/kids-kits">Kids Kits</a></section>
         <section><h3>Help</h3><a href="/size-guide">Size Guide</a><a href="/privacy">Privacy</a><a href="https://www.instagram.com/jerseysfrmjb/" target="_blank" rel="noopener">Message on Instagram</a></section>
         <section><h3>Marketplaces</h3><a href="https://www.ebay.com/usr/jerseysfrmjb" target="_blank" rel="noopener">eBay</a><a href="https://www.depop.com/jerseysfrmjb/" target="_blank" rel="noopener">Depop</a></section>
       </nav>

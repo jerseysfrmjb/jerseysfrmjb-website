@@ -10,9 +10,10 @@ function json(data, status = 200) {
     }
   });
 }
-const SIZE_ORDER = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"];
+const SIZE_ORDER = ["24", "S", "M", "L", "XL", "2XL", "3XL", "4XL"];
 const PUBLIC_PLATFORM_NAMES = ["Depop", "eBay", "Facebook", "Local", "Other"];
 const SIZE_WORDS = [
+  ["24", /\b24\b/],
   ["4XL", /4\s*x\s*l/i],
   ["3XL", /3\s*x\s*l/i],
   ["2XL", /2\s*x\s*l|xxl/i],
@@ -64,16 +65,18 @@ function publicPlatformPrices(value) {
 
 function parseItem(row) {
   const sizes = normalizeSizes(parseJson(row.sizes_json, {}), row.size, row.quantity);
+  const availableSizes = Object.fromEntries(Object.keys(sizes).filter(size => Number(sizes[size]) > 0).map(size => [size, 1]));
+  const available = totalQuantity(sizes, row.quantity) > 0;
   return {
     id: row.id,
     category: row.category,
     name: row.name,
     size: sizesLabel(sizes, row.size),
-    sizes,
+    sizes: availableSizes,
     base_price: row.price,
     website_price: row.website_price,
     price: row.website_price ?? row.price,
-    quantity: totalQuantity(sizes, row.quantity),
+    available,
     featured: Boolean(row.featured),
     featured_order: row.featured_order || 0,
     sort_order: row.sort_order,

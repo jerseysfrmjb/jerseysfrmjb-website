@@ -8,8 +8,9 @@ import {
 } from "../api/catalog/_products.js";
 
 const DEFAULT_SITE_ORIGIN = "https://jerseysfrmjb.com";
-const SIZE_ORDER = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"];
+const SIZE_ORDER = ["24", "S", "M", "L", "XL", "2XL", "3XL", "4XL"];
 const SIZE_LABELS = {
+  "24": "Kids 24",
   S: "Small",
   M: "Medium",
   L: "Large",
@@ -19,6 +20,7 @@ const SIZE_LABELS = {
   "4XL": "4XL"
 };
 const SIZE_WORDS = [
+  ["24", /\b24\b/],
   ["4XL", /4\s*x\s*l/i],
   ["3XL", /3\s*x\s*l/i],
   ["2XL", /2\s*x\s*l|xxl/i],
@@ -128,6 +130,12 @@ function categoryDetails(category = "") {
     return {
       label: "Retro Jersey",
       href: "/retro-jerseys"
+    };
+  }
+  if (category === "kids") {
+    return {
+      label: "Kids Kits",
+      href: "/kids-kits"
     };
   }
   return {
@@ -621,6 +629,7 @@ function headerMarkup(model) {
       <a href="/worldcup-jerseys">World Cup Jerseys</a>
       <a href="/retro-jerseys">Retro Jerseys</a>
       <a href="/club-jerseys">Club Jerseys</a>
+      <a href="/kids-kits">Kids Kits</a>
       <a href="/size-guide">Size Guide</a>
       <a href="/#contact-form">Contact</a>
     </nav>
@@ -632,7 +641,8 @@ function headerMarkup(model) {
     <a class="active" href="/shop-all">Shop All</a>
     <a href="/worldcup-jerseys">World Cup Jerseys</a>
     <a href="/retro-jerseys">Retro Jerseys</a>
-    <a href="/club-jerseys">Club Jerseys</a>
+      <a href="/club-jerseys">Club Jerseys</a>
+      <a href="/kids-kits">Kids Kits</a>
     <a href="/size-guide">Size Guide</a>
     <a href="/#contact-form">Contact</a>
   </aside>
@@ -656,6 +666,7 @@ function footerMarkup() {
           <a href="/worldcup-jerseys">World Cup Jerseys</a>
           <a href="/club-jerseys">Club Jerseys</a>
           <a href="/retro-jerseys">Retro Jerseys</a>
+          <a href="/kids-kits">Kids Kits</a>
         </section>
         <section>
           <h3>Help</h3>

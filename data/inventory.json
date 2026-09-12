@@ -1790,6 +1790,114 @@
       "featured_order": 0,
       "new_arrival": true,
       "date_added": "2026-09-04"
+    },
+    {
+      "sort_order": 600,
+      "id": "kids-manchester-united-home-blank-2627",
+      "photos": [{"src":"assets/inventory/kids-manchester-united-home-blank-front.jpg","alt":"Manchester United kids home kit front"},{"src":"assets/inventory/kids-manchester-united-home-blank-back.jpg","alt":"Manchester United kids home kit back"}],
+      "size": "24",
+      "sizes": {"24": 2},
+      "price": 40,
+      "platform_prices": {"eBay":45,"Depop":40},
+      "category": "kids",
+      "name": "No Name/No Number | Manchester United Home Kit (Kids)",
+      "quantity": 2,
+      "links": {"depop":"https://www.depop.com/jerseysfrmjb/","ebay":"https://www.ebay.com/usr/jerseysfrmjb"},
+      "featured": false,"featured_order":0,"new_arrival":true,"date_added":"2026-09-12"
+    },
+    {
+      "sort_order": 610,
+      "id": "kids-barcelona-yamal-home-2627",
+      "photos": [{"src":"assets/inventory/kids-barcelona-yamal-10-front.jpg","alt":"Lamine Yamal Barcelona kids home kit front"},{"src":"assets/inventory/kids-barcelona-yamal-10-back.jpg","alt":"Lamine Yamal Barcelona kids home kit back"}],
+      "size": "24",
+      "sizes": {"24": 2},
+      "price": 40,
+      "platform_prices": {"eBay":45,"Depop":40},
+      "category": "kids",
+      "name": "Lamine Yamal #10 | Barcelona Home Kit (Kids)",
+      "quantity": 2,
+      "links": {"depop":"https://www.depop.com/jerseysfrmjb/","ebay":"https://www.ebay.com/usr/jerseysfrmjb"},
+      "featured": false,"featured_order":0,"new_arrival":true,"date_added":"2026-09-12"
+    },
+    {
+      "sort_order": 620,
+      "id": "kids-barcelona-kobe-bryant-blank",
+      "photos": [{"src":"assets/inventory/kids-barcelona-kobe-bryant-blank-front.jpg","alt":"Barcelona x Kobe Bryant kids kit front"},{"src":"assets/inventory/kids-barcelona-kobe-bryant-blank-back.jpg","alt":"Barcelona x Kobe Bryant kids kit back"}],
+      "size": "24",
+      "sizes": {"24": 2},
+      "price": 40,
+      "platform_prices": {"eBay":45,"Depop":40},
+      "category": "kids",
+      "name": "No Name/No Number | Barcelona x Kobe Bryant Kit (Kids)",
+      "quantity": 2,
+      "links": {"depop":"https://www.depop.com/jerseysfrmjb/","ebay":"https://www.ebay.com/usr/jerseysfrmjb"},
+      "featured": false,"featured_order":0,"new_arrival":true,"date_added":"2026-09-12"
+    },
+    {
+      "sort_order": 630,
+      "id": "kids-real-madrid-pink-blank",
+      "photos": [{"src":"assets/inventory/kids-real-madrid-pink-blank-front.jpg","alt":"Real Madrid pink and red kids kit front"},{"src":"assets/inventory/kids-real-madrid-pink-blank-back.jpg","alt":"Real Madrid pink and red kids kit back"}],
+      "size": "24",
+      "sizes": {"24": 2},
+      "price": 40,
+      "platform_prices": {"eBay":45,"Depop":40},
+      "category": "kids",
+      "name": "No Name/No Number | Real Madrid Pink/Red Kit (Kids)",
+      "quantity": 2,
+      "links": {"depop":"https://www.depop.com/jerseysfrmjb/","ebay":"https://www.ebay.com/usr/jerseysfrmjb"},
+      "featured": false,"featured_order":0,"new_arrival":true,"date_added":"2026-09-12"
+    },
+    {
+      "sort_order": 640,
+      "id": "kids-arsenal-saka-home-2627",
+      "photos": [{"src":"assets/inventory/kids-arsenal-saka-7-front.jpg","alt":"Bukayo Saka Arsenal kids home kit front"},{"src":"assets/inventory/kids-arsenal-saka-7-back.jpg","alt":"Bukayo Saka Arsenal kids home kit back"}],
+      "size": "24",
+      "sizes": {"24": 1},
+      "price": 40,
+      "platform_prices": {"eBay":45,"Depop":40},
+      "category": "kids",
+      "name": "Bukayo Saka #7 | Arsenal Home Kit (Kids)",
+      "quantity": 1,
+      "links": {"depop":"https://www.depop.com/jerseysfrmjb/","ebay":"https://www.ebay.com/usr/jerseysfrmjb"},
+      "featured": false,"featured_order":0,"new_arrival":true,"date_added":"2026-09-12"
+    },
+    {
+      "sort_order": 650,
+      "id": "kids-liverpool-home-blank-2627",
+      "photos": [{"src":"assets/inventory/kids-liverpool-home-blank-front.jpg","alt":"Liverpool kids home kit front"},{"src":"assets/inventory/kids-liverpool-home-blank-back.jpg","alt":"Liverpool kids home kit back"}],
+      "size": "24",
+      "sizes": {"24": 1},
+      "price": 40,
+      "platform_prices": {"eBay":45,"Depop":40},
+      "category": "kids",
+      "name": "No Name/No Number | Liverpool Home Kit (Kids)",
+      "quantity": 1,
+      "links": {"depop":"https://www.depop.com/jerseysfrmjb/","ebay":"https://www.ebay.com/usr/jerseysfrmjb"},
+      "featured": false,"featured_order":0,"new_arrival":true,"date_added":"2026-09-12"
+    },
+    {
+      "sort_order": 660,
+      "id": "club-liverpool-barcola-29",
+      "photos": [{"src":"assets/inventory/club-liverpool-barcola-29-front.jpg","alt":"B. Barcola Liverpool men's jersey front"},{"src":"assets/inventory/club-liverpool-barcola-29-back.jpg","alt":"B. Barcola Liverpool men's jersey back"}],
+      "size": "M","sizes":{"M":1},"price":55,"platform_prices":{"eBay":55,"Depop":50},"category":"club",
+      "name":"B. Barcola #29 | Liverpool Home Jersey","quantity":1,
+      "links":{"depop":"https://www.depop.com/jerseysfrmjb/","ebay":"https://www.ebay.com/usr/jerseysfrmjb"},"featured":false,"featured_order":0,"new_arrival":true,"date_added":"2026-09-12"
+    },
+    {
+      "sort_order": 670,
+      "id": "club-manchester-united-baleba-20",
+      "photos": [{"src":"assets/inventory/club-manchester-united-baleba-20-front.jpg","alt":"Carlos Baleba Manchester United men's jersey front"},{"src":"assets/inventory/club-manchester-united-baleba-20-back.jpg","alt":"Carlos Baleba Manchester United men's jersey back"}],
+      "size": "M","sizes":{"M":1},"price":55,"platform_prices":{"eBay":55,"Depop":50},"category":"club",
+      "name":"Carlos Baleba #20 | Manchester United Home Jersey","quantity":1,
+      "links":{"depop":"https://www.depop.com/jerseysfrmjb/","ebay":"https://www.ebay.com/usr/jerseysfrmjb"},"featured":false,"featured_order":0,"new_arrival":true,"date_added":"2026-09-12"
+    },
+    {
+      "sort_order": 680,
+      "id": "club-manchester-city-enzo-17",
+      "photos": [{"src":"assets/inventory/club-manchester-city-enzo-17-front.jpg","alt":"Enzo Manchester City men's jersey front"},{"src":"assets/inventory/club-manchester-city-enzo-17-back.jpg","alt":"Enzo Manchester City men's jersey back"}],
+      "size": "M","sizes":{"M":1},"price":55,"platform_prices":{"eBay":55,"Depop":50},"category":"club",
+      "name":"Enzo #17 | Manchester City Home Jersey","quantity":1,
+      "links":{"depop":"https://www.depop.com/jerseysfrmjb/","ebay":"https://www.ebay.com/usr/jerseysfrmjb"},"featured":false,"featured_order":0,"new_arrival":true,"date_added":"2026-09-12"
     }
   ]
 }

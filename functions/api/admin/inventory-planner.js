@@ -6,7 +6,7 @@ import { adminConfigError, isAuthorized, json, unauthorized } from "./_auth.js";
 const JERSEY_TYPES = ["fan", "retro_short", "retro_long"];
 const CUSTOMIZATIONS = ["base", "nameset_patches"];
 const PRICE_PLATFORMS = ["Website", "eBay", "Depop", "Facebook"];
-const SIZE_ORDER = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"];
+const SIZE_ORDER = ["24", "S", "M", "L", "XL", "2XL", "3XL", "4XL"];
 
 const PLANNER_SCHEMA = [
   `CREATE TABLE IF NOT EXISTS inventory_suppliers (

@@ -10,6 +10,7 @@ const STATIC_PAGES = [
   "/shop-all",
   "/worldcup-jerseys",
   "/club-jerseys",
+  "/kids-kits",
   "/retro-jerseys",
   "/size-guide",
   "/privacy"

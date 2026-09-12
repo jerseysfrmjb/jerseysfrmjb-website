@@ -1,3 +1,5 @@
+import { adultSeptemberInventory, kidsKitInventory } from "./_kidsKitInventory.js";
+
 export const seedInventory = {
   "items": [
     {
@@ -1609,6 +1611,8 @@ seedInventory.items.push(
     featured: false, featured_order: 0, new_arrival: true, date_added: "2026-09-04"
   }
 );
+
+seedInventory.items.push(...kidsKitInventory, ...adultSeptemberInventory);
 export const schemaStatements = [
   `CREATE TABLE IF NOT EXISTS inventory (
     id TEXT PRIMARY KEY,
@@ -1646,7 +1650,7 @@ async function addColumnIfMissing(env, columnSql) {
   }
 }
 
-const SIZE_ORDER = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"];
+const SIZE_ORDER = ["24", "S", "M", "L", "XL", "2XL", "3XL", "4XL"];
 
 function parseSizeStock(value) {
   try {

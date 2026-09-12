@@ -1,8 +1,9 @@
 const DEFAULT_SITE_ORIGIN = "https://jerseysfrmjb.com";
 const CURRENCY = "USD";
 const CACHE_CONTROL = "public, max-age=300, s-maxage=300, stale-while-revalidate=60";
-const SIZE_ORDER = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"];
+const SIZE_ORDER = ["24", "S", "M", "L", "XL", "2XL", "3XL", "4XL"];
 const SIZE_WORDS = [
+  ["24", /\b24\b/],
   ["4XL", /4\s*x\s*l/i],
   ["3XL", /3\s*x\s*l/i],
   ["2XL", /2\s*x\s*l|xxl/i],
@@ -195,6 +196,7 @@ export function categoryLabel(category = "") {
   if (category === "world") return "International Team Jerseys";
   if (category === "club") return "Club Jerseys";
   if (category === "retro") return "Retro Jerseys";
+  if (category === "kids") return "Kids Kits";
   return "Football Jerseys";
 }
 
@@ -321,7 +323,7 @@ export function buildJerseyDescription(row = {}, options = {}) {
   const availableSizes = Array.isArray(options.availableSizes) ? options.availableSizes : [];
   const sizeLabels = availableSizes.map(size => {
     const value = String(size || "").trim();
-    return ({ S: "Small", M: "Medium", L: "Large", XL: "Extra Large" }[value] || value);
+    return ({ "24": "Kids 24", S: "Small", M: "Medium", L: "Large", XL: "Extra Large" }[value] || value);
   }).filter(Boolean);
   const number = titleNumber(title);
   const bullets = [];
@@ -329,6 +331,8 @@ export function buildJerseyDescription(row = {}, options = {}) {
   const patch = patchDetails(title);
   if (patch) bullets.push(patch);
   if (/long\s*sleeve|longsleeve/i.test(title)) bullets.push("Long sleeve");
+  if (row.category === "kids") bullets.push("Kids size 24");
+  if (row.category === "kids") bullets.push("Matching socks included");
   bullets.push(row.category === "retro" ? "Retro fan version" : "Fan version");
   bullets.push("Excellent condition");
   return [
@@ -389,7 +393,7 @@ export function buildCatalogProducts(rows = [], options = {}) {
       size: availableSizes.join(", "),
       available_sizes: availableSizes.join(", "),
       google_product_category: "Apparel & Accessories > Clothing > Shirts & Tops",
-      age_group: "adult",
+      age_group: row.category === "kids" ? "kids" : "adult",
       gender: "unisex",
       canonical_link: productLandingUrl(id, siteOrigin)
     }];

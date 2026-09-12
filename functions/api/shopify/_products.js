@@ -9,8 +9,9 @@ import {
 } from "../catalog/_products.js";
 import { sha256, shopifyGraphql } from "./_shared.js";
 
-export const SHOPIFY_SIZE_ORDER = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"];
+export const SHOPIFY_SIZE_ORDER = ["24", "S", "M", "L", "XL", "2XL", "3XL", "4XL"];
 const SIZE_LABELS = {
+  "24": "Kids 24",
   S: "Small",
   M: "Medium",
   L: "Large",
@@ -20,6 +21,7 @@ const SIZE_LABELS = {
   "4XL": "4XL"
 };
 const SIZE_WORDS = [
+  ["24", /\b24\b/],
   ["4XL", /4\s*x\s*l/i], ["3XL", /3\s*x\s*l/i], ["2XL", /2\s*x\s*l|xxl/i],
   ["XL", /\bxl\b|extra\s+large/i], ["L", /\bl\b|\blarge\b/i],
   ["M", /\bm\b|\bmedium\b/i], ["S", /\bs\b|\bsmall\b/i]
