@@ -3,13 +3,13 @@ const MARKETPLACE_LINKS = {
   ebay: "https://www.ebay.com/usr/jerseysfrmjb"
 };
 
-const KIDS_KIT = (id, name, photos, quantity, sortOrder, platformPrices = { Depop: 40, eBay: 45 }) => ({
+const KIDS_KIT = (id, name, photos, quantity, sortOrder, platformPrices = { Depop: 55, eBay: 60 }) => ({
   id,
   category: "kids",
   name,
   size: "24",
   sizes: { "24": quantity },
-  price: 40,
+  price: 55,
   platform_prices: platformPrices,
   quantity,
   photos: photos.map(([src, alt]) => ({ src, alt })),

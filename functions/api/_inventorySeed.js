@@ -1757,6 +1757,37 @@ async function applyOneTimeInventoryCleanup(env, key, ids) {
     ON CONFLICT(key) DO UPDATE SET value = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP`).run();
 }
 
+async function applyOneTimeKidsKitPricing(env, key) {
+  const existing = await env.DB.prepare("SELECT value FROM site_settings WHERE key = ?").bind(key).first();
+  if (existing?.value === "applied") return;
+
+  const ids = [
+    "kids-manchester-united-home-blank-2627",
+    "kids-barcelona-yamal-home-2627",
+    "kids-barcelona-kobe-bryant-blank",
+    "kids-real-madrid-pink-blank",
+    "kids-arsenal-saka-home-2627",
+    "kids-liverpool-home-blank-2627"
+  ];
+  for (const id of ids) {
+    await env.DB.prepare("UPDATE inventory SET price = 55, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(id).run();
+    for (const [platform, price] of [["Website", 55], ["Depop", 55], ["eBay", 60]]) {
+      await env.DB.prepare(
+        `INSERT INTO product_platform_prices (product_id, platform, price, updated_at)
+         VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+         ON CONFLICT(product_id, platform) DO UPDATE SET price = excluded.price, updated_at = CURRENT_TIMESTAMP`
+      ).bind(id, platform, price).run();
+    }
+  }
+
+  await env.DB.prepare(`INSERT INTO site_settings (key, value, updated_at)
+    VALUES (?, 'applied', CURRENT_TIMESTAMP)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP`).bind(key).run();
+  await env.DB.prepare(`INSERT INTO site_settings (key, value, updated_at)
+    VALUES ('inventory_updated_at', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ON CONFLICT(key) DO UPDATE SET value = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP`).run();
+}
+
 async function applyOneTimeProductCorrections(env, key, corrections) {
   const existing = await env.DB.prepare("SELECT value FROM site_settings WHERE key = ?").bind(key).first();
   if (existing?.value === "applied") return;
@@ -1999,6 +2030,7 @@ export async function ensureInventory(env) {
   );
   if (platformPriceStatements.length) await env.DB.batch(platformPriceStatements);
 
+  await applyOneTimeKidsKitPricing(env, "kids_kits_pricing_2026_09_12");
   await applyOneTimeInventoryCleanup(env, "remove_incorrect_chelsea_and_duplicate_liverpool_blank_2026_09_04", ["club-chelsea-blue-blank", "club-liverpool-red-blank"]);
   await applyOneTimeStockSet(env, "set_palmer_pair_stock_2026_09_04", [
     { id: "club-chelsea-palmer-10", size: "M", quantity: 2, newArrival: true, dateAdded: "2026-09-04" }
