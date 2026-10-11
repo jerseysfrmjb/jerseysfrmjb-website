@@ -172,12 +172,7 @@ export function buildSeoProduct(row = {}, options = {}) {
     {
       name: "Depop",
       price: numericPrice(row.depop_price),
-      link: marketplaceUrl(links.depop, ["depop.com"])
-    },
-    {
-      name: "eBay",
-      price: numericPrice(row.ebay_price),
-      link: marketplaceUrl(links.ebay, ["ebay.com", "ebay.us"])
+      link: marketplaceUrl(links.depop, ["depop.com"]) || "https://www.depop.com/jerseysfrmjb/"
     }
   ];
   product.marketplaces = marketplaceDefinitions.filter(item => item.price !== null || item.link);
@@ -303,23 +298,23 @@ function collectionIntroduction(products, kind, name) {
   const variant = [...name].reduce((sum, character) => sum + character.charCodeAt(0), 0) % 3;
   if (kind === "teams") {
     const variants = [
-      `Explore the current ${name} jersey selection, led by ${designs}. ${players ? `Featured names include ${players}. ` : ""}Open each permanent product page for photos, available sizes, and secure Shopify checkout.`,
-      `Find ${name} shirts from ${seasons || "recent and classic seasons"} in the live JerseysFrmJB inventory. The collection currently includes ${designs}${players ? ` and designs associated with ${players}` : ""}, with individual pages for sizing and secure website checkout.`,
+      `Explore the current ${name} jersey selection, led by ${designs}. ${players ? `Featured names include ${players}. ` : ""}Open each permanent product page for photos, available sizes, and the current Depop purchase option.`,
+      `Find ${name} shirts from ${seasons || "recent and classic seasons"} in the live JerseysFrmJB inventory. The collection currently includes ${designs}${players ? ` and designs associated with ${players}` : ""}, with individual pages for sizing and Depop purchasing.`,
       `${name} supporters can browse ${designs} in this inventory-backed collection. ${players ? `The available lineup features ${players}. ` : ""}Every jersey links to its own page with front and back photos, size availability, and current buying options.`
     ];
     return variants[variant];
   }
   if (kind === "players") {
     const variants = [
-      `Browse ${name} jerseys connected with ${teams || "club and international football"}, including ${designs}. Compare front and back photos, available sizes, and secure Shopify checkout on each jersey page.`,
-      `The live ${name} collection currently features ${designs}${teams ? ` across ${teams}` : ""}. Use the permanent product links to check sizing, photos, and secure website checkout.`,
+      `Browse ${name} jerseys connected with ${teams || "club and international football"}, including ${designs}. Compare front and back photos, available sizes, and the Depop purchase option on each jersey page.`,
+      `The live ${name} collection currently features ${designs}${teams ? ` across ${teams}` : ""}. Use the permanent product links to check sizing, photos, and purchase through Depop.`,
       `Shop the current ${name} selection from ${seasons || "featured football seasons"}: ${designs}. Each matching jersey has a dedicated page with team details, available sizes, imagery, and current buying options.`
     ];
     return variants[variant];
   }
   const variants = [
     `Shop jerseys connected with the ${name}, including ${designs}. The live selection features ${teams || "international teams"}${players ? ` and players such as ${players}` : ""}, with direct links to each matching jersey page.`,
-    `Explore the ${name} through current JerseysFrmJB inventory such as ${designs}. Browse teams including ${teams || "international sides"} and open each product page for photos, sizing, and secure Shopify checkout.`,
+    `Explore the ${name} through current JerseysFrmJB inventory such as ${designs}. Browse teams including ${teams || "international sides"} and open each product page for photos, sizing, and the Depop purchase option.`,
     `The ${name} collection brings together ${designs}${players ? `, featuring ${players}` : ""}. Inventory-backed product pages show every matching jersey, available size, and current buying options.`
   ];
   return variants[variant];
@@ -334,7 +329,7 @@ function collectionFaqs(kind, name) {
     },
     {
       question: "Where is payment completed?",
-      answer: "Available jerseys can be purchased directly through JerseysFrmJB using secure Shopify checkout. Depop and eBay remain available when their listings are linked."
+      answer: "Shopify checkout and eBay are temporarily unavailable. Available jerseys can be purchased through the linked Depop listing."
     }
   ];
 }
@@ -472,6 +467,11 @@ function headerMarkup() {
         <a href="/kids-kits">Kids Kits</a>
       </nav>
     </header>
+    <aside class="site-status-banner" role="status" aria-label="Temporary purchase update">
+      <strong>Temporary purchase update</strong>
+      <span>Shopify checkout and eBay are unavailable right now. Please purchase through Depop only.</span>
+      <a href="https://www.depop.com/jerseysfrmjb/" target="_blank" rel="noopener">Shop on Depop <span aria-hidden="true">&nearr;</span></a>
+    </aside>
     <aside class="drawer" aria-hidden="true">
       <button class="drawer-close" type="button" aria-label="Close menu">&times;</button>
       <a href="/">Home</a><a href="/shop-all">Shop All</a>
@@ -488,7 +488,7 @@ function footerMarkup() {
       <nav class="footer-links" aria-label="Footer navigation">
         <section><h3>Shop</h3><a href="/shop-all">Shop All</a><a href="/worldcup-jerseys">World Cup Jerseys</a><a href="/club-jerseys">Club Jerseys</a><a href="/retro-jerseys">Retro Jerseys</a><a href="/kids-kits">Kids Kits</a></section>
         <section><h3>Help</h3><a href="/size-guide">Size Guide</a><a href="/privacy">Privacy</a><a href="https://www.instagram.com/jerseysfrmjb/" target="_blank" rel="noopener">Message on Instagram</a></section>
-        <section><h3>Marketplaces</h3><a href="https://www.ebay.com/usr/jerseysfrmjb" target="_blank" rel="noopener">eBay</a><a href="https://www.depop.com/jerseysfrmjb/" target="_blank" rel="noopener">Depop</a></section>
+        <section><h3>Purchase</h3><a href="https://www.depop.com/jerseysfrmjb/" target="_blank" rel="noopener">Depop</a></section>
       </nav>
     </div></footer>`;
 }

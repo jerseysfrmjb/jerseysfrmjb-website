@@ -8,6 +8,7 @@ import {
 } from "../api/catalog/_products.js";
 
 const DEFAULT_SITE_ORIGIN = "https://jerseysfrmjb.com";
+const PUBLIC_DEPOP_ONLY = true;
 const SIZE_ORDER = ["24", "S", "M", "L", "XL", "2XL", "3XL", "4XL"];
 const SIZE_LABELS = {
   "24": "Kids 24",
@@ -34,13 +35,8 @@ const MARKETPLACES = [
     name: "Depop",
     key: "depop",
     icon: "\u{1F6CD}",
-    hosts: ["depop.com"]
-  },
-  {
-    name: "eBay",
-    key: "ebay",
-    icon: "\u{1F6D2}",
-    hosts: ["ebay.com"]
+    hosts: ["depop.com"],
+    defaultUrl: "https://www.depop.com/jerseysfrmjb/"
   }
 ];
 
@@ -248,7 +244,7 @@ export function buildProductPageModel(row = {}, options = {}) {
   const synchronizedPrices = synchronizedMarketplacePrices(row);
   const marketplaces = MARKETPLACES.flatMap(marketplace => {
     const price = synchronizedPrices[marketplace.name];
-    const link = marketplaceUrl(links?.[marketplace.key], marketplace.hosts);
+    const link = marketplaceUrl(links?.[marketplace.key], marketplace.hosts) || marketplace.defaultUrl || "";
     if (price === null && !link) return [];
     return [{
       name: marketplace.name,
@@ -269,8 +265,8 @@ export function buildProductPageModel(row = {}, options = {}) {
     .filter(variant => variant?.variant_id)
     .map(variant => String(variant.size || "")));
   const shopify = {
-    available: Boolean(options.shopifyCheckoutEnabled),
-    enabled: Boolean(options.shopifyCheckoutEnabled && row.shopify_product_id),
+    available: Boolean(options.shopifyCheckoutEnabled && !PUBLIC_DEPOP_ONLY),
+    enabled: Boolean(options.shopifyCheckoutEnabled && !PUBLIC_DEPOP_ONLY && row.shopify_product_id),
     price: row.website_price === null || row.website_price === undefined || String(row.website_price).trim() === ""
       ? Number(row.base_price ?? row.price ?? 0)
       : Number(row.website_price),
@@ -452,9 +448,7 @@ function productFaqs(model) {
     },
     {
       question: "Where is checkout completed?",
-      answer: model.shopify?.enabled
-        ? "You can purchase directly through JerseysFrmJB using secure Shopify checkout. Depop and eBay remain available when their listings are linked."
-        : "Checkout is completed on the linked Depop or eBay listing. JerseysFrmJB does not process payment on this product page."
+      answer: "Shopify checkout and eBay are temporarily unavailable. Purchase available jerseys through the linked Depop listing."
     }
   ];
 }
@@ -555,7 +549,7 @@ function marketplaceMarkup(model) {
         <span>Marketplace checkout</span>
         <h2 id="marketplace-heading">Available on</h2>
       </div>
-      <p class="product-marketplace-primary-note">Depop is our primary purchase option. eBay is also available.</p>
+      <p class="product-marketplace-primary-note">Shopify checkout and eBay are temporarily unavailable. Please purchase through Depop only for now.</p>
       <div class="product-marketplace-list">
         ${model.marketplaces.map(marketplace => {
           let action = "";
@@ -635,6 +629,11 @@ function headerMarkup(model) {
     </nav>
     ${model?.shopify?.available ? '<button class="site-cart-button" type="button" data-shopify-cart-open aria-label="Open shopping cart">Cart <span data-shopify-cart-count>0</span></button>' : ""}
   </header>
+  <aside class="site-status-banner" role="status" aria-label="Temporary purchase update">
+    <strong>Temporary purchase update</strong>
+    <span>Shopify checkout and eBay are unavailable right now. Please purchase through Depop only.</span>
+    <a href="https://www.depop.com/jerseysfrmjb/" target="_blank" rel="noopener">Shop on Depop <span aria-hidden="true">&nearr;</span></a>
+  </aside>
   <aside class="drawer" aria-hidden="true">
     <button class="drawer-close" type="button" aria-label="Close menu">&times;</button>
     <a href="/">Home</a>
@@ -677,7 +676,6 @@ function footerMarkup() {
         </section>
         <section>
           <h3>Marketplaces</h3>
-          <a href="https://www.ebay.com/usr/jerseysfrmjb" target="_blank" rel="noopener"><i class="brand-icon ebay-icon">e</i>eBay</a>
           <a href="https://www.depop.com/jerseysfrmjb/" target="_blank" rel="noopener"><i class="brand-icon depop-icon">d</i>Depop</a>
           <a href="https://www.instagram.com/jerseysfrmjb/" target="_blank" rel="noopener"><i class="brand-icon instagram-icon">&#9678;</i>Instagram</a>
         </section>
@@ -780,7 +778,7 @@ export function renderProductPage(model) {
         </section>
         ${marketplaceMarkup(model)}
         ${shopifyCheckoutMarkup(model)}
-        ${model.available && model.marketplaces.length ? `<p class="product-checkout-note">${model.shopify?.enabled ? "Depop is our primary purchase option. eBay and secure website checkout remain available below." : "Purchases are completed securely on the selected marketplace. JerseysFrmJB does not process checkout on this page."}</p>` : ""}
+        ${model.available && model.marketplaces.length ? '<p class="product-checkout-note">Shopify checkout and eBay are temporarily unavailable. Purchases are completed through Depop only.</p>' : ""}
       </section>
     </article>
     <section class="product-page-support">

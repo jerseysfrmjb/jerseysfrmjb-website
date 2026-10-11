@@ -31,26 +31,25 @@ const [
 ]);
 
 assert.match(homepage, /href="\/shop-all\?stock=available#inventory">Shop Available Jerseys/);
-assert.match(homepage, /Secure Website Checkout/);
-assert.match(homepage, /Secure Shopify Checkout/);
-assert.doesNotMatch(homepage, /Simple Marketplace Checkout/);
+assert.match(homepage, /Temporary purchase update/);
+assert.match(homepage, /Shopify checkout and eBay are unavailable/);
+assert.match(homepage, /Depop Purchase Only For Now/);
+assert.doesNotMatch(homepage, /Secure Website Checkout|Secure Shopify Checkout/);
 
 for (const page of [shopAll, club, retro, world]) {
   assert.match(page, /class="inventory-page" id="inventory"/);
-  assert.match(page, /class="where-to-buy website-checkout-promo"/);
-  assert.match(page, /Show Available Jerseys/);
-  assert.match(page, /Shopify checkout/i);
-  assert.match(page, /Depop/);
-  assert.match(page, /eBay/);
+  assert.match(page, /class="where-to-buy marketplace-only-promo"/);
+  assert.match(page, /Shop on Depop/);
+  assert.match(page, /Shopify checkout and eBay are unavailable/i);
+  assert.match(page, /Shop on Depop/);
 }
 
 assert.match(storefront, /new URLSearchParams\(window\.location\.search\)\.get\("stock"\)/);
 assert.match(storefront, /item\.featured && isAvailable\(item\)/);
-assert.match(storefront, /Choose Size &amp; Buy/);
-assert.match(cartClient, /Secure Shopify checkout is live/);
-assert.match(productPage, /aria-label="Website checkout options"/);
-assert.match(productPage, /data-shopify-cart-open>Cart/);
-assert.match(productPage, /href="#website-checkout">Choose Size/);
+assert.doesNotMatch(storefront, /Choose Size &amp; Buy/);
+assert.match(cartClient, /function shopifyCart/);
+assert.match(productPage, /const PUBLIC_DEPOP_ONLY = true/);
+assert.match(productPage, /shopifyCheckoutEnabled && !PUBLIC_DEPOP_ONLY/);
 assert.match(styles, /\.product-mobile-shopify-bar nav/);
 assert.match(styles, /\.website-checkout-promo>p/);
 

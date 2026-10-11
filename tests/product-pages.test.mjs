@@ -154,10 +154,10 @@ assert.ok(inStockModel.sizes.every(size => !("quantity" in size)));
 assert.equal(inStockModel.canonicalUrl, `https://jerseysfrmjb.com/products/${inStockRow.id}`);
 assert.equal(inStockModel.images.front.src.startsWith("https://jerseysfrmjb.com/"), true);
 assert.equal(inStockModel.images.back.src.startsWith("https://jerseysfrmjb.com/"), true);
-assert.equal(inStockModel.marketplaces.filter(marketplace => marketplace.link).length, 2);
+assert.equal(inStockModel.marketplaces.filter(marketplace => marketplace.link).length, 1);
 assert.deepEqual(
   inStockModel.marketplaces.map(marketplace => [marketplace.name, marketplace.priceDisplay]),
-  [["Depop", "50.00"], ["eBay", "55.00"]]
+  [["Depop", "50.00"]]
 );
 
 assert.equal(soldOutModel.available, false);
@@ -166,19 +166,17 @@ assert.deepEqual(soldOutModel.sizes, []);
 assert.equal(soldOutModel.availabilityUrl, "https://schema.org/OutOfStock");
 
 assert.equal(oneLinkModel.marketplaces.filter(marketplace => marketplace.link).length, 1);
-assert.equal(oneLinkModel.marketplaces.find(marketplace => marketplace.name === "eBay").link, "");
 assert.deepEqual(
   basePriceModel.marketplaces.map(marketplace => [marketplace.name, marketplace.priceDisplay]),
-  [["Depop", "40.00"], ["eBay", "45.00"]]
+  [["Depop", "40.00"]]
 );
 assert.deepEqual(
   ebayOnlyPriceModel.marketplaces.map(marketplace => [marketplace.name, marketplace.priceDisplay]),
-  [["Depop", "45.00"], ["eBay", "50.00"]]
+  [["Depop", "45.00"]]
 );
 assert.deepEqual(
   explicitMarketplacePriceModel.marketplaces.map(marketplace => [marketplace.name, marketplace.priceDisplay]),
-  [["Depop", "50.00"], ["eBay", "62.00"]],
-  "a saved eBay price is preserved instead of being replaced with Depop plus five dollars"
+  [["Depop", "50.00"]]
 );
 assert.match(storefrontSource, /eBay: savedEbay \?\? \(depop === null \? null : depop \+ 5\)/);
 
@@ -200,10 +198,10 @@ assert.equal((inStockHtml.match(/data-product-gallery-open/g) || []).length, 2);
 assert.match(inStockHtml, /data-gallery-index="0"/);
 assert.match(inStockHtml, /data-gallery-index="1"/);
 assert.match(inStockHtml, /class="product-mobile-action-bar" aria-label="Marketplace purchase options"/);
-assert.equal((inStockHtml.match(/product-mobile-marketplace-button/g) || []).length, 2);
+assert.equal((inStockHtml.match(/product-mobile-marketplace-button/g) || []).length, 1);
 assert.match(inStockHtml, /\/meta-pixel\.js\?v=1/);
 assert.match(inStockHtml, /Buy on Depop/);
-assert.match(inStockHtml, /Buy on eBay/);
+assert.doesNotMatch(inStockHtml, /Buy on eBay/);
 assert.doesNotMatch(inStockHtml, /Jersey Price|Marketplace prices may vary|Website price/i);
 assert.match(storefrontSource, /class="product-details-button"/);
 assert.match(storefrontSource, /View Jersey Details/);
@@ -224,7 +222,7 @@ assert.doesNotMatch(inStockHtml, /What is the condition of this jersey|>Conditio
 assert.doesNotMatch(inStockHtml, /href="[^"]*\.html/);
 assert.match(inStockHtml, /5\.0 · 2 approved reviews/);
 assert.doesNotMatch(inStockHtml, /Total stock|Stock quantity|\d+\s+(?:available|remaining)|quantity/i);
-assert.match(inStockHtml, /does not process checkout on this page/);
+assert.match(inStockHtml, /Shopify checkout and eBay are temporarily unavailable/);
 assert.doesNotMatch(inStockHtml, /Add to Cart|Checkout Now|Buy from JerseysFrmJB/);
 
 const inStockSchema = structuredData(inStockHtml);
@@ -235,7 +233,7 @@ assert.equal(inStockSchema.url, inStockModel.canonicalUrl);
 assert.equal(inStockSchema.image.length, 2);
 assert.equal(inStockSchema.image[0]["@type"], "ImageObject");
 assert.match(inStockSchema.image[0].name, /Lionel Messi Argentina 2026 Home soccer jersey front view/);
-assert.equal(inStockSchema.offers.length, 2);
+assert.equal(inStockSchema.offers.length, 1);
 assert.deepEqual(inStockSchema.size, ["M"]);
 assert.equal("brand" in inStockSchema, false);
 assert.equal("audience" in inStockSchema, false);
@@ -249,11 +247,11 @@ assert.equal(
 );
 assert.deepEqual(
   inStockSchema.offers.map(offer => offer.name).sort(),
-  ["Buy on Depop", "Buy on eBay"].sort()
+  ["Buy on Depop"]
 );
 assert.deepEqual(
   inStockSchema.offers.map(offer => Number(offer.price)).sort((a, b) => a - b),
-  [50, 55]
+  [50]
 );
 for (const offer of inStockSchema.offers) {
   assert.equal(offer.priceCurrency, "USD");
@@ -271,7 +269,6 @@ assert.doesNotMatch(soldOutHtml, /<h2 id="marketplace-heading">Available on<\/h2
 assert.match(soldOutHtml, /Restock requests open/);
 assert.match(soldOutHtml, /Expected marketplace price/);
 assert.match(soldOutHtml, /<b>Depop<\/b> \$50/);
-assert.match(soldOutHtml, /<b>eBay<\/b> \$55/);
 assert.match(soldOutHtml, /data-help-request-type="restock_request"><span>Request This Jersey<\/span>/);
 assert.match(soldOutHtml, /class="product-mobile-action-bar" aria-label="Restock this jersey"/);
 assert.match(soldOutHtml, /class="product-mobile-request-button"[^>]*data-help-request-type="restock_request"/);
@@ -292,7 +289,7 @@ assert.equal(
 );
 assert.match(oneLinkHtml, /Buy on Depop/);
 assert.doesNotMatch(oneLinkHtml, /Buy on eBay/);
-assert.match(oneLinkHtml, /Listing link unavailable/);
+assert.match(oneLinkHtml, /href="https:\/\/www\.depop\.com\/jerseysfrmjb\//);
 assert.equal(structuredData(oneLinkHtml).offers.length, 1);
 
 for (const image of [inStockModel.images.front, inStockModel.images.back]) {

@@ -369,7 +369,6 @@ function categoryLabel(category = "") {
 
 const PUBLIC_MARKETPLACES = [
   { name: "Depop", linkKey: "depop", icon: "\u{1F6CD}", defaultUrl: "https://www.depop.com/jerseysfrmjb/" },
-  { name: "eBay", linkKey: "ebay", icon: "\u{1F6D2}", defaultUrl: "https://www.ebay.com/usr/jerseysfrmjb" },
   { name: "Facebook", linkKey: "facebook", icon: "\u{1F465}" },
   { name: "Local", linkKey: "local", icon: "\u{1F4CD}" },
   { name: "Other", linkKey: "other", icon: "\u{1F517}" }
@@ -489,18 +488,51 @@ function websiteCheckoutPrice(item = {}) {
 }
 
 function renderWebsiteCheckout(item = {}, available = true) {
-  if (!available) return "";
-  const price = websiteCheckoutPrice(item);
-  const formattedPrice = price === null ? "" : `$${formatPriceValue(price)}`;
-  return `
-    <section class="website-checkout-card" aria-label="Buy this jersey directly from JerseysFrmJB">
-      <div class="website-checkout-heading">
-        <span>Secure Shopify checkout</span>
-        ${formattedPrice ? `<strong>${escapeHtml(formattedPrice)}</strong>` : ""}
-      </div>
-      <p>Choose an available size, then use the website cart or Buy It Now.</p>
-      <a href="${escapeHtml(productDetailsUrl(item.id))}"><span>Choose Size &amp; Buy</span><span aria-hidden="true">&rarr;</span></a>
-    </section>`;
+  return "";
+}
+
+function applyTemporaryPurchaseMode() {
+  if (!document.querySelector(".site-status-banner")) {
+    const header = document.querySelector(".site-header");
+    if (header) {
+      const banner = document.createElement("aside");
+      banner.className = "site-status-banner";
+      banner.setAttribute("role", "status");
+      banner.setAttribute("aria-label", "Temporary purchase update");
+      banner.innerHTML = '<strong>Temporary purchase update</strong><span>Shopify checkout and eBay are unavailable right now. Please purchase through Depop only.</span><a href="https://www.depop.com/jerseysfrmjb/" target="_blank" rel="noopener">Shop on Depop <span aria-hidden="true">&nearr;</span></a>';
+      header.insertAdjacentElement("afterend", banner);
+    }
+  }
+
+  document.querySelectorAll(".website-checkout-promo").forEach(section => {
+    section.classList.remove("website-checkout-promo");
+    section.classList.add("marketplace-only-promo");
+    section.setAttribute("aria-label", "Depop purchase option");
+    section.innerHTML = '<span class="section-kicker">Depop Only For Now</span><h2>Ready to order?</h2><p>Shopify checkout is temporarily unavailable and eBay is currently down. Available jerseys can be purchased through Depop only.</p><div class="marketplace-buttons"><a class="shop-button recommended" href="https://www.depop.com/jerseysfrmjb/" target="_blank" rel="noopener">Shop on Depop <span aria-hidden="true">&nearr;</span></a></div>';
+  });
+
+  document.querySelectorAll(".page-intro").forEach(intro => {
+    if (/shopify/i.test(intro.textContent)) {
+      intro.textContent = "Browse available jerseys, then purchase through Depop only for now.";
+    }
+  });
+
+  const buyFlow = document.querySelector(".buy-contact-section");
+  if (buyFlow) {
+    buyFlow.querySelector(".section-kicker")?.replaceChildren(document.createTextNode("Depop Purchase Only For Now"));
+    const intro = buyFlow.querySelector(".buy-flow-heading p");
+    if (intro) intro.textContent = "Choose an available jersey, then complete your purchase through Depop.";
+    const finalStep = buyFlow.querySelector(".buy-steps article:last-child");
+    if (finalStep) {
+      finalStep.querySelector("h3")?.replaceChildren(document.createTextNode("Purchase on Depop"));
+      finalStep.querySelector("p")?.replaceChildren(document.createTextNode("Shopify checkout and eBay are unavailable right now. Use the Depop listing to purchase."));
+    }
+  }
+
+  document.querySelectorAll('a[href*="ebay.com"], a[href*="ebay.us"]').forEach(link => link.remove());
+  document.querySelectorAll(".footer-links h3").forEach(heading => {
+    if (/marketplaces/i.test(heading.textContent)) heading.textContent = "Purchase";
+  });
 }
 
 function formatInventoryUpdated(value = "") {
@@ -1081,6 +1113,7 @@ async function renderMarketplaceFeedback() {
   ]);
 }
 
+applyTemporaryPurchaseMode();
 initProductLightbox();
 renderInventoryGrids();
 renderFeaturedGrid();
