@@ -301,7 +301,6 @@ function productDescription(row, identity, availableSizes) {
 
 const PATCH_DETAILS = [
   [/kaka.*ac milan.*2006\/07.*away/i, "UCL patches"],
-  [/kaka.*ac milan.*2006\/07.*home/i, "No UCL patch"],
   [/ronaldo.*manchester united.*2007\/08/i, "BARCLAYS patches"],
   [/henry.*arsenal.*2005\/06/i, "BARCLAYS patches"],
   [/hazard.*chelsea.*2014\/15/i, "BARCLAYS patches"],
