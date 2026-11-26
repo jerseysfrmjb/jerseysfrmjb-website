@@ -165,7 +165,7 @@ const shopifySetupAudit = document.querySelector("[data-shopify-setup-audit]");
 let inventory = [];
 let settings = {};
 let featuredLimit = 3;
-let sizeOptions = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"];
+let sizeOptions = ["24", "26", "28", "S", "M", "L", "XL", "2XL", "3XL", "4XL"];
 let messages = [];
 let unreadMessages = 0;
 let requestSummaryRows = [];
@@ -2092,6 +2092,9 @@ function selectedFacebookProducts() {
 
 function facebookSizeLabel(size = "") {
   return {
+    "24": "Kids 24",
+    "26": "Kids 26",
+    "28": "Kids 28",
     S: "Small",
     M: "Medium",
     L: "Large",

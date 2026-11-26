@@ -1472,12 +1472,12 @@ export const seedInventory = {
       ],
       "size": "M",
       "sizes": {
-        "M": 2
+        "M": 1
       },
       "price": 55,
       "category": "retro",
       "name": "Kaka #22 | AC Milan 2006/07 Home Long Sleeve",
-      "quantity": 2,
+      "quantity": 1,
       "links": {
         "depop": "https://www.depop.com/jerseysfrmjb/",
         "ebay": "https://www.ebay.com/usr/jerseysfrmjb"
@@ -1650,7 +1650,7 @@ async function addColumnIfMissing(env, columnSql) {
   }
 }
 
-const SIZE_ORDER = ["24", "S", "M", "L", "XL", "2XL", "3XL", "4XL"];
+const SIZE_ORDER = ["24", "26", "28", "S", "M", "L", "XL", "2XL", "3XL", "4XL"];
 
 function parseSizeStock(value) {
   try {
@@ -2031,6 +2031,9 @@ export async function ensureInventory(env) {
   if (platformPriceStatements.length) await env.DB.batch(platformPriceStatements);
 
   await applyOneTimeKidsKitPricing(env, "kids_kits_pricing_2026_09_12");
+  await applyOneTimeStockSet(env, "split_kaka_home_away_2026_11_25", [
+    { id: "retro-ac-milan-kaka-home-0607-long", size: "M", quantity: 1, newArrival: true, dateAdded: "2026-11-25" }
+  ]);
   await applyOneTimeInventoryCleanup(env, "remove_incorrect_chelsea_and_duplicate_liverpool_blank_2026_09_04", ["club-chelsea-blue-blank", "club-liverpool-red-blank"]);
   await applyOneTimeStockSet(env, "set_palmer_pair_stock_2026_09_04", [
     { id: "club-chelsea-palmer-10", size: "M", quantity: 2, newArrival: true, dateAdded: "2026-09-04" }

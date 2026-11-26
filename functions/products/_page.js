@@ -9,9 +9,11 @@ import {
 
 const DEFAULT_SITE_ORIGIN = "https://jerseysfrmjb.com";
 const PUBLIC_DEPOP_ONLY = true;
-const SIZE_ORDER = ["24", "S", "M", "L", "XL", "2XL", "3XL", "4XL"];
+const SIZE_ORDER = ["24", "26", "28", "S", "M", "L", "XL", "2XL", "3XL", "4XL"];
 const SIZE_LABELS = {
   "24": "Kids 24",
+  "26": "Kids 26",
+  "28": "Kids 28",
   S: "Small",
   M: "Medium",
   L: "Large",
@@ -22,6 +24,8 @@ const SIZE_LABELS = {
 };
 const SIZE_WORDS = [
   ["24", /\b24\b/],
+  ["28", /\b28\b/],
+  ["26", /\b26\b/],
   ["4XL", /4\s*x\s*l/i],
   ["3XL", /3\s*x\s*l/i],
   ["2XL", /2\s*x\s*l|xxl/i],

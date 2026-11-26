@@ -144,6 +144,66 @@ export const adultSeptemberInventory = [
     new_arrival: true,
     date_added: "2026-09-12",
     sort_order: 680
+  },
+  {
+    id: "retro-ac-milan-kaka-away-0607-long",
+    category: "retro",
+    name: "Kaka #22 | AC Milan 2006/07 Away Long Sleeve",
+    size: "M",
+    sizes: {},
+    price: 55,
+    platform_prices: { Depop: 50, eBay: 55 },
+    quantity: 0,
+    photos: [
+      { src: "assets/inventory/retro-ac-milan-kaka-away-0607-long-front.jpg", alt: "Kaka AC Milan 2006/07 away long sleeve jersey front" },
+      { src: "assets/inventory/retro-ac-milan-kaka-away-0607-long-back.jpg", alt: "Kaka AC Milan 2006/07 away long sleeve jersey back" }
+    ],
+    links: MARKETPLACE_LINKS,
+    featured: false,
+    featured_order: 0,
+    new_arrival: true,
+    date_added: "2026-11-25",
+    sort_order: 455
+  },
+  {
+    id: "club-bayern-munich-kane-home-2026",
+    category: "club",
+    name: "Harry Kane #9 | Bayern Munich 2026 Home Jersey",
+    size: "M",
+    sizes: { M: 2 },
+    price: 55,
+    platform_prices: { Depop: 50, eBay: 55 },
+    quantity: 2,
+    photos: [
+      { src: "assets/inventory/club-bayern-kane-home-2026-front.jpg", alt: "Harry Kane Bayern Munich 2026 home jersey front" },
+      { src: "assets/inventory/club-bayern-kane-home-2026-back.jpg", alt: "Harry Kane Bayern Munich 2026 home jersey back" }
+    ],
+    links: MARKETPLACE_LINKS,
+    featured: false,
+    featured_order: 0,
+    new_arrival: true,
+    date_added: "2026-11-25",
+    sort_order: 690
+  },
+  {
+    id: "world-mexico-home-blank-2026",
+    category: "world",
+    name: "No Name/No Number | Mexico 2026 World Cup Home Jersey",
+    size: "M",
+    sizes: { M: 2 },
+    price: 55,
+    platform_prices: { Depop: 50, eBay: 55 },
+    quantity: 2,
+    photos: [
+      { src: "assets/inventory/world-mexico-home-blank-2026-front.jpg", alt: "Mexico 2026 World Cup home jersey front" },
+      { src: "assets/inventory/world-mexico-home-blank-2026-back.jpg", alt: "Mexico 2026 World Cup home jersey back" }
+    ],
+    links: MARKETPLACE_LINKS,
+    featured: false,
+    featured_order: 0,
+    new_arrival: true,
+    date_added: "2026-11-25",
+    sort_order: 700
   }
 ];
 

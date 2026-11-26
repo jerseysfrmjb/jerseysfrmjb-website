@@ -1,7 +1,7 @@
 import { ensureInventory } from "../_inventorySeed.js";
 import { adminConfigError, isAuthorized, json, unauthorized } from "./_auth.js";
 
-const SIZE_ORDER = ["24", "S", "M", "L", "XL", "2XL", "3XL", "4XL"];
+const SIZE_ORDER = ["24", "26", "28", "S", "M", "L", "XL", "2XL", "3XL", "4XL"];
 const PLATFORMS = new Set(["Depop", "eBay", "Facebook", "Website", "Local", "Other"]);
 const SALES_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS sales (
@@ -27,6 +27,8 @@ const SALES_SCHEMA_STATEMENTS = [
 ];
 const SIZE_WORDS = [
   ["24", /\b24\b/],
+  ["28", /\b28\b/],
+  ["26", /\b26\b/],
   ["4XL", /4\s*x\s*l/i],
   ["3XL", /3\s*x\s*l/i],
   ["2XL", /2\s*x\s*l|xxl/i],

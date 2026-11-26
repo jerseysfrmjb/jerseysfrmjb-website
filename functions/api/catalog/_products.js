@@ -1,9 +1,11 @@
 const DEFAULT_SITE_ORIGIN = "https://jerseysfrmjb.com";
 const CURRENCY = "USD";
 const CACHE_CONTROL = "public, max-age=300, s-maxage=300, stale-while-revalidate=60";
-const SIZE_ORDER = ["24", "S", "M", "L", "XL", "2XL", "3XL", "4XL"];
+const SIZE_ORDER = ["24", "26", "28", "S", "M", "L", "XL", "2XL", "3XL", "4XL"];
 const SIZE_WORDS = [
   ["24", /\b24\b/],
+  ["28", /\b28\b/],
+  ["26", /\b26\b/],
   ["4XL", /4\s*x\s*l/i],
   ["3XL", /3\s*x\s*l/i],
   ["2XL", /2\s*x\s*l|xxl/i],
@@ -298,7 +300,8 @@ function productDescription(row, identity, availableSizes) {
 }
 
 const PATCH_DETAILS = [
-  [/kaka.*ac milan.*2006\/07/i, "UCL patches"],
+  [/kaka.*ac milan.*2006\/07.*away/i, "UCL patches"],
+  [/kaka.*ac milan.*2006\/07.*home/i, "No UCL patch"],
   [/ronaldo.*manchester united.*2007\/08/i, "BARCLAYS patches"],
   [/henry.*arsenal.*2005\/06/i, "BARCLAYS patches"],
   [/hazard.*chelsea.*2014\/15/i, "BARCLAYS patches"],
@@ -323,7 +326,7 @@ export function buildJerseyDescription(row = {}, options = {}) {
   const availableSizes = Array.isArray(options.availableSizes) ? options.availableSizes : [];
   const sizeLabels = availableSizes.map(size => {
     const value = String(size || "").trim();
-    return ({ "24": "Kids 24", S: "Small", M: "Medium", L: "Large", XL: "Extra Large" }[value] || value);
+    return ({ "24": "Kids 24", "26": "Kids 26", "28": "Kids 28", S: "Small", M: "Medium", L: "Large", XL: "Extra Large" }[value] || value);
   }).filter(Boolean);
   const number = titleNumber(title);
   const bullets = [];
@@ -331,7 +334,10 @@ export function buildJerseyDescription(row = {}, options = {}) {
   const patch = patchDetails(title);
   if (patch) bullets.push(patch);
   if (/long\s*sleeve|longsleeve/i.test(title)) bullets.push("Long sleeve");
-  if (row.category === "kids") bullets.push("Kids size 24");
+  if (row.category === "kids") {
+    const kidsSizes = sizeLabels.filter(label => /^Kids /.test(label)).map(label => label.replace(/^Kids /, ""));
+    bullets.push(kidsSizes.length > 1 ? `Kids sizes ${kidsSizes.join(", ")}` : `Kids size ${kidsSizes[0] || "24"}`);
+  }
   if (row.category === "kids") bullets.push("Matching socks included");
   bullets.push(row.category === "retro" ? "Retro fan version" : "Fan version");
   bullets.push("Excellent condition");

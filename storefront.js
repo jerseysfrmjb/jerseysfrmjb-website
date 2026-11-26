@@ -190,13 +190,15 @@ function sortInventory(items) {
 
 function activeSizes(item) {
   const sizes = item?.sizes || {};
-  const order = ["24", "S", "M", "L", "XL", "2XL", "3XL", "4XL"];
+  const order = ["24", "26", "28", "S", "M", "L", "XL", "2XL", "3XL", "4XL"];
   return order.filter(size => Number(sizes[size]) > 0);
 }
 
 function sizeLabel(value = "") {
   const normalized = String(value).trim().toLowerCase();
   if (normalized === "24" || normalized === "kids 24") return "Kids 24";
+  if (normalized === "26" || normalized === "kids 26") return "Kids 26";
+  if (normalized === "28" || normalized === "kids 28") return "Kids 28";
   if (normalized === "s" || normalized === "small") return "Small";
   if (normalized === "m" || normalized === "medium") return "Medium";
   if (normalized === "l" || normalized === "large") return "Large";
@@ -208,6 +210,8 @@ function sizeLabelsFromText(value = "") {
   const text = String(value).toLowerCase();
   const labels = [];
   if (/\b24\b/.test(text)) labels.push("Kids 24");
+  if (/\b26\b/.test(text)) labels.push("Kids 26");
+  if (/\b28\b/.test(text)) labels.push("Kids 28");
   if (/\b(s|small)\b/.test(text)) labels.push("Small");
   if (/\b(m|medium)\b/.test(text)) labels.push("Medium");
   if (/\b(l|large)\b/.test(text)) labels.push("Large");
@@ -556,7 +560,7 @@ function sizeTokens(value = "") {
 function filterSizeTokens(item) {
   const active = activeSizes(item);
   if (active.length) {
-    return [...new Set(active.map(size => ({ "24": "kids 24", S: "small", M: "medium", L: "large", XL: "xl", "2XL": "2xl", "3XL": "3xl", "4XL": "4xl" }[size] || String(size).toLowerCase())))];
+    return [...new Set(active.map(size => ({ "24": "kids 24", "26": "kids 26", "28": "kids 28", S: "small", M: "medium", L: "large", XL: "xl", "2XL": "2xl", "3XL": "3xl", "4XL": "4xl" }[size] || String(size).toLowerCase())))];
   }
   const labels = sizeLabelsFromText(item?.size || displaySize(item));
   const tokenMap = { Small: "small", Medium: "medium", Large: "large", "XL+": "xl" };
@@ -872,6 +876,8 @@ function setupFilters(filterGroup, cards) {
   if (sizeSelect) {
     const options = [
       ["kids 24", "Kids 24"],
+      ["kids 26", "Kids 26"],
+      ["kids 28", "Kids 28"],
       ["small", "Small"],
       ["medium", "Medium"],
       ["large", "Large"],
@@ -885,7 +891,7 @@ function setupFilters(filterGroup, cards) {
 
   container?.querySelector("[data-advanced-filters]")?.remove();
   function selectedSizeLabel(value) {
-    return { "kids 24": "Kids 24", small: "Small", medium: "Medium", large: "Large", xl: "XL", "2xl": "2XL", "3xl": "3XL", "4xl": "4XL", "xl+": "XL+" }[value] || "";
+    return { "kids 24": "Kids 24", "kids 26": "Kids 26", "kids 28": "Kids 28", small: "Small", medium: "Medium", large: "Large", xl: "XL", "2xl": "2XL", "3xl": "3XL", "4xl": "4XL", "xl+": "XL+" }[value] || "";
   }
 
   function setActive(buttons, selected) {
