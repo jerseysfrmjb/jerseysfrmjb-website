@@ -398,8 +398,10 @@ function structuredProduct(model) {
 function imageMarkup(image, label, loading = "lazy", index = 0) {
   if (!image) return "";
   const responsiveMatch = String(image.src).match(/^(.*\/assets\/inventory\/)([^/?#]+)\.(?:jpe?g|png)(?:[?#].*)?$/i);
+  const revision = responsiveMatch && new URL(image.src).searchParams.get("v");
+  const version = revision ? `?v=${encodeURIComponent(revision)}` : "";
   const responsive = responsiveMatch
-    ? `<source type="image/webp" srcset="${escapeHtml(`${responsiveMatch[1]}responsive/${responsiveMatch[2]}-480.webp`)} 480w, ${escapeHtml(`${responsiveMatch[1]}responsive/${responsiveMatch[2]}-900.webp`)} 900w" sizes="(max-width: 700px) 100vw, 560px">`
+    ? `<source type="image/webp" srcset="${escapeHtml(`${responsiveMatch[1]}responsive/${responsiveMatch[2]}-480.webp${version}`)} 480w, ${escapeHtml(`${responsiveMatch[1]}responsive/${responsiveMatch[2]}-900.webp${version}`)} 900w" sizes="(max-width: 700px) 100vw, 560px">`
     : "";
   return `
     <figure class="product-detail-photo">

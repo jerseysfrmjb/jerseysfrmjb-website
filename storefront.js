@@ -74,6 +74,8 @@ function escapeHtml(value = "") {
 }
 
 const INVENTORY_IMAGE_REVISIONS = new Map([
+  ["assets/inventory/retro-ac-milan-kaka-home-0607-long-front.jpg", "d29952f"],
+  ["assets/inventory/retro-ac-milan-kaka-home-0607-long-back.jpg", "d29952f"],
   ["assets/inventory/club-real-front.jpg", "20260726-2"],
   ["assets/inventory/club-real-back.jpg", "20260726-2"],
   ["assets/inventory/club-city-front.jpg", "20260726-2"],
