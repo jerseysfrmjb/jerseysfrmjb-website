@@ -1462,11 +1462,11 @@ export const seedInventory = {
       "id": "retro-ac-milan-kaka-home-0607-long",
       "photos": [
         {
-          "src": "assets/inventory/retro-ac-milan-kaka-home-0607-front.jpg",
+          "src": "assets/inventory/retro-ac-milan-kaka-home-0607-long-front.jpg",
           "alt": "Kaka AC Milan 2006/07 home long sleeve jersey front"
         },
         {
-          "src": "assets/inventory/retro-ac-milan-kaka-home-0607-back.jpg",
+          "src": "assets/inventory/retro-ac-milan-kaka-home-0607-long-back.jpg",
           "alt": "Kaka AC Milan 2006/07 home long sleeve jersey back"
         }
       ],
@@ -2033,6 +2033,15 @@ export async function ensureInventory(env) {
   await applyOneTimeKidsKitPricing(env, "kids_kits_pricing_2026_09_12");
   await applyOneTimeStockSet(env, "split_kaka_home_away_2026_11_25", [
     { id: "retro-ac-milan-kaka-home-0607-long", size: "M", quantity: 1, newArrival: true, dateAdded: "2026-11-25" }
+  ]);
+  await applyOneTimePhotoCorrections(env, "refresh_kaka_home_photos_2026_11_25", [
+    {
+      id: "retro-ac-milan-kaka-home-0607-long",
+      replacements: [
+        { from: "assets/inventory/retro-ac-milan-kaka-home-0607-front.jpg", to: "assets/inventory/retro-ac-milan-kaka-home-0607-long-front.jpg" },
+        { from: "assets/inventory/retro-ac-milan-kaka-home-0607-back.jpg", to: "assets/inventory/retro-ac-milan-kaka-home-0607-long-back.jpg" }
+      ]
+    }
   ]);
   await applyOneTimeInventoryCleanup(env, "remove_incorrect_chelsea_and_duplicate_liverpool_blank_2026_09_04", ["club-chelsea-blue-blank", "club-liverpool-red-blank"]);
   await applyOneTimeStockSet(env, "set_palmer_pair_stock_2026_09_04", [
